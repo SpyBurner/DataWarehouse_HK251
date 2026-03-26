@@ -1,0 +1,48 @@
+services:
+  # -----------------------------------
+  # 1. SQL SERVER (Staging)
+  # -----------------------------------
+  mssql-staging:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mssql-staging
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "31082004@Lmao"
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "31082004@Lmao", "-C", "-Q", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Sidecar container to initialize MSSQL
+  mssql-setup:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mssql-setup
+    depends_on:
+      mssql-staging:
+        condition: service_healthy
+    volumes:
+      - ./SQL:/scripts
+    command: >
+      /bin/bash -c "
+      echo 'Running MSSQL initialization script...' &&
+      /opt/mssql-tools18/bin/sqlcmd -S mssql-staging -U sa -P '31082004@Lmao' -C -i /scripts/SQL_SQLServer_CreateStagingDB.sql
+      "
+
+  # -----------------------------------
+  # 2. POSTGRES (Staging)
+  # -----------------------------------
+  postgres-warehouse:
+    image: postgres:15-alpine # Using alpine for a smaller footprint
+    container_name: postgres-warehouse
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 31082004@Lmao
+      POSTGRES_DB: Warehouse # Automatically creates this DB on startup
+    ports:
+      - "5432:5432"
+    # UNCOMMENT the lines below if you also have a SQL file for Postgres
+    # volumes:
+    #   - ./SQL/Postgres_Init.sql:/docker-entrypoint-initdb.d/init.sql
