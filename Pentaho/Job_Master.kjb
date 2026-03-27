@@ -328,7 +328,7 @@
       <attributes/>
       <specification_method>filename</specification_method>
       <job_object_id/>
-      <filename>D:/GeneralProjectSpace/.UNI/.HKVIII/Datawarehouse/BTL DW/Pentaho/Job_StageData.kjb</filename>
+      <filename>D:/GeneralProjectSpace/.UNI/.HKVIII/Datawarehouse/BTL DW/Pentaho/StageData.kjb</filename>
       <jobname/>
       <directory/>
       <arg_from_previous>N</arg_from_previous>
