@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <transformation>
   <info>
     <name>Transform_GetPlatformsAndTables</name>
@@ -430,7 +429,7 @@
     <created_user>-</created_user>
     <created_date>2026/03/27 14:52:01.650</created_date>
     <modified_user>-</modified_user>
-    <modified_date>2026/03/27 14:52:01.650</modified_date>
+    <modified_date>2026/04/01 15:46:49.110</modified_date>
     <key_for_session_key>H4sIAAAAAAAAAAMAAAAAAAAAAAA=</key_for_session_key>
     <is_key_private>N</is_key_private>
   </info>
@@ -438,26 +437,82 @@
   </notepads>
   <order>
     <hop>
-      <from>Select values</from>
-      <to>Copy rows to result</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
       <from>Get file names</from>
       <to>Filter unrelated</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Filter unrelated</from>
-      <to>Replace in string</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Replace in string</from>
+      <from>Extract platform and table name</from>
       <to>Select values</to>
       <enabled>Y</enabled>
     </hop>
+    <hop>
+      <from>Select values</from>
+      <to>Extract target table name</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Extract target table name</from>
+      <to>Copy rows to result</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Filter unrelated</from>
+      <to>Copy filepath</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Copy filepath</from>
+      <to>Extract platform and table name</to>
+      <enabled>Y</enabled>
+    </hop>
   </order>
+  <step>
+    <name>Copy filepath</name>
+    <type>ScriptValueMod</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <compatible>N</compatible>
+    <optimizationLevel>9</optimizationLevel>
+    <jsScripts>
+      <jsScript>
+        <jsScript_type>0</jsScript_type>
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>//Script here
+
+var file_path = filename</jsScript_script>
+      </jsScript>
+    </jsScripts>
+    <fields>
+      <field>
+        <name>file_path</name>
+        <rename>file_path</rename>
+        <type>String</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>432</xloc>
+      <yloc>144</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
   <step>
     <name>Copy rows to result</name>
     <type>RowsToResult</type>
@@ -478,92 +533,13 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>816</xloc>
-      <yloc>288</yloc>
+      <xloc>768</xloc>
+      <yloc>384</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
   <step>
-    <name>Filter unrelated</name>
-    <type>SelectValues</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <fields>
-      <field>
-        <name>filename</name>
-      </field>
-      <field>
-        <name>short_filename</name>
-      </field>
-      <select_unspecified>N</select_unspecified>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>272</xloc>
-      <yloc>288</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Get file names</name>
-    <type>GetFileNames</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <filter>
-      <filterfiletype>all_files</filterfiletype>
-    </filter>
-    <doNotFailIfNoFile>N</doNotFailIfNoFile>
-    <rownum>N</rownum>
-    <isaddresult>Y</isaddresult>
-    <filefield>N</filefield>
-    <rownum_field/>
-    <filename_Field/>
-    <wildcard_Field/>
-    <exclude_wildcard_Field/>
-    <dynamic_include_subfolders>N</dynamic_include_subfolders>
-    <limit>0</limit>
-    <file>
-      <name>${PROJECT_PATH}\Datasets</name>
-      <filemask>.*?\.csv</filemask>
-      <exclude_filemask/>
-      <file_required>Y</file_required>
-      <include_subfolders>Y</include_subfolders>
-    </file>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>128</xloc>
-      <yloc>288</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Replace in string</name>
+    <name>Extract platform and table name</name>
     <type>ReplaceString</type>
     <description/>
     <distribute>Y</distribute>
@@ -614,6 +590,131 @@
     </GUI>
   </step>
   <step>
+    <name>Extract target table name</name>
+    <type>ScriptValueMod</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <compatible>N</compatible>
+    <optimizationLevel>9</optimizationLevel>
+    <jsScripts>
+      <jsScript>
+        <jsScript_type>0</jsScript_type>
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>//Script here
+
+var target_table_name = "raw_" + platform + "_" + table</jsScript_script>
+      </jsScript>
+    </jsScripts>
+    <fields>
+      <field>
+        <name>target_table_name</name>
+        <rename>target_table_name</rename>
+        <type>String</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>584</xloc>
+      <yloc>384</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Filter unrelated</name>
+    <type>SelectValues</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <fields>
+      <field>
+        <name>filename</name>
+      </field>
+      <field>
+        <name>short_filename</name>
+      </field>
+      <select_unspecified>N</select_unspecified>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>312</xloc>
+      <yloc>144</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Get file names</name>
+    <type>GetFileNames</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <filter>
+      <filterfiletype>all_files</filterfiletype>
+    </filter>
+    <doNotFailIfNoFile>N</doNotFailIfNoFile>
+    <rownum>N</rownum>
+    <isaddresult>Y</isaddresult>
+    <filefield>N</filefield>
+    <rownum_field/>
+    <filename_Field/>
+    <wildcard_Field/>
+    <exclude_wildcard_Field/>
+    <dynamic_include_subfolders>N</dynamic_include_subfolders>
+    <limit>0</limit>
+    <file>
+      <name>${PROJECT_PATH}\Datasets</name>
+      <filemask>.*?\.csv</filemask>
+      <exclude_filemask/>
+      <file_required>Y</file_required>
+      <include_subfolders>Y</include_subfolders>
+    </file>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>192</xloc>
+      <yloc>144</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
     <name>Select values</name>
     <type>SelectValues</type>
     <description/>
@@ -627,9 +728,15 @@
     <fields>
       <field>
         <name>platform</name>
+        <rename/>
       </field>
       <field>
         <name>table</name>
+        <rename/>
+      </field>
+      <field>
+        <name>file_path</name>
+        <rename/>
       </field>
       <select_unspecified>N</select_unspecified>
     </fields>
@@ -642,8 +749,8 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>624</xloc>
-      <yloc>288</yloc>
+      <xloc>432</xloc>
+      <yloc>384</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
