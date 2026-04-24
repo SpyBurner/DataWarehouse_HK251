@@ -1,0 +1,1 @@
+docker compose up -d mssql-staging mssql-setup postgres-warehouse

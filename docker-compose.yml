@@ -29,8 +29,10 @@ services:
       - ./SQL:/scripts
     command: >
       /bin/bash -c "
-      echo 'Running MSSQL initialization script...' &&
-      /opt/mssql-tools18/bin/sqlcmd -S mssql-staging -U sa -P '31082004@Lmao' -C -i /scripts/SQL_SQLServer_CreateStagingDB.sql
+      set -euo pipefail;
+
+      echo 'Running MSSQL initialization script (first boot)...';
+      /opt/mssql-tools18/bin/sqlcmd -S mssql-staging -U sa -P '31082004@Lmao' -C -b -V 16 -i /scripts/SQL_SQLServer_CreateStagingDB.sql
       "
 
   # -----------------------------------
@@ -47,6 +49,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data # Persist Postgres data
+      - ./SQL/SQL_Postgres_InitWarehouse.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
 
   # -----------------------------------
   # 3. STEAM CRAWLER (CSV landing drops)

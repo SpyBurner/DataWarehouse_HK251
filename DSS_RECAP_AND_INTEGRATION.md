@@ -181,12 +181,28 @@ Keep responsibilities explicit:
 - The crawler is responsible for:
   - writing complete partitions
   - writing `_SUCCESS` last
-  - never modifying previously “published” partitions in place
+  - never modifying previously "published" partitions in place
 
 - Pentaho is responsible for:
   - only ingesting partitions that contain `_SUCCESS`
-  - recording ingestion status (success/failure) per partition
-  - archiving or marking partitions as “processed”
+  - recording ingestion status (success/failure) per partition in `stg_load_audit`
+  - **never modifying or moving landing files** — the file system is treated as read-only
+
+#### Partition tracking: the Database Audit Log method
+
+Pentaho uses the `stg_load_audit` table in MSSQL staging to decide what to ingest:
+
+1. On each run, Pentaho lists all `extract_dt=...` folders in the landing directory.
+2. It queries `stg_load_audit` for all `extract_dt` values where `status = 'success'`.
+3. It diffs the two lists — only folders **not** already in the audit table are candidates.
+4. Among candidates, it checks for `_SUCCESS` and validates required files.
+5. After a successful load, it writes a row with `status = 'success'` to the audit table.
+6. After a failed load, it writes a row with `status = 'failed'` — failed partitions are automatically retried on the next run (since only `'success'` is filtered out).
+
+This approach:
+- Leaves the file system completely untouched (read-only crawler outputs).
+- Creates a queryable, auditable history of exactly when data was loaded and how many rows were processed.
+- Makes retry logic automatic — just re-run the job.
 
 Scheduling options (pick one):
 - Run crawler via OS scheduler (Windows Task Scheduler / cron) → writes drops → Pentaho runs on a schedule and picks the latest complete drop.
@@ -218,23 +234,25 @@ Pentaho can fully handle everything before the datamart. The simplest pattern is
 
 Suggested top-level orchestration job (one “run”):
 - `run_dss_refresh.kjb`:
-  1) call `00_validate_landing.kjb`
+  1) call `00_validate_landing.kjb` (diffs landing/ folders against `stg_load_audit`, sets `LATEST_PARTITION` variable)
   2) run all `10_load_mssql_staging_*.ktr`
   3) run all `20_build_postgres_dw_*.ktr`
   4) run all `30_build_datamart_*.ktr`
-  5) call `40_publish.kjb`
+  5) write `stg_load_audit` row with `status = 'success'` (or `'failed'` on error branch)
   6) notify (email/Slack/log table)
 
-### 4.1 Step 1 — Validate landing drops
+### 4.1 Step 1 — Validate landing drops (Database Audit Log method)
 
 Pentaho Job: `00_validate_landing.kjb`
+Pentaho Transform (called by the job): `00_find_unprocessed_partitions.ktr`
 
-Checks:
-- locate newest `extract_dt=...` folder
-- ensure `_SUCCESS` exists
-- validate required files exist
-- validate row counts and schema version from `manifest.json`
-- move “bad drops” to a quarantine folder and alert
+How it works:
+- List all `extract_dt=...` folders in `landing/` (Get File Names step)
+- Query `stg_load_audit` for `extract_dt WHERE status = 'success'` (Table Input step)
+- Left-join the two on `extract_dt`, keep only rows where the audit side is NULL (unprocessed)
+- Among unprocessed folders, check that `_SUCCESS` exists
+- Select the newest unprocessed partition and set it as the `LATEST_PARTITION` variable
+- If no unprocessed partition is found, the job exits cleanly (no work to do)
 
 ### 4.2 Step 2 — Load MSSQL staging (raw-ish)
 
