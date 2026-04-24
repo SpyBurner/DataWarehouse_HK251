@@ -1,3 +1,9 @@
+# APIs used:
+- http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/ → players.csv  
+- http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/ → purchased_games.csv  
+- http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/ → history.csv  
+- https://steamcommunity.com/profiles/{steam_id}/recommended/?p={page}&l=english → reviews.csv
+
 # Migration guide: split at Postgres Datamart (Pentaho upstream, ML downstream)
 
 This document is a **step-by-step playbook** for migrating this repo into a Decision Support System (DSS) architecture where:
@@ -109,15 +115,14 @@ Example layout (recommended):
 
 ```
 landing/
-  steam/
-    extract_dt=2026-04-23T120000Z/
-      players.csv
-      history.csv
-      reviews.csv
-      library.csv
-      private_steamids.csv
-      manifest.json
-      _SUCCESS
+  extract_dt=2026-04-23T120000Z/
+    players.csv
+    history.csv
+    reviews.csv
+    library.csv
+    private_steamids.csv
+    manifest.json
+    _SUCCESS
 ```
 
 Notes:

@@ -48,6 +48,18 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data # Persist Postgres data
 
+  # -----------------------------------
+  # 3. STEAM CRAWLER (CSV landing drops)
+  # -----------------------------------
+  steam-crawler:
+    build:
+      context: ./steam_crawler
+    container_name: steam-crawler
+    volumes:
+      - ./Datasets/landing:/app/Datasets/landing
+    working_dir: /app
+    entrypoint: ["python", "-m", "steam_crawler.cli"]
+
 # Define named volumes
 volumes:
   mssql_data:
