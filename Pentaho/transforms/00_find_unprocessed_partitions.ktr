@@ -530,21 +530,6 @@
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Check _SUCCESS exists</from>
-      <to>Filter has_SUCCESS</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Filter has_SUCCESS</from>
-      <to>Sort descending</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Filter has_SUCCESS</from>
-      <to>Dummy discard</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
       <from>Sort descending</from>
       <to>Sample 1 partition</to>
       <enabled>Y</enabled>
@@ -554,12 +539,27 @@
       <to>Set Variables</to>
       <enabled>Y</enabled>
     </hop>
+    <hop>
+      <from>Filter has_SUCCESS 2</from>
+      <to>Sort descending</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Filter has_SUCCESS 2</from>
+      <to>Dummy discard</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Check _SUCCESS exists</from>
+      <to>Filter has_SUCCESS 2</to>
+      <enabled>Y</enabled>
+    </hop>
   </order>
   <step>
     <name>Check _SUCCESS exists</name>
     <type>ScriptValueMod</type>
     <description>Check whether _SUCCESS sentinel file exists in the partition folder</description>
-    <distribute>Y</distribute>
+    <distribute>N</distribute>
     <custom_distribution/>
     <copies>1</copies>
     <partitioning>
@@ -640,41 +640,6 @@ var has_success = success_file.exists();
     </GUI>
   </step>
   <step>
-    <name>Filter has_SUCCESS</name>
-    <type>FilterRows</type>
-    <description>Keep only partitions where _SUCCESS sentinel exists</description>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <send_true_to>Sort descending</send_true_to>
-    <send_false_to>Dummy discard</send_false_to>
-    <compare>
-      <condition>
-        <negated>N</negated>
-        <leftvalue>has_success</leftvalue>
-        <function>=</function>
-        <rightvalue>true</rightvalue>
-      </condition>
-    </compare>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>1040</xloc>
-      <yloc>240</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
     <name>Filter unprocessed only</name>
     <type>FilterRows</type>
     <description>Keep only rows where audit_extract_dt IS NULL (= not yet loaded)</description>
@@ -721,7 +686,7 @@ var has_success = success_file.exists();
       <schema_name/>
     </partitioning>
     <filter>
-      <filterfiletype>only_files</filterfiletype>
+      <filterfiletype>only_folders</filterfiletype>
     </filter>
     <doNotFailIfNoFile>N</doNotFailIfNoFile>
     <rownum>N</rownum>
@@ -819,7 +784,7 @@ ORDER BY audit_extract_dt</sql>
     <name>Merge Join</name>
     <type>MergeJoin</type>
     <description>LEFT OUTER join: folder list vs audit table on folder_extract_dt = audit_extract_dt</description>
-    <distribute>Y</distribute>
+    <distribute>N</distribute>
     <custom_distribution/>
     <copies>1</copies>
     <partitioning>
@@ -898,7 +863,7 @@ ORDER BY audit_extract_dt</sql>
         <field_name>full_partition_path</field_name>
         <variable_name>PARTITION_PATH</variable_name>
         <variable_type>PARENT_JOB</variable_type>
-        <default_value />
+        <default_value/>
       </field>
     </fields>
     <use_formatting>N</use_formatting>
@@ -994,6 +959,76 @@ ORDER BY audit_extract_dt</sql>
     <GUI>
       <xloc>240</xloc>
       <yloc>160</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Filter has_SUCCESS 2</name>
+    <type>FilterRows</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <send_true_to>Sort descending</send_true_to>
+    <send_false_to>Dummy discard</send_false_to>
+    <compare>
+      <condition>
+        <negated>N</negated>
+        <leftvalue>has_success</leftvalue>
+        <function>TRUE</function>
+        <rightvalue/>
+      </condition>
+    </compare>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>1040</xloc>
+      <yloc>240</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Filter has_SUCCESS 2</name>
+    <type>FilterRows</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <send_true_to>Sort descending</send_true_to>
+    <send_false_to>Dummy discard</send_false_to>
+    <compare>
+      <condition>
+        <negated>N</negated>
+        <leftvalue>has_success</leftvalue>
+        <function>TRUE</function>
+        <rightvalue/>
+      </condition>
+    </compare>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>1040</xloc>
+      <yloc>240</yloc>
       <draw>Y</draw>
     </GUI>
   </step>

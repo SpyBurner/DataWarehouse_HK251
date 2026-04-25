@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<transformation>
+  <info>
+    <name>05_load_raw_players</name>
+  </info>
+  <connection>
+    <name>MSSQL_Staging</name>
+    <server>localhost</server>
+    <type>MSSQLNATIVE</type>
+    <access>Native</access>
+    <database>DW_Staging</database>
+    <port>1433</port>
+    <username>sa</username>
+    <password>Encrypted 2be98affb5b97cad6fb49fa50f29faed5</password>
+  </connection>
+  <step>
+    <name>CSV File Input</name>
+    <type>CsvInput</type>
+    <filename>${Internal.Entry.Current.Directory}/../../Datasets/raw/players.csv</filename>
+    <header>Y</header>
+    <separator>,</separator>
+    <enclosure>"</enclosure>
+    <fields>
+      <field><name>playerid</name><type>String</type></field>
+      <field><name>country</name><type>String</type></field>
+      <field><name>created</name><type>String</type></field></fields>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+    <GUI><xloc>100</xloc><yloc>100</yloc><draw>Y</draw></GUI>
+  </step>
+  <step>
+    <name>Table Output</name>
+    <type>TableOutput</type>
+    <connection>MSSQL_Staging</connection>
+    <schema>dbo</schema>
+    <table>raw_players</table>
+    <commit>1000</commit>
+    <truncate>N</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>N</specify_fields>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+    <GUI><xloc>300</xloc><yloc>100</yloc><draw>Y</draw></GUI>
+  </step>
+  <order>
+    <hop><from>CSV File Input</from><to>Table Output</to><enabled>Y</enabled></hop>
+  </order>
+</transformation>
