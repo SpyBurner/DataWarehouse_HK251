@@ -1,0 +1,215 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<transformation>
+  <info>
+    <name>30_build_datamart_features</name>
+    <description>Postgres DW → dm.dm_steam_player_features_v1 (feature engineering for ML)</description>
+  </info>
+
+  <connection>
+    <name>Postgres_Warehouse</name>
+    <server>localhost</server>
+    <type>POSTGRESQL</type>
+    <access>Native</access>
+    <database>Warehouse</database>
+    <port>5432</port>
+    <username>postgres</username>
+    <password>31082004@Lmao</password>
+  </connection>
+
+  
+
+  <step>
+    
+    <name>Player base</name>
+    <type>TableInput</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>Postgres_Warehouse</connection>
+    <sql>SELECT p.playerid,
+       p.country,
+       p.created,
+       EXTRACT(EPOCH FROM (NOW() - p.created)) / 86400.0 AS account_age_days
+FROM dw.dim_player p
+ORDER BY p.playerid</sql>
+    <limit>0</limit>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>Y</variables_active>
+    <GUI><xloc>80</xloc><yloc>80</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Library counts</name>
+    <type>TableInput</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>Postgres_Warehouse</connection>
+    <sql>SELECT playerid, COUNT(*) AS library_size
+FROM dw.fact_library
+GROUP BY playerid
+ORDER BY playerid</sql>
+    <limit>0</limit>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>Y</variables_active>
+    <GUI><xloc>80</xloc><yloc>200</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Achievement counts</name>
+    <type>TableInput</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>Postgres_Warehouse</connection>
+    <sql>SELECT playerid,
+       COUNT(*) AS total_achievements,
+       COUNT(DISTINCT gameid) AS achievement_game_count
+FROM dw.fact_achievement_unlock
+GROUP BY playerid
+ORDER BY playerid</sql>
+    <limit>0</limit>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>Y</variables_active>
+    <GUI><xloc>80</xloc><yloc>320</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Review stats</name>
+    <type>TableInput</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>Postgres_Warehouse</connection>
+    <sql>SELECT playerid,
+       COUNT(*) AS total_reviews,
+       AVG(LENGTH(review)) AS avg_review_length,
+       MIN(LENGTH(review)) AS min_review_length
+FROM dw.fact_review
+GROUP BY playerid
+ORDER BY playerid</sql>
+    <limit>0</limit>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>Y</variables_active>
+    <GUI><xloc>80</xloc><yloc>440</yloc><draw>Y</draw></GUI></step>
+
+  
+
+  <step>
+    
+    <name>Join player + library</name>
+    <type>MergeJoin</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><join_type>LEFT OUTER</join_type>
+    <stepname1>Player base</stepname1>
+    <stepname2>Library counts</stepname2>
+    <keys_1><key>playerid</key></keys_1>
+    <keys_2><key>playerid</key></keys_2>
+    <GUI><xloc>320</xloc><yloc>140</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Join + achievements</name>
+    <type>MergeJoin</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><join_type>LEFT OUTER</join_type>
+    <stepname1>Join player + library</stepname1>
+    <stepname2>Achievement counts</stepname2>
+    <keys_1><key>playerid</key></keys_1>
+    <keys_2><key>playerid</key></keys_2>
+    <GUI><xloc>560</xloc><yloc>200</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Join + reviews</name>
+    <type>MergeJoin</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><join_type>LEFT OUTER</join_type>
+    <stepname1>Join + achievements</stepname1>
+    <stepname2>Review stats</stepname2>
+    <keys_1><key>playerid</key></keys_1>
+    <keys_2><key>playerid</key></keys_2>
+    <GUI><xloc>800</xloc><yloc>280</yloc><draw>Y</draw></GUI></step>
+
+  
+
+  <step>
+    
+    <name>Compute features</name>
+    <type>ScriptValueMod</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><description>Derive achievement_game_ratio and review_duplication_rate (placeholder)</description>
+    <script>
+      
+// achievement_game_ratio = total_achievements / library_size (avoid division by zero)
+var achievement_game_ratio = 0.0;
+if (library_size != null &amp;&amp; library_size &gt; 0) {
+    achievement_game_ratio = total_achievements / library_size;
+}
+
+// review_duplication_rate — placeholder; implement with a subquery or additional join later
+var review_duplication_rate = 0.0;
+      
+    </script>
+    <fields>
+      <field>
+        <name>achievement_game_ratio</name>
+        <rename>achievement_game_ratio</rename>
+        <type>Number</type>
+        <length>15</length>
+        <precision>6</precision>
+        <replace>N</replace>
+      </field>
+      <field>
+        <name>review_duplication_rate</name>
+        <rename>review_duplication_rate</rename>
+        <type>Number</type>
+        <length>15</length>
+        <precision>6</precision>
+        <replace>N</replace>
+      </field>
+    </fields>
+    <GUI><xloc>1040</xloc><yloc>280</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Select feature columns</name>
+    <type>SelectValues</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><fields>
+      <field><name>playerid</name></field>
+      <field><name>country</name></field>
+      <field><name>account_age_days</name></field>
+      <field><name>library_size</name></field>
+      <field><name>total_achievements</name></field>
+      <field><name>achievement_game_ratio</name></field>
+      <field><name>total_reviews</name></field>
+      <field><name>avg_review_length</name></field>
+      <field><name>min_review_length</name></field>
+      <field><name>review_duplication_rate</name></field>
+    </fields>
+    <GUI><xloc>1280</xloc><yloc>280</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Insert Update features</name>
+    <type>InsertUpdate</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>Postgres_Warehouse</connection>
+    <schema>dm</schema>
+    <table>dm_steam_player_features_v1</table>
+    <commit>1000</commit>
+    <lookup>
+      <key><name>playerid</name><field>playerid</field><condition>=</condition><name2 /></key>
+    </lookup>
+    <values>
+      <value><name>playerid</name>               <rename>playerid</rename>               <update>N</update></value>
+      <value><name>country</name>                <rename>country</rename>                <update>Y</update></value>
+      <value><name>account_age_days</name>       <rename>account_age_days</rename>       <update>Y</update></value>
+      <value><name>library_size</name>           <rename>library_size</rename>           <update>Y</update></value>
+      <value><name>total_achievements</name>     <rename>total_achievements</rename>     <update>Y</update></value>
+      <value><name>achievement_game_ratio</name> <rename>achievement_game_ratio</rename> <update>Y</update></value>
+      <value><name>total_reviews</name>          <rename>total_reviews</rename>          <update>Y</update></value>
+      <value><name>avg_review_length</name>      <rename>avg_review_length</rename>      <update>Y</update></value>
+      <value><name>min_review_length</name>      <rename>min_review_length</rename>      <update>Y</update></value>
+      <value><name>review_duplication_rate</name><rename>review_duplication_rate</rename><update>Y</update></value>
+    </values>
+    <GUI><xloc>1520</xloc><yloc>280</yloc><draw>Y</draw></GUI></step>
+
+  
+
+  <order>
+    <hop><from>Player base</from>          <to>Join player + library</to><enabled>Y</enabled></hop>
+    <hop><from>Library counts</from>       <to>Join player + library</to><enabled>Y</enabled></hop>
+    <hop><from>Join player + library</from><to>Join + achievements</to>  <enabled>Y</enabled></hop>
+    <hop><from>Achievement counts</from>   <to>Join + achievements</to>  <enabled>Y</enabled></hop>
+    <hop><from>Join + achievements</from>  <to>Join + reviews</to>       <enabled>Y</enabled></hop>
+    <hop><from>Review stats</from>         <to>Join + reviews</to>       <enabled>Y</enabled></hop>
+    <hop><from>Join + reviews</from>       <to>Compute features</to>     <enabled>Y</enabled></hop>
+    <hop><from>Compute features</from>     <to>Select feature columns</to><enabled>Y</enabled></hop>
+    <hop><from>Select feature columns</from><to>Insert Update features</to><enabled>Y</enabled></hop>
+  </order>
+
+<notepads /></transformation>

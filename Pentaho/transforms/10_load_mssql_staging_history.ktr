@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<transformation>
+  <info>
+    <name>10_load_mssql_staging_history</name>
+    <description>CSV → dbo.stg_history (MSSQL Staging)</description>
+  </info>
+
+  <connection>
+    <name>MSSQL_Staging</name>
+    <server>localhost</server>
+    <type>MSSQLNATIVE</type>
+    <access>Native</access>
+    <database>DW_Staging</database>
+    <port>1433</port>
+    <username>sa</username>
+    <password>31082004@Lmao</password>
+    <attributes>
+      <attribute><code>trustServerCertificate</code><attribute>true</attribute></attribute>
+    </attributes>
+  </connection>
+
+  <step>
+    <name>CSV File Input</name>
+    <type>CsvInput</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><filename>${PARTITION_PATH}/history.csv</filename>
+    <separator>,</separator>
+    <enclosure>"</enclosure>
+    <header>Y</header>
+    <lazy_conversion>N</lazy_conversion>
+    <fields>
+      <field><name>playerid</name>      <type>String</type><length>30</length></field>
+      <field><name>achievementid</name> <type>String</type><length>200</length></field>
+      <field><name>date_acquired</name> <type>String</type><length>30</length></field>
+    </fields>
+    <GUI><xloc>80</xloc><yloc>160</yloc><draw>Y</draw></GUI><buffer_size>50000</buffer_size><parallel>N</parallel><newline_possible>N</newline_possible><format>mixed</format><encoding /><add_filename_result>N</add_filename_result></step>
+
+  <step>
+    <name>Add constants</name>
+    <type>Constant</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><fields>
+      <field>
+        <name>extract_dt</name>
+        <type>String</type>
+        <value>${LATEST_PARTITION}</value>
+        <length>50</length>
+      </field>
+    </fields>
+    <GUI><xloc>280</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    <name>Select Values</name>
+    <type>SelectValues</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><fields>
+      <field><name>playerid</name></field>
+      <field><name>achievementid</name></field>
+      <field><name>date_acquired</name></field>
+      <field><name>extract_dt</name></field>
+    </fields>
+    <GUI><xloc>480</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    <name>Table Output</name>
+    <type>TableOutput</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>MSSQL_Staging</connection>
+    <schema>dbo</schema>
+    <table>stg_history</table>
+    <commit>1000</commit>
+    <truncate>Y</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>N</specify_fields>
+    <GUI><xloc>680</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <order>
+    <hop><from>CSV File Input</from><to>Add constants</to><enabled>Y</enabled></hop>
+    <hop><from>Add constants</from><to>Select Values</to> <enabled>Y</enabled></hop>
+    <hop><from>Select Values</from><to>Table Output</to>  <enabled>Y</enabled></hop>
+  </order>
+
+<notepads /></transformation>

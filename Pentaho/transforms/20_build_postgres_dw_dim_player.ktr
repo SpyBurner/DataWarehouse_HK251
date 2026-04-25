@@ -1,0 +1,112 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<transformation>
+  <info>
+    <name>20_build_postgres_dw_dim_player</name>
+    <description>MSSQL stg_players → Postgres dw.dim_player (upsert)</description>
+  </info>
+
+  <connection>
+    <name>MSSQL_Staging</name>
+    <server>localhost</server>
+    <type>MSSQLNATIVE</type>
+    <access>Native</access>
+    <database>DW_Staging</database>
+    <port>1433</port>
+    <username>sa</username>
+    <password>31082004@Lmao</password>
+    <attributes>
+      <attribute><code>trustServerCertificate</code><attribute>true</attribute></attribute>
+    </attributes>
+  </connection>
+
+  <connection>
+    <name>Postgres_Warehouse</name>
+    <server>localhost</server>
+    <type>POSTGRESQL</type>
+    <access>Native</access>
+    <database>Warehouse</database>
+    <port>5432</port>
+    <username>postgres</username>
+    <password>31082004@Lmao</password>
+  </connection>
+
+  <step>
+    
+    <name>Table Input</name>
+    <type>TableInput</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>MSSQL_Staging</connection>
+    <sql>SELECT playerid, country, created, extract_dt
+FROM dbo.stg_players</sql>
+    
+    <limit>0</limit>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>Y</variables_active>
+    <GUI><xloc>80</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Select Values</name>
+    <type>SelectValues</type>
+    
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><select_unspecified>N</select_unspecified>
+    <meta>
+      <field>
+        <name>created</name>
+        <rename>created</rename>
+        <type>Timestamp</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <conversion_mask>yyyy-MM-dd HH:mm:ss</conversion_mask>
+        <decimal_symbol />
+        <grouping_symbol />
+        <currency_symbol />
+        <storage_type />
+      </field>
+    </meta>
+    <GUI><xloc>280</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Add partition constants</name>
+    <type>Constant</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><fields>
+      <field><name>last_seen_dt</name>  <type>String</type><value>${LATEST_PARTITION}</value><length>50</length></field>
+      <field><name>first_seen_dt</name> <type>String</type><value>${LATEST_PARTITION}</value><length>50</length></field>
+    </fields>
+    <GUI><xloc>480</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Insert Update</name>
+    <type>InsertUpdate</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>Postgres_Warehouse</connection>
+    <schema>dw</schema>
+    <table>dim_player</table>
+    <commit>1000</commit>
+    <update_bypassed>N</update_bypassed>
+    
+    <lookup>
+      <key>
+        <name>playerid</name>
+        <field>playerid</field>
+        <condition>=</condition>
+        <name2 />
+      </key>
+    </lookup>
+    
+    <values>
+      <value><name>playerid</name>    <rename>playerid</rename>    <update>N</update></value>
+      <value><name>country</name>     <rename>country</rename>     <update>Y</update></value>
+      <value><name>created</name>     <rename>created</rename>     <update>Y</update></value>
+      <value><name>last_seen_dt</name><rename>last_seen_dt</rename><update>Y</update></value>
+      <value><name>first_seen_dt</name><rename>first_seen_dt</rename><update>N</update></value>
+    </values>
+    <GUI><xloc>680</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <order>
+    <hop><from>Table Input</from>           <to>Select Values</to>         <enabled>Y</enabled></hop>
+    <hop><from>Select Values</from>         <to>Add partition constants</to><enabled>Y</enabled></hop>
+    <hop><from>Add partition constants</from><to>Insert Update</to>         <enabled>Y</enabled></hop>
+  </order>
+
+<notepads /></transformation>

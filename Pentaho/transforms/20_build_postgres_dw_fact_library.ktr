@@ -1,0 +1,179 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<transformation>
+  <info>
+    <name>20_build_postgres_dw_fact_library</name>
+    <description>MSSQL stg_library_raw → explode list → Postgres dw.fact_library (upsert per appid)</description>
+  </info>
+
+  <connection>
+    <name>MSSQL_Staging</name>
+    <server>localhost</server>
+    <type>MSSQLNATIVE</type>
+    <access>Native</access>
+    <database>DW_Staging</database>
+    <port>1433</port>
+    <username>sa</username>
+    <password>31082004@Lmao</password>
+    <attributes>
+      <attribute><code>trustServerCertificate</code><attribute>true</attribute></attribute>
+    </attributes>
+  </connection>
+
+  <connection>
+    <name>Postgres_Warehouse</name>
+    <server>localhost</server>
+    <type>POSTGRESQL</type>
+    <access>Native</access>
+    <database>Warehouse</database>
+    <port>5432</port>
+    <username>postgres</username>
+    <password>31082004@Lmao</password>
+  </connection>
+
+  <step>
+    
+    <name>Table Input</name>
+    <type>TableInput</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>MSSQL_Staging</connection>
+    <sql>SELECT playerid, library_list_string, extract_dt
+FROM dbo.stg_library_raw</sql>
+    
+    <limit>0</limit>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>Y</variables_active>
+    <GUI><xloc>80</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Strip brackets</name>
+    <type>ScriptValueMod</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><description>Remove leading "[" and trailing "]" from the library list string</description>
+    <script>
+      
+var cleaned_library = library_list_string;
+if (cleaned_library != null) {
+    cleaned_library = cleaned_library.replace(/^\[/, '').replace(/\]$/, '').trim();
+}
+      
+    </script>
+    <fields>
+      <field>
+        <name>cleaned_library</name>
+        <rename>cleaned_library</rename>
+        <type>String</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+    </fields>
+    <GUI><xloc>280</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Split field to rows</name>
+    <type>SplitFieldToRows3</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><splitfield>cleaned_library</splitfield>
+    <delimiter>,</delimiter>
+    <newfield>appid</newfield>
+    <include_rownum>N</include_rownum>
+    <rownum_field />
+    <reset_rownum>N</reset_rownum>
+    <GUI><xloc>480</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Trim appid</name>
+    <type>StringOperations</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><fields>
+      <field>
+        <name>appid</name>
+        <trim_type>both</trim_type>
+        <lower_upper>none</lower_upper>
+        <padding_type>none</padding_type>
+        <pad_char />
+        <pad_len />
+        <init_cap>N</init_cap>
+        <mask_xml>N</mask_xml>
+        <digits_only>N</digits_only>
+        <remove_special_characters>N</remove_special_characters>
+      </field>
+    </fields>
+    <GUI><xloc>680</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Filter valid appids</name>
+    <type>FilterRows</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><description>Keep only non-empty appid values</description>
+    <send_true_to>Select Values</send_true_to>
+    <send_false_to>Dummy discard</send_false_to>
+    <compare>
+      <condition>
+        <negated>N</negated>
+        <operator>AND</operator>
+        <conditions>
+          <condition>
+            <negated>N</negated>
+            <leftvalue>appid</leftvalue>
+            <function>IS NOT NULL</function>
+            <rightvalue />
+          </condition>
+          <condition>
+            <negated>N</negated>
+            <leftvalue>appid</leftvalue>
+            <function>&lt;&gt;</function>
+            <rightvalue />
+            <rightstring />
+          </condition>
+        </conditions>
+      </condition>
+    </compare>
+    <GUI><xloc>880</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Select Values</name>
+    <type>SelectValues</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><fields>
+      <field><name>playerid</name></field>
+      <field><name>appid</name></field>
+      <field><name>extract_dt</name></field>
+    </fields>
+    <GUI><xloc>1080</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  <step>
+    
+    <name>Insert Update</name>
+    <type>InsertUpdate</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><connection>Postgres_Warehouse</connection>
+    <schema>dw</schema>
+    <table>fact_library</table>
+    <commit>5000</commit>
+    <lookup>
+      <key><name>playerid</name><field>playerid</field><condition>=</condition><name2 /></key>
+      <key><name>appid</name>   <field>appid</field>   <condition>=</condition><name2 /></key>
+    </lookup>
+    <values>
+      <value><name>playerid</name>  <rename>playerid</rename>  <update>N</update></value>
+      <value><name>appid</name>     <rename>appid</rename>     <update>N</update></value>
+      <value><name>extract_dt</name><rename>extract_dt</rename><update>Y</update></value>
+    </values>
+    <GUI><xloc>1280</xloc><yloc>160</yloc><draw>Y</draw></GUI></step>
+
+  
+  <step>
+    <name>Dummy discard</name>
+    <type>Dummy</type>
+    <distribute>Y</distribute><custom_distribution /><copies>1</copies><partitioning><method>none</method><schema_name /></partitioning><GUI><xloc>880</xloc><yloc>300</yloc><draw>Y</draw></GUI></step>
+
+  <order>
+    <hop><from>Table Input</from>         <to>Strip brackets</to>      <enabled>Y</enabled></hop>
+    <hop><from>Strip brackets</from>      <to>Split field to rows</to>  <enabled>Y</enabled></hop>
+    <hop><from>Split field to rows</from> <to>Trim appid</to>           <enabled>Y</enabled></hop>
+    <hop><from>Trim appid</from>          <to>Filter valid appids</to>  <enabled>Y</enabled></hop>
+    <hop><from>Filter valid appids</from> <to>Select Values</to>        <enabled>Y</enabled></hop>
+    <hop><from>Filter valid appids</from> <to>Dummy discard</to>        <enabled>Y</enabled></hop>
+    <hop><from>Select Values</from>       <to>Insert Update</to>        <enabled>Y</enabled></hop>
+  </order>
+
+<notepads /></transformation>
