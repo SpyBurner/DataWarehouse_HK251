@@ -482,15 +482,15 @@
       </attribute>
       <attribute>
         <code>QUOTE_ALL_FIELDS</code>
-        <attribute>Y</attribute>
+        <attribute>N</attribute>
       </attribute>
       <attribute>
         <code>SUPPORTS_BOOLEAN_DATA_TYPE</code>
-        <attribute>Y</attribute>
+        <attribute>N</attribute>
       </attribute>
       <attribute>
         <code>SUPPORTS_TIMESTAMP_DATA_TYPE</code>
-        <attribute>Y</attribute>
+        <attribute>N</attribute>
       </attribute>
       <attribute>
         <code>USE_POOLING</code>
@@ -636,6 +636,41 @@ var has_success = success_file.exists();
     <GUI>
       <xloc>840</xloc>
       <yloc>400</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Filter has_SUCCESS 2</name>
+    <type>FilterRows</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <send_true_to>Sort descending</send_true_to>
+    <send_false_to>Dummy discard</send_false_to>
+    <compare>
+      <condition>
+        <negated>N</negated>
+        <leftvalue>has_success</leftvalue>
+        <function>TRUE</function>
+        <rightvalue/>
+      </condition>
+    </compare>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>1040</xloc>
+      <yloc>240</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -856,13 +891,13 @@ ORDER BY audit_extract_dt</sql>
       <field>
         <field_name>folder_extract_dt</field_name>
         <variable_name>LATEST_PARTITION</variable_name>
-        <variable_type>PARENT_JOB</variable_type>
+        <variable_type>ROOT_JOB</variable_type>
         <default_value/>
       </field>
       <field>
         <field_name>full_partition_path</field_name>
         <variable_name>PARTITION_PATH</variable_name>
-        <variable_type>PARENT_JOB</variable_type>
+        <variable_type>ROOT_JOB</variable_type>
         <default_value/>
       </field>
     </fields>
@@ -959,76 +994,6 @@ ORDER BY audit_extract_dt</sql>
     <GUI>
       <xloc>240</xloc>
       <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Filter has_SUCCESS 2</name>
-    <type>FilterRows</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <send_true_to>Sort descending</send_true_to>
-    <send_false_to>Dummy discard</send_false_to>
-    <compare>
-      <condition>
-        <negated>N</negated>
-        <leftvalue>has_success</leftvalue>
-        <function>TRUE</function>
-        <rightvalue/>
-      </condition>
-    </compare>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>1040</xloc>
-      <yloc>240</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Filter has_SUCCESS 2</name>
-    <type>FilterRows</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <send_true_to>Sort descending</send_true_to>
-    <send_false_to>Dummy discard</send_false_to>
-    <compare>
-      <condition>
-        <negated>N</negated>
-        <leftvalue>has_success</leftvalue>
-        <function>TRUE</function>
-        <rightvalue/>
-      </condition>
-    </compare>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>1040</xloc>
-      <yloc>240</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
