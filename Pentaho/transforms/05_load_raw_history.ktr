@@ -509,7 +509,7 @@
     <name>CSV File Input</name>
     <type>CsvInput</type>
     <description/>
-    <distribute>Y</distribute>
+    <distribute>N</distribute>
     <custom_distribution/>
     <copies>1</copies>
     <partitioning>
@@ -574,8 +574,8 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>100</xloc>
-      <yloc>100</yloc>
+      <xloc>208</xloc>
+      <yloc>240</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -618,8 +618,8 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>300</xloc>
-      <yloc>100</yloc>
+      <xloc>512</xloc>
+      <yloc>240</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
