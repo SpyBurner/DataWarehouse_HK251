@@ -28,7 +28,6 @@ IF OBJECT_ID('dbo.stg_load_audit', 'U') IS NULL
 BEGIN
 	CREATE TABLE dbo.stg_load_audit (
 		audit_id         INT IDENTITY(1,1) PRIMARY KEY,
-		extract_dt       NVARCHAR(50)   NOT NULL,
 		loaded_at        DATETIME2      NOT NULL DEFAULT SYSUTCDATETIME(),
 		status           NVARCHAR(20)   NOT NULL,
 		players_rows     INT,
@@ -36,158 +35,108 @@ BEGIN
 		reviews_rows     INT,
 		library_rows     INT,
 		private_rows     INT,
-		error_message    NVARCHAR(MAX)
+		error_message    NVARCHAR(MAX),
+		extract_dt	     DATETIME2
 	);
 END;
 
 IF OBJECT_ID('dbo.stg_players', 'U') IS NULL
 BEGIN
 	CREATE TABLE dbo.stg_players (
-		playerid     NVARCHAR(30)  NOT NULL,
-		country      NVARCHAR(10),
-		created      NVARCHAR(30),
-		extract_dt   NVARCHAR(50)  NOT NULL,
-		loaded_at    DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
+		[playerid]     NVARCHAR(MAX),
+		[country]      NVARCHAR(MAX),
+		[created]      NVARCHAR(MAX),
+		loaded_at      DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;
 
 IF OBJECT_ID('dbo.stg_history', 'U') IS NULL
 BEGIN
 	CREATE TABLE dbo.stg_history (
-		playerid        NVARCHAR(30)  NOT NULL,
-		achievementid   NVARCHAR(200) NOT NULL,
-		date_acquired   NVARCHAR(30),
-		extract_dt      NVARCHAR(50)  NOT NULL,
-		loaded_at       DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
+		[playerid]        NVARCHAR(MAX),
+		[achievementid]   NVARCHAR(MAX),
+		[date_acquired]   NVARCHAR(MAX),
+		loaded_at         DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;
 
 IF OBJECT_ID('dbo.stg_reviews', 'U') IS NULL
 BEGIN
 	CREATE TABLE dbo.stg_reviews (
-		reviewid    NVARCHAR(30)  NOT NULL,
-		playerid    NVARCHAR(30)  NOT NULL,
-		gameid      NVARCHAR(30),
-		review      NVARCHAR(MAX),
-		helpful     INT,
-		funny       INT,
-		awards      INT,
-		posted      NVARCHAR(30),
-		extract_dt  NVARCHAR(50)  NOT NULL,
-		loaded_at   DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
+		[reviewid]    NVARCHAR(MAX),
+		[playerid]    NVARCHAR(MAX),
+		[gameid]      NVARCHAR(MAX),
+		[review]      NVARCHAR(MAX),
+		[helpful]     NVARCHAR(MAX),
+		[funny]       NVARCHAR(MAX),
+		[awards]      NVARCHAR(MAX),
+		[posted]      NVARCHAR(MAX),
+		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;
 
-IF OBJECT_ID('dbo.stg_library', 'U') IS NULL
+IF OBJECT_ID('dbo.stg_purchased_games', 'U') IS NULL
 BEGIN
-	CREATE TABLE dbo.stg_library (
-		playerid            NVARCHAR(30)  NOT NULL,
-		library_list_string NVARCHAR(MAX),
-		extract_dt          NVARCHAR(50)  NOT NULL,
-		loaded_at           DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
+	CREATE TABLE dbo.stg_purchased_games (
+		[playerid]      NVARCHAR(MAX),
+		[library]       NVARCHAR(MAX),
+		loaded_at       DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;
 
 IF OBJECT_ID('dbo.stg_private_steamids', 'U') IS NULL
 BEGIN
 	CREATE TABLE dbo.stg_private_steamids (
-		playerid    NVARCHAR(30) NOT NULL,
-		extract_dt  NVARCHAR(50) NOT NULL,
-		loaded_at   DATETIME2    NOT NULL DEFAULT SYSUTCDATETIME()
+		[playerid]    NVARCHAR(MAX),
+		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;
 
-/* ------------------------------
-   Raw mirror tables (raw_*)
-   ------------------------------ */
-IF OBJECT_ID('dbo.raw_achievements', 'U') IS NULL
+IF OBJECT_ID('dbo.stg_achievements', 'U') IS NULL
 BEGIN
-	CREATE TABLE dbo.raw_achievements (
+	CREATE TABLE dbo.stg_achievements (
 		[achievementid] NVARCHAR(MAX),
 		[gameid]        NVARCHAR(MAX),
 		[title]         NVARCHAR(MAX),
-		[description]   NVARCHAR(MAX)
+		[description]   NVARCHAR(MAX),
+		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;
 
-IF OBJECT_ID('dbo.raw_friends', 'U') IS NULL
+IF OBJECT_ID('dbo.stg_friends', 'U') IS NULL
 BEGIN
-	CREATE TABLE dbo.raw_friends (
+	CREATE TABLE dbo.stg_friends (
 		[playerid] NVARCHAR(MAX),
-		[friends]  NVARCHAR(MAX)
+		[friends]  NVARCHAR(MAX),
+		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;
 
-IF OBJECT_ID('dbo.raw_games', 'U') IS NULL
+IF OBJECT_ID('dbo.stg_games', 'U') IS NULL
 BEGIN
-	CREATE TABLE dbo.raw_games (
+	CREATE TABLE dbo.stg_games (
 		[gameid]              NVARCHAR(MAX),
 		[title]               NVARCHAR(MAX),
 		[developers]          NVARCHAR(MAX),
 		[publishers]          NVARCHAR(MAX),
 		[genres]              NVARCHAR(MAX),
 		[supported_languages] NVARCHAR(MAX),
-		[release_date]        NVARCHAR(MAX)
+		[release_date]        NVARCHAR(MAX),
+		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;
 
-IF OBJECT_ID('dbo.raw_history', 'U') IS NULL
+IF OBJECT_ID('dbo.stg_prices', 'U') IS NULL
 BEGIN
-	CREATE TABLE dbo.raw_history (
-		[playerid]      NVARCHAR(MAX),
-		[achievementid] NVARCHAR(MAX),
-		[date_acquired] NVARCHAR(MAX)
-	);
-END;
-
-IF OBJECT_ID('dbo.raw_players', 'U') IS NULL
-BEGIN
-	CREATE TABLE dbo.raw_players (
-		[playerid] NVARCHAR(MAX),
-		[country]  NVARCHAR(MAX),
-		[created]  NVARCHAR(MAX)
-	);
-END;
-
-IF OBJECT_ID('dbo.raw_prices', 'U') IS NULL
-BEGIN
-	CREATE TABLE dbo.raw_prices (
+	CREATE TABLE dbo.stg_prices (
 		[gameid]        NVARCHAR(MAX),
 		[usd]           NVARCHAR(MAX),
 		[eur]           NVARCHAR(MAX),
 		[gbp]           NVARCHAR(MAX),
 		[jpy]           NVARCHAR(MAX),
 		[rub]           NVARCHAR(MAX),
-		[date_acquired] NVARCHAR(MAX)
-	);
-END;
-
-IF OBJECT_ID('dbo.raw_private_steamids', 'U') IS NULL
-BEGIN
-	CREATE TABLE dbo.raw_private_steamids (
-		[playerid] NVARCHAR(MAX)
-	);
-END;
-
-IF OBJECT_ID('dbo.raw_purchased_games', 'U') IS NULL
-BEGIN
-	CREATE TABLE dbo.raw_purchased_games (
-		[playerid] NVARCHAR(MAX),
-		[library]  NVARCHAR(MAX)
-	);
-END;
-
-IF OBJECT_ID('dbo.raw_reviews', 'U') IS NULL
-BEGIN
-	CREATE TABLE dbo.raw_reviews (
-		[reviewid] NVARCHAR(MAX),
-		[playerid] NVARCHAR(MAX),
-		[gameid]   NVARCHAR(MAX),
-		[review]   NVARCHAR(MAX),
-		[helpful]  NVARCHAR(MAX),
-		[funny]    NVARCHAR(MAX),
-		[awards]   NVARCHAR(MAX),
-		[posted]   NVARCHAR(MAX)
+		[date_acquired] NVARCHAR(MAX),
+		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;
 

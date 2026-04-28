@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <transformation>
   <info>
-    <name>20_build_postgres_dw_fact_review</name>
-    <description>MSSQL stg_players → Postgres dw.dim_player (upsert)</description>
+    <name>20_build_postgres_dw_game_extra</name>
+    <description/>
     <extended_description/>
     <trans_version/>
     <trans_type>Normal</trans_type>
@@ -417,7 +417,7 @@
     <shared_objects_file/>
     <capture_step_performance>N</capture_step_performance>
     <step_performance_capturing_delay>1000</step_performance_capturing_delay>
-    <step_performance_capturing_size_limit/>
+    <step_performance_capturing_size_limit>100</step_performance_capturing_size_limit>
     <dependencies>
     </dependencies>
     <partitionschemas>
@@ -426,11 +426,11 @@
     </slaveservers>
     <clusterschemas>
     </clusterschemas>
-    <created_user/>
-    <created_date>2026/04/26 00:33:05.707</created_date>
-    <modified_user/>
-    <modified_date>2026/04/26 00:33:05.707</modified_date>
-    <key_for_session_key>H4sIAAAAAAAAAAMAAAAAAAAAAAA=</key_for_session_key>
+    <created_user>-</created_user>
+    <created_date>2026/04/29 00:46:39.455</created_date>
+    <modified_user>-</modified_user>
+    <modified_date>2026/04/29 00:46:39.455</modified_date>
+    <key_for_session_key/>
     <is_key_private>N</is_key_private>
   </info>
   <notepads>
@@ -519,12 +519,47 @@
   </connection>
   <order>
     <hop>
-      <from>Table Input</from>
-      <to>Select Values</to>
+      <from>Modified JavaScript value</from>
+      <to>Select Values 2</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Select Values</from>
+      <from>Table Input</from>
+      <to>Modified JavaScript value</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Select Values 2</from>
+      <to>Select developers</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Select Values 2</from>
+      <to>Select publishers</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Select Values 2</from>
+      <to>Select genres</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Select developers</from>
+      <to>Split field to rows</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Select publishers</from>
+      <to>Split field to rows 2</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Select genres</from>
+      <to>Split field to rows 3</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Split field to rows</from>
       <to>Insert Update</to>
       <enabled>Y</enabled>
     </hop>
@@ -545,51 +580,21 @@
     <update_bypassed>N</update_bypassed>
     <lookup>
       <schema>dw</schema>
-      <table>fact_review</table>
+      <table>dim_developer</table>
       <key>
-        <name>reviewid</name>
-        <field>reviewid</field>
+        <name>gameid</name>
+        <field>gameid</field>
         <condition>=</condition>
         <name2/>
       </key>
-      <value>
-        <name>reviewid</name>
-        <rename>reviewid</rename>
-        <update>Y</update>
-      </value>
-      <value>
-        <name>playerid</name>
-        <rename>playerid</rename>
-        <update>Y</update>
-      </value>
       <value>
         <name>gameid</name>
         <rename>gameid</rename>
         <update>Y</update>
       </value>
       <value>
-        <name>review</name>
-        <rename>review</rename>
-        <update>Y</update>
-      </value>
-      <value>
-        <name>helpful</name>
-        <rename>helpful</rename>
-        <update>Y</update>
-      </value>
-      <value>
-        <name>funny</name>
-        <rename>funny</rename>
-        <update>Y</update>
-      </value>
-      <value>
-        <name>awards</name>
-        <rename>awards</rename>
-        <update>Y</update>
-      </value>
-      <value>
-        <name>posted</name>
-        <rename>posted</rename>
+        <name>name</name>
+        <rename>name</rename>
         <update>Y</update>
       </value>
     </lookup>
@@ -602,14 +607,14 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>464</xloc>
-      <yloc>160</yloc>
+      <xloc>832</xloc>
+      <yloc>384</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
   <step>
-    <name>Select Values</name>
-    <type>SelectValues</type>
+    <name>Table Input</name>
+    <type>TableInput</type>
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
@@ -618,74 +623,225 @@
       <method>none</method>
       <schema_name/>
     </partitioning>
+    <connection>MSSQL_Staging</connection>
+    <sql>SELECT gameid, developers, publishers, genres
+FROM (
+    SELECT 
+        gameid, 
+        developers, 
+        publishers, 
+        genres,
+        ROW_NUMBER() OVER(PARTITION BY gameid ORDER BY loaded_at DESC) as rn
+    FROM dbo.stg_games
+) sub
+WHERE rn = 1</sql>
+    <limit>0</limit>
+    <lookup/>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>Y</variables_active>
+    <lazy_conversion_active>N</lazy_conversion_active>
+    <cached_row_meta_active>N</cached_row_meta_active>
+    <row-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>gameid</name>
+        <length>1073741823</length>
+        <precision>-1</precision>
+        <origin>Table Input</origin>
+        <comments>gameid</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>developers</name>
+        <length>1073741823</length>
+        <precision>-1</precision>
+        <origin>Table Input</origin>
+        <comments>developers</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>publishers</name>
+        <length>1073741823</length>
+        <precision>-1</precision>
+        <origin>Table Input</origin>
+        <comments>publishers</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>genres</name>
+        <length>1073741823</length>
+        <precision>-1</precision>
+        <origin>Table Input</origin>
+        <comments>genres</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+    </row-meta>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>160</xloc>
+      <yloc>464</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Modified JavaScript value</name>
+    <type>ScriptValueMod</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <compatible>N</compatible>
+    <optimizationLevel>9</optimizationLevel>
+    <jsScripts>
+      <jsScript>
+        <jsScript_type>0</jsScript_type>
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>var cleaned_developers = (developers != null) ? developers.slice(1, -1) : "";
+
+var cleaned_publishers = (publishers != null) ? publishers.slice(1, -1) : "";
+
+var cleaned_genres = (genres != null) ? genres.slice(1, -1) : "";</jsScript_script>
+      </jsScript>
+    </jsScripts>
     <fields>
       <field>
-        <name>reviewid</name>
-        <rename/>
+        <name>cleaned_developers</name>
+        <rename>cleaned_developers</rename>
+        <type>String</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
       </field>
       <field>
-        <name>playerid</name>
-        <rename/>
+        <name>cleaned_publishers</name>
+        <rename>cleaned_publishers</rename>
+        <type>String</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
       </field>
+      <field>
+        <name>cleaned_genres</name>
+        <rename>cleaned_genres</rename>
+        <type>String</type>
+        <length>-1</length>
+        <precision>-1</precision>
+        <replace>N</replace>
+      </field>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>160</xloc>
+      <yloc>544</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Select Values 2</name>
+    <type>SelectValues</type>
+    <description/>
+    <distribute>N</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <fields>
       <field>
         <name>gameid</name>
         <rename/>
       </field>
       <field>
-        <name>review</name>
+        <name>cleaned_developers</name>
         <rename/>
       </field>
       <field>
-        <name>helpful</name>
+        <name>cleaned_publishers</name>
         <rename/>
       </field>
       <field>
-        <name>funny</name>
-        <rename/>
-      </field>
-      <field>
-        <name>awards</name>
-        <rename/>
-      </field>
-      <field>
-        <name>posted</name>
+        <name>cleaned_genres</name>
         <rename/>
       </field>
       <select_unspecified>N</select_unspecified>
-      <meta>
-        <name>reviewid</name>
-        <rename>reviewid</rename>
-        <type>None</type>
-        <length>1073741823</length>
-        <precision>-2</precision>
-        <conversion_mask/>
-        <date_format_lenient>false</date_format_lenient>
-        <date_format_locale/>
-        <date_format_timezone/>
-        <lenient_string_to_number>false</lenient_string_to_number>
-        <encoding/>
-        <decimal_symbol/>
-        <grouping_symbol/>
-        <currency_symbol/>
-        <storage_type/>
-      </meta>
-      <meta>
-        <name>playerid</name>
-        <rename>playerid</rename>
-        <type>None</type>
-        <length>1073741823</length>
-        <precision>-2</precision>
-        <conversion_mask/>
-        <date_format_lenient>false</date_format_lenient>
-        <date_format_locale/>
-        <date_format_timezone/>
-        <lenient_string_to_number>false</lenient_string_to_number>
-        <encoding/>
-        <decimal_symbol/>
-        <grouping_symbol/>
-        <currency_symbol/>
-        <storage_type/>
-      </meta>
       <meta>
         <name>gameid</name>
         <rename>gameid</rename>
@@ -704,8 +860,8 @@
         <storage_type/>
       </meta>
       <meta>
-        <name>review</name>
-        <rename>review</rename>
+        <name>developers</name>
+        <rename>developers</rename>
         <type>None</type>
         <length>1073741823</length>
         <precision>-2</precision>
@@ -721,8 +877,8 @@
         <storage_type/>
       </meta>
       <meta>
-        <name>helpful</name>
-        <rename>helpful</rename>
+        <name>publishers</name>
+        <rename>publishers</rename>
         <type>None</type>
         <length>1073741823</length>
         <precision>-2</precision>
@@ -738,8 +894,8 @@
         <storage_type/>
       </meta>
       <meta>
-        <name>funny</name>
-        <rename>funny</rename>
+        <name>genres</name>
+        <rename>genres</rename>
         <type>None</type>
         <length>1073741823</length>
         <precision>-2</precision>
@@ -755,10 +911,10 @@
         <storage_type/>
       </meta>
       <meta>
-        <name>awards</name>
-        <rename>awards</rename>
+        <name>cleaned_developers</name>
+        <rename>cleaned_developers</rename>
         <type>None</type>
-        <length>1073741823</length>
+        <length>-2</length>
         <precision>-2</precision>
         <conversion_mask/>
         <date_format_lenient>false</date_format_lenient>
@@ -772,12 +928,29 @@
         <storage_type/>
       </meta>
       <meta>
-        <name>posted</name>
-        <rename>posted</rename>
-        <type>Date</type>
-        <length>1073741823</length>
+        <name>cleaned_publishers</name>
+        <rename>cleaned_publishers</rename>
+        <type>None</type>
+        <length>-2</length>
         <precision>-2</precision>
-        <conversion_mask>YY-MM-DD</conversion_mask>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+      <meta>
+        <name>cleaned_genres</name>
+        <rename>cleaned_genres</rename>
+        <type>None</type>
+        <length>-2</length>
+        <precision>-2</precision>
+        <conversion_mask/>
         <date_format_lenient>false</date_format_lenient>
         <date_format_locale/>
         <date_format_timezone/>
@@ -798,14 +971,14 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>272</xloc>
-      <yloc>160</yloc>
+      <xloc>304</xloc>
+      <yloc>544</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
   <step>
-    <name>Table Input</name>
-    <type>TableInput</type>
+    <name>Split field to rows</name>
+    <type>SplitFieldToRows3</type>
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
@@ -814,21 +987,13 @@
       <method>none</method>
       <schema_name/>
     </partitioning>
-    <connection>MSSQL_Staging</connection>
-    <sql>SELECT reviewid, playerid, gameid, review, helpful, funny, awards, posted
-FROM (
-    SELECT reviewid, playerid, gameid, review, helpful, funny, awards, posted,
-           ROW_NUMBER() OVER(PARTITION BY reviewid ORDER BY loaded_at DESC) as rn
-    FROM dbo.stg_reviews
-) sub
-WHERE rn = 1</sql>
-    <limit>0</limit>
-    <lookup/>
-    <execute_each_row>N</execute_each_row>
-    <variables_active>Y</variables_active>
-    <lazy_conversion_active>N</lazy_conversion_active>
-    <cached_row_meta_active>N</cached_row_meta_active>
-    <row-meta/>
+    <splitfield>cleaned_developers</splitfield>
+    <delimiter>, </delimiter>
+    <newfield>name</newfield>
+    <rownum>N</rownum>
+    <rownum_field/>
+    <resetrownumber>Y</resetrownumber>
+    <delimiter_is_regex>Y</delimiter_is_regex>
     <attributes/>
     <cluster_schema/>
     <remotesteps>
@@ -838,8 +1003,282 @@ WHERE rn = 1</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>80</xloc>
-      <yloc>160</yloc>
+      <xloc>664</xloc>
+      <yloc>384</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Split field to rows 2</name>
+    <type>SplitFieldToRows3</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <splitfield>cleaned_publishers</splitfield>
+    <delimiter>, </delimiter>
+    <newfield>name</newfield>
+    <rownum>N</rownum>
+    <rownum_field/>
+    <resetrownumber>Y</resetrownumber>
+    <delimiter_is_regex>Y</delimiter_is_regex>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>664</xloc>
+      <yloc>464</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Split field to rows 3</name>
+    <type>SplitFieldToRows3</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <splitfield>cleaned_genres</splitfield>
+    <delimiter>, </delimiter>
+    <newfield>name</newfield>
+    <rownum>N</rownum>
+    <rownum_field/>
+    <resetrownumber>Y</resetrownumber>
+    <delimiter_is_regex>Y</delimiter_is_regex>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>664</xloc>
+      <yloc>544</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Select publishers</name>
+    <type>SelectValues</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <fields>
+      <field>
+        <name>gameid</name>
+        <rename/>
+      </field>
+      <field>
+        <name>cleaned_publishers</name>
+        <rename/>
+      </field>
+      <select_unspecified>N</select_unspecified>
+      <meta>
+        <name>gameid</name>
+        <rename>gameid</rename>
+        <type>None</type>
+        <length>1073741823</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+      <meta>
+        <name>cleaned_publishers</name>
+        <rename>cleaned_publishers</rename>
+        <type>None</type>
+        <length>-2</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>496</xloc>
+      <yloc>464</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Select developers</name>
+    <type>SelectValues</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <fields>
+      <field>
+        <name>gameid</name>
+        <rename/>
+      </field>
+      <field>
+        <name>cleaned_developers</name>
+        <rename/>
+      </field>
+      <select_unspecified>N</select_unspecified>
+      <meta>
+        <name>gameid</name>
+        <rename>gameid</rename>
+        <type>None</type>
+        <length>1073741823</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+      <meta>
+        <name>cleaned_developers</name>
+        <rename>cleaned_developers</rename>
+        <type>None</type>
+        <length>-2</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>496</xloc>
+      <yloc>384</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Select genres</name>
+    <type>SelectValues</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <fields>
+      <field>
+        <name>gameid</name>
+        <rename/>
+      </field>
+      <field>
+        <name>cleaned_genres</name>
+        <rename/>
+      </field>
+      <select_unspecified>N</select_unspecified>
+      <meta>
+        <name>gameid</name>
+        <rename>gameid</rename>
+        <type>None</type>
+        <length>1073741823</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+      <meta>
+        <name>cleaned_genres</name>
+        <rename>cleaned_genres</rename>
+        <type>None</type>
+        <length>-2</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>496</xloc>
+      <yloc>544</yloc>
       <draw>Y</draw>
     </GUI>
   </step>

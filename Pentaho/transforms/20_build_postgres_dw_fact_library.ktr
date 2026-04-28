@@ -2,7 +2,7 @@
 <transformation>
   <info>
     <name>20_build_postgres_dw_fact_library</name>
-    <description>MSSQL stg_library_raw → explode list → Postgres dw.fact_library (upsert per appid)</description>
+    <description>MSSQL stg_players → Postgres dw.dim_player (upsert)</description>
     <extended_description/>
     <trans_version/>
     <trans_type>Normal</trans_type>
@@ -427,9 +427,9 @@
     <clusterschemas>
     </clusterschemas>
     <created_user/>
-    <created_date>2026/04/26 00:47:42.753</created_date>
+    <created_date>2026/04/26 00:33:05.707</created_date>
     <modified_user/>
-    <modified_date>2026/04/26 00:47:42.753</modified_date>
+    <modified_date>2026/04/26 00:33:05.707</modified_date>
     <key_for_session_key>H4sIAAAAAAAAAAMAAAAAAAAAAAA=</key_for_session_key>
     <is_key_private>N</is_key_private>
   </info>
@@ -520,116 +520,30 @@
   <order>
     <hop>
       <from>Table Input</from>
-      <to>Strip brackets</to>
+      <to>Modified JavaScript value</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Trim appid</from>
-      <to>Filter valid appids</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Filter valid appids</from>
+      <from>Modified JavaScript value</from>
       <to>Select Values</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Filter valid appids</from>
-      <to>Dummy discard</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
       <from>Select Values</from>
-      <to>Insert Update</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Strip brackets</from>
-      <to>Select Values 2</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Select Values 2</from>
       <to>Split field to rows</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
       <from>Split field to rows</from>
-      <to>Select Values 2 2</to>
+      <to>Select Values 2</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Select Values 2 2</from>
-      <to>Trim appid</to>
+      <from>Select Values 2</from>
+      <to>Insert Update</to>
       <enabled>Y</enabled>
     </hop>
   </order>
-  <step>
-    <name>Dummy discard</name>
-    <type>Dummy</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>880</xloc>
-      <yloc>300</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Filter valid appids</name>
-    <type>FilterRows</type>
-    <description>Keep only non-empty appid values</description>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <send_true_to>Select Values</send_true_to>
-    <send_false_to>Dummy discard</send_false_to>
-    <compare>
-      <condition>
-        <negated>N</negated>
-        <operator>AND</operator>
-        <conditions>
-          <condition>
-            <negated>N</negated>
-            <leftvalue>appid</leftvalue>
-            <function>IS NOT NULL</function>
-            <rightvalue/>
-          </condition>
-        </conditions>
-      </condition>
-    </compare>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>880</xloc>
-      <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
   <step>
     <name>Insert Update</name>
     <type>InsertUpdate</type>
@@ -642,7 +556,7 @@
       <schema_name/>
     </partitioning>
     <connection>Postgres_Warehouse</connection>
-    <commit>5000</commit>
+    <commit>1000</commit>
     <update_bypassed>N</update_bypassed>
     <lookup>
       <schema>dw</schema>
@@ -669,11 +583,6 @@
         <rename>appid</rename>
         <update>Y</update>
       </value>
-      <value>
-        <name>extract_dt</name>
-        <rename>extract_dt</rename>
-        <update>Y</update>
-      </value>
     </lookup>
     <attributes/>
     <cluster_schema/>
@@ -684,84 +593,15 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>1280</xloc>
-      <yloc>160</yloc>
+      <xloc>704</xloc>
+      <yloc>336</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
   <step>
-    <name>Select Values</name>
-    <type>SelectValues</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <fields>
-      <field>
-        <name>playerid</name>
-      </field>
-      <field>
-        <name>appid</name>
-      </field>
-      <field>
-        <name>extract_dt</name>
-      </field>
-      <select_unspecified>N</select_unspecified>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>1080</xloc>
-      <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Split field to rows</name>
-    <type>SplitFieldToRows3</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <splitfield>cleaned_library</splitfield>
-    <delimiter>,</delimiter>
-    <newfield>appid</newfield>
-    <rownum>N</rownum>
-    <rownum_field/>
-    <resetrownumber>N</resetrownumber>
-    <delimiter_is_regex>N</delimiter_is_regex>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>480</xloc>
-      <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Strip brackets</name>
+    <name>Modified JavaScript value</name>
     <type>ScriptValueMod</type>
-    <description>Remove leading "[" and trailing "]" from the library list string</description>
+    <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
     <copies>1</copies>
@@ -769,16 +609,17 @@
       <method>none</method>
       <schema_name/>
     </partitioning>
-    <compatible>Y</compatible>
+    <compatible>N</compatible>
     <optimizationLevel>9</optimizationLevel>
     <jsScripts>
       <jsScript>
         <jsScript_type>0</jsScript_type>
-        <jsScript_name>ScriptValue</jsScript_name>
-        <jsScript_script>// Option 1: Remove all '[' and ']' anywhere in the string
-var cleaned_library = library_list_string;
-if (cleaned_library != null) {
-    cleaned_library = String(cleaned_library).replace(/\[|\]/g, '').trim();
+        <jsScript_name>Script 1</jsScript_name>
+        <jsScript_script>// Remove the leading '[' and trailing ']' from the library string
+var cleaned_library = "";
+
+if (library != null) { 
+	cleaned_library = library.slice(1, -1);
 }</jsScript_script>
       </jsScript>
     </jsScripts>
@@ -801,8 +642,176 @@ if (cleaned_library != null) {
       </output>
     </remotesteps>
     <GUI>
-      <xloc>208</xloc>
-      <yloc>160</yloc>
+      <xloc>336</xloc>
+      <yloc>208</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Select Values</name>
+    <type>SelectValues</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <fields>
+      <field>
+        <name>playerid</name>
+      </field>
+      <field>
+        <name>cleaned_library</name>
+      </field>
+      <select_unspecified>N</select_unspecified>
+      <meta>
+        <name>playerid</name>
+        <rename>playerid</rename>
+        <type>None</type>
+        <length>1073741823</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+      <meta>
+        <name>cleaned_library</name>
+        <rename>cleaned_library</rename>
+        <type>String</type>
+        <length>-2</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>512</xloc>
+      <yloc>208</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Select Values 2</name>
+    <type>SelectValues</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <fields>
+      <field>
+        <name>playerid</name>
+      </field>
+      <field>
+        <name>appid</name>
+      </field>
+      <select_unspecified>N</select_unspecified>
+      <meta>
+        <name>playerid</name>
+        <rename>playerid</rename>
+        <type>None</type>
+        <length>1073741823</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+      <meta>
+        <name>appid</name>
+        <rename>appid</rename>
+        <type>None</type>
+        <length>-2</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>512</xloc>
+      <yloc>336</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Split field to rows</name>
+    <type>SplitFieldToRows3</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <splitfield>cleaned_library</splitfield>
+    <delimiter>, </delimiter>
+    <newfield>appid</newfield>
+    <rownum>N</rownum>
+    <rownum_field/>
+    <resetrownumber>Y</resetrownumber>
+    <delimiter_is_regex>Y</delimiter_is_regex>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>336</xloc>
+      <yloc>336</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -818,8 +827,13 @@ if (cleaned_library != null) {
       <schema_name/>
     </partitioning>
     <connection>MSSQL_Staging</connection>
-    <sql>SELECT playerid, library_list_string, extract_dt
-FROM dbo.stg_library</sql>
+    <sql>SELECT playerid, library
+FROM (
+    SELECT playerid, library,
+           ROW_NUMBER() OVER(PARTITION BY playerid ORDER BY loaded_at DESC) as rn
+    FROM dbo.stg_purchased_games
+) sub
+WHERE rn = 1</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
@@ -831,7 +845,7 @@ FROM dbo.stg_library</sql>
         <type>String</type>
         <storagetype>normal</storagetype>
         <name>playerid</name>
-        <length>30</length>
+        <length>1073741823</length>
         <precision>-1</precision>
         <origin>Table Input</origin>
         <comments>playerid</comments>
@@ -853,34 +867,11 @@ FROM dbo.stg_library</sql>
       <value-meta>
         <type>String</type>
         <storagetype>normal</storagetype>
-        <name>library_list_string</name>
+        <name>library</name>
         <length>1073741823</length>
         <precision>-1</precision>
         <origin>Table Input</origin>
-        <comments>library_list_string</comments>
-        <conversion_Mask/>
-        <decimal_symbol>.</decimal_symbol>
-        <grouping_symbol>,</grouping_symbol>
-        <currency_symbol/>
-        <trim_type>none</trim_type>
-        <case_insensitive>N</case_insensitive>
-        <collator_disabled>Y</collator_disabled>
-        <collator_strength>0</collator_strength>
-        <sort_descending>N</sort_descending>
-        <output_padding>N</output_padding>
-        <date_format_lenient>N</date_format_lenient>
-        <date_format_locale>en_US</date_format_locale>
-        <date_format_timezone>Asia/Saigon</date_format_timezone>
-        <lenient_string_to_number>N</lenient_string_to_number>
-      </value-meta>
-      <value-meta>
-        <type>String</type>
-        <storagetype>normal</storagetype>
-        <name>extract_dt</name>
-        <length>50</length>
-        <precision>-1</precision>
-        <origin>Table Input</origin>
-        <comments>extract_dt</comments>
+        <comments>library</comments>
         <conversion_Mask/>
         <decimal_symbol>.</decimal_symbol>
         <grouping_symbol>,</grouping_symbol>
@@ -906,154 +897,8 @@ FROM dbo.stg_library</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>80</xloc>
-      <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Trim appid</name>
-    <type>StringOperations</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <fields>
-      <field>
-        <in_stream_name>extract_dt</in_stream_name>
-        <out_stream_name/>
-        <trim_type>none</trim_type>
-        <lower_upper>none</lower_upper>
-        <padding_type>none</padding_type>
-        <pad_char/>
-        <pad_len/>
-        <init_cap>N</init_cap>
-        <mask_xml>None</mask_xml>
-        <digits>none</digits>
-        <remove_special_characters>none</remove_special_characters>
-      </field>
-      <field>
-        <in_stream_name>playerid</in_stream_name>
-        <out_stream_name/>
-        <trim_type>none</trim_type>
-        <lower_upper>none</lower_upper>
-        <padding_type>none</padding_type>
-        <pad_char/>
-        <pad_len/>
-        <init_cap>N</init_cap>
-        <mask_xml>None</mask_xml>
-        <digits>none</digits>
-        <remove_special_characters>none</remove_special_characters>
-      </field>
-      <field>
-        <in_stream_name>appid</in_stream_name>
-        <out_stream_name/>
-        <trim_type>both</trim_type>
-        <lower_upper/>
-        <padding_type>none</padding_type>
-        <pad_char/>
-        <pad_len/>
-        <init_cap>N</init_cap>
-        <mask_xml>None</mask_xml>
-        <digits>none</digits>
-        <remove_special_characters>none</remove_special_characters>
-      </field>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>720</xloc>
-      <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Select Values 2</name>
-    <type>SelectValues</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <fields>
-      <field>
-        <name>playerid</name>
-        <rename/>
-      </field>
-      <field>
-        <name>extract_dt</name>
-        <rename/>
-      </field>
-      <field>
-        <name>cleaned_library</name>
-        <rename/>
-      </field>
-      <select_unspecified>N</select_unspecified>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>336</xloc>
-      <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Select Values 2 2</name>
-    <type>SelectValues</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <fields>
-      <field>
-        <name>playerid</name>
-        <rename/>
-      </field>
-      <field>
-        <name>extract_dt</name>
-        <rename/>
-      </field>
-      <field>
-        <name>appid</name>
-        <rename/>
-      </field>
-      <select_unspecified>N</select_unspecified>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>608</xloc>
-      <yloc>160</yloc>
+      <xloc>192</xloc>
+      <yloc>208</yloc>
       <draw>Y</draw>
     </GUI>
   </step>

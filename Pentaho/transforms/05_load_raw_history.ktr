@@ -592,9 +592,9 @@
     </partitioning>
     <connection>MSSQL_Staging</connection>
     <schema>dbo</schema>
-    <table>raw_history</table>
+    <table>stg_history</table>
     <commit>1000</commit>
-    <truncate>N</truncate>
+    <truncate>Y</truncate>
     <ignore_errors>N</ignore_errors>
     <use_batch>Y</use_batch>
     <specify_fields>N</specify_fields>

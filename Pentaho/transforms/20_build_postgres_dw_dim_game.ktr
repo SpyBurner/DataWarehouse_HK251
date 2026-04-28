@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <transformation>
   <info>
-    <name>05_load_raw_private_steamids</name>
-    <description/>
+    <name>20_build_postgres_dw_dim_game</name>
+    <description>MSSQL stg_players → Postgres dw.dim_player (upsert)</description>
     <extended_description/>
     <trans_version/>
     <trans_type>Normal</trans_type>
@@ -427,9 +427,9 @@
     <clusterschemas>
     </clusterschemas>
     <created_user/>
-    <created_date>2026/04/26 00:03:55.220</created_date>
+    <created_date>2026/04/26 00:33:05.707</created_date>
     <modified_user/>
-    <modified_date>2026/04/26 00:03:55.220</modified_date>
+    <modified_date>2026/04/26 00:33:05.707</modified_date>
     <key_for_session_key>H4sIAAAAAAAAAAMAAAAAAAAAAAA=</key_for_session_key>
     <is_key_private>N</is_key_private>
   </info>
@@ -498,16 +498,40 @@
       </attribute>
     </attributes>
   </connection>
+  <connection>
+    <name>Postgres_Warehouse</name>
+    <server>localhost</server>
+    <type>POSTGRESQL</type>
+    <access>Native</access>
+    <database>Warehouse</database>
+    <port>5432</port>
+    <username>postgres</username>
+    <password>Encrypted 2be98affb5b97cad6fb49fa50f29faed5</password>
+    <servername/>
+    <data_tablespace/>
+    <index_tablespace/>
+    <attributes>
+      <attribute>
+        <code>PORT_NUMBER</code>
+        <attribute>5432</attribute>
+      </attribute>
+    </attributes>
+  </connection>
   <order>
     <hop>
-      <from>CSV File Input</from>
-      <to>Table Output</to>
+      <from>Select Values</from>
+      <to>Insert Update</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Table Input</from>
+      <to>Select Values</to>
       <enabled>Y</enabled>
     </hop>
   </order>
   <step>
-    <name>CSV File Input</name>
-    <type>CsvInput</type>
+    <name>Insert Update</name>
+    <type>InsertUpdate</type>
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
@@ -516,32 +540,121 @@
       <method>none</method>
       <schema_name/>
     </partitioning>
-    <filename>${Internal.Entry.Current.Directory}/../../Datasets/raw/private_steamids.csv</filename>
-    <filename_field/>
-    <rownum_field/>
-    <include_filename>N</include_filename>
-    <separator>,</separator>
-    <enclosure>"</enclosure>
-    <header>Y</header>
-    <buffer_size>50000</buffer_size>
-    <lazy_conversion>N</lazy_conversion>
-    <add_filename_result>N</add_filename_result>
-    <parallel>N</parallel>
-    <newline_possible>Y</newline_possible>
-    <format/>
-    <encoding/>
+    <connection>Postgres_Warehouse</connection>
+    <commit>1000</commit>
+    <update_bypassed>N</update_bypassed>
+    <lookup>
+      <schema>dw</schema>
+      <table>dim_game</table>
+      <key>
+        <name>gameid</name>
+        <field>gameid</field>
+        <condition>=</condition>
+        <name2/>
+      </key>
+      <value>
+        <name>gameid</name>
+        <rename>gameid</rename>
+        <update>N</update>
+      </value>
+      <value>
+        <name>title</name>
+        <rename>title</rename>
+        <update>Y</update>
+      </value>
+      <value>
+        <name>release_date</name>
+        <rename>release_date</rename>
+        <update>Y</update>
+      </value>
+    </lookup>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>752</xloc>
+      <yloc>192</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Select Values</name>
+    <type>SelectValues</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
     <fields>
       <field>
         <name>playerid</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <length>-1</length>
-        <precision>-1</precision>
-        <trim_type>none</trim_type>
       </field>
+      <field>
+        <name>country</name>
+      </field>
+      <field>
+        <name>created</name>
+      </field>
+      <select_unspecified>N</select_unspecified>
+      <meta>
+        <name>gameid</name>
+        <rename>gameid</rename>
+        <type>None</type>
+        <length>1073741823</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+      <meta>
+        <name>title</name>
+        <rename>title</rename>
+        <type>None</type>
+        <length>1073741823</length>
+        <precision>-2</precision>
+        <conversion_mask/>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
+      <meta>
+        <name>release_date</name>
+        <rename>release_date</rename>
+        <type>Date</type>
+        <length>-2</length>
+        <precision>-2</precision>
+        <conversion_mask>dd/MM/yyyy</conversion_mask>
+        <date_format_lenient>false</date_format_lenient>
+        <date_format_locale/>
+        <date_format_timezone/>
+        <lenient_string_to_number>false</lenient_string_to_number>
+        <encoding/>
+        <decimal_symbol/>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <storage_type/>
+      </meta>
     </fields>
     <attributes/>
     <cluster_schema/>
@@ -552,14 +665,14 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>100</xloc>
-      <yloc>100</yloc>
+      <xloc>560</xloc>
+      <yloc>192</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
   <step>
-    <name>Table Output</name>
-    <type>TableOutput</type>
+    <name>Table Input</name>
+    <type>TableInput</type>
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
@@ -569,24 +682,90 @@
       <schema_name/>
     </partitioning>
     <connection>MSSQL_Staging</connection>
-    <schema>dbo</schema>
-    <table>stg_private_steamids</table>
-    <commit>1000</commit>
-    <truncate>Y</truncate>
-    <ignore_errors>N</ignore_errors>
-    <use_batch>Y</use_batch>
-    <specify_fields>N</specify_fields>
-    <partitioning_enabled>N</partitioning_enabled>
-    <partitioning_field/>
-    <partitioning_daily>N</partitioning_daily>
-    <partitioning_monthly>N</partitioning_monthly>
-    <tablename_in_field>N</tablename_in_field>
-    <tablename_field/>
-    <tablename_in_table>N</tablename_in_table>
-    <return_keys>N</return_keys>
-    <return_field/>
-    <fields>
-    </fields>
+    <sql>SELECT gameid, title, release_date
+FROM (
+    SELECT gameid, title, release_date,
+           ROW_NUMBER() OVER(PARTITION BY gameid ORDER BY loaded_at DESC) as rn
+    FROM dbo.stg_games
+) sub
+WHERE rn = 1</sql>
+    <limit>0</limit>
+    <lookup/>
+    <execute_each_row>N</execute_each_row>
+    <variables_active>Y</variables_active>
+    <lazy_conversion_active>N</lazy_conversion_active>
+    <cached_row_meta_active>N</cached_row_meta_active>
+    <row-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>gameid</name>
+        <length>1073741823</length>
+        <precision>-1</precision>
+        <origin>Table Input</origin>
+        <comments>gameid</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>title</name>
+        <length>1073741823</length>
+        <precision>-1</precision>
+        <origin>Table Input</origin>
+        <comments>title</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>release_date</name>
+        <length>1073741823</length>
+        <precision>-1</precision>
+        <origin>Table Input</origin>
+        <comments>release_date</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+    </row-meta>
     <attributes/>
     <cluster_schema/>
     <remotesteps>
@@ -596,8 +775,8 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>300</xloc>
-      <yloc>100</yloc>
+      <xloc>368</xloc>
+      <yloc>192</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
