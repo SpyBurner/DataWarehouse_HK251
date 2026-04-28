@@ -103,14 +103,14 @@ BEGIN
 	);
 END;
 
-IF OBJECT_ID('dbo.stg_friends', 'U') IS NULL
-BEGIN
-	CREATE TABLE dbo.stg_friends (
-		[playerid] NVARCHAR(MAX),
-		[friends]  NVARCHAR(MAX),
-		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
-	);
-END;
+-- IF OBJECT_ID('dbo.stg_friends', 'U') IS NULL
+-- BEGIN
+-- 	CREATE TABLE dbo.stg_friends (
+-- 		[playerid] NVARCHAR(MAX),
+-- 		[friends]  NVARCHAR(MAX),
+-- 		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
+-- 	);
+-- END;
 
 IF OBJECT_ID('dbo.stg_games', 'U') IS NULL
 BEGIN
@@ -126,19 +126,19 @@ BEGIN
 	);
 END;
 
-IF OBJECT_ID('dbo.stg_prices', 'U') IS NULL
-BEGIN
-	CREATE TABLE dbo.stg_prices (
-		[gameid]        NVARCHAR(MAX),
-		[usd]           NVARCHAR(MAX),
-		[eur]           NVARCHAR(MAX),
-		[gbp]           NVARCHAR(MAX),
-		[jpy]           NVARCHAR(MAX),
-		[rub]           NVARCHAR(MAX),
-		[date_acquired] NVARCHAR(MAX),
-		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
-	);
-END;
+-- IF OBJECT_ID('dbo.stg_prices', 'U') IS NULL
+-- BEGIN
+-- 	CREATE TABLE dbo.stg_prices (
+-- 		[gameid]        NVARCHAR(MAX),
+-- 		[usd]           NVARCHAR(MAX),
+-- 		[eur]           NVARCHAR(MAX),
+-- 		[gbp]           NVARCHAR(MAX),
+-- 		[jpy]           NVARCHAR(MAX),
+-- 		[rub]           NVARCHAR(MAX),
+-- 		[date_acquired] NVARCHAR(MAX),
+-- 		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
+-- 	);
+-- END;
 
 /* ------------------------------
    One-time init marker

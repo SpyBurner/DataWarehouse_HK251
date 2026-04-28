@@ -530,23 +530,18 @@
     </hop>
     <hop>
       <from>Select Values</from>
-      <to>Split field to rows</to>
+      <to>Table output</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Split field to rows</from>
-      <to>Select Values 2</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Select Values 2</from>
-      <to>Insert Update</to>
+      <from>Table output</from>
+      <to>Execute SQL script</to>
       <enabled>Y</enabled>
     </hop>
   </order>
   <step>
-    <name>Insert Update</name>
-    <type>InsertUpdate</type>
+    <name>Execute SQL script</name>
+    <type>ExecSQL</type>
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
@@ -556,34 +551,20 @@
       <schema_name/>
     </partitioning>
     <connection>Postgres_Warehouse</connection>
-    <commit>1000</commit>
-    <update_bypassed>N</update_bypassed>
-    <lookup>
-      <schema>dw</schema>
-      <table>fact_library</table>
-      <key>
-        <name>playerid</name>
-        <field>playerid</field>
-        <condition>=</condition>
-        <name2/>
-      </key>
-      <key>
-        <name>appid</name>
-        <field>appid</field>
-        <condition>=</condition>
-        <name2/>
-      </key>
-      <value>
-        <name>playerid</name>
-        <rename>playerid</rename>
-        <update>Y</update>
-      </value>
-      <value>
-        <name>appid</name>
-        <rename>appid</rename>
-        <update>Y</update>
-      </value>
-    </lookup>
+    <execute_each_row>N</execute_each_row>
+    <single_statement>N</single_statement>
+    <replace_variables>N</replace_variables>
+    <quoteString>N</quoteString>
+    <sql>INSERT INTO dw.fact_library (playerid, appid)
+SELECT playerid, trim(unnest(string_to_array(library, ',')))
+FROM dw.stg_library_temp;</sql>
+    <set_params>N</set_params>
+    <insert_field/>
+    <update_field/>
+    <delete_field/>
+    <read_field/>
+    <arguments>
+    </arguments>
     <attributes/>
     <cluster_schema/>
     <remotesteps>
@@ -593,8 +574,8 @@
       </output>
     </remotesteps>
     <GUI>
-      <xloc>704</xloc>
-      <yloc>336</yloc>
+      <xloc>816</xloc>
+      <yloc>208</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -642,7 +623,7 @@ if (library != null) {
       </output>
     </remotesteps>
     <GUI>
-      <xloc>336</xloc>
+      <xloc>348</xloc>
       <yloc>208</yloc>
       <draw>Y</draw>
     </GUI>
@@ -651,7 +632,7 @@ if (library != null) {
     <name>Select Values</name>
     <type>SelectValues</type>
     <description/>
-    <distribute>Y</distribute>
+    <distribute>N</distribute>
     <custom_distribution/>
     <copies>1</copies>
     <partitioning>
@@ -710,108 +691,8 @@ if (library != null) {
       </output>
     </remotesteps>
     <GUI>
-      <xloc>512</xloc>
+      <xloc>504</xloc>
       <yloc>208</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Select Values 2</name>
-    <type>SelectValues</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <fields>
-      <field>
-        <name>playerid</name>
-      </field>
-      <field>
-        <name>appid</name>
-      </field>
-      <select_unspecified>N</select_unspecified>
-      <meta>
-        <name>playerid</name>
-        <rename>playerid</rename>
-        <type>None</type>
-        <length>1073741823</length>
-        <precision>-2</precision>
-        <conversion_mask/>
-        <date_format_lenient>false</date_format_lenient>
-        <date_format_locale/>
-        <date_format_timezone/>
-        <lenient_string_to_number>false</lenient_string_to_number>
-        <encoding/>
-        <decimal_symbol/>
-        <grouping_symbol/>
-        <currency_symbol/>
-        <storage_type/>
-      </meta>
-      <meta>
-        <name>appid</name>
-        <rename>appid</rename>
-        <type>None</type>
-        <length>-2</length>
-        <precision>-2</precision>
-        <conversion_mask/>
-        <date_format_lenient>false</date_format_lenient>
-        <date_format_locale/>
-        <date_format_timezone/>
-        <lenient_string_to_number>false</lenient_string_to_number>
-        <encoding/>
-        <decimal_symbol/>
-        <grouping_symbol/>
-        <currency_symbol/>
-        <storage_type/>
-      </meta>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>512</xloc>
-      <yloc>336</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Split field to rows</name>
-    <type>SplitFieldToRows3</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <splitfield>cleaned_library</splitfield>
-    <delimiter>, </delimiter>
-    <newfield>appid</newfield>
-    <rownum>N</rownum>
-    <rownum_field/>
-    <resetrownumber>Y</resetrownumber>
-    <delimiter_is_regex>Y</delimiter_is_regex>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>336</xloc>
-      <yloc>336</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -898,6 +779,50 @@ WHERE rn = 1</sql>
     </remotesteps>
     <GUI>
       <xloc>192</xloc>
+      <yloc>208</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Table output</name>
+    <type>TableOutput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Postgres_Warehouse</connection>
+    <schema>dw</schema>
+    <table>stg_library_temp</table>
+    <commit>20000</commit>
+    <truncate>Y</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>N</specify_fields>
+    <partitioning_enabled>N</partitioning_enabled>
+    <partitioning_field/>
+    <partitioning_daily>N</partitioning_daily>
+    <partitioning_monthly>Y</partitioning_monthly>
+    <tablename_in_field>N</tablename_in_field>
+    <tablename_field/>
+    <tablename_in_table>Y</tablename_in_table>
+    <return_keys>N</return_keys>
+    <return_field/>
+    <fields>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>656</xloc>
       <yloc>208</yloc>
       <draw>Y</draw>
     </GUI>

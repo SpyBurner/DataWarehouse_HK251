@@ -535,13 +535,13 @@
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
-    <copies>1</copies>
+    <copies>2</copies>
     <partitioning>
       <method>none</method>
       <schema_name/>
     </partitioning>
     <connection>Postgres_Warehouse</connection>
-    <commit>1000</commit>
+    <commit>20000</commit>
     <update_bypassed>N</update_bypassed>
     <lookup>
       <schema>dw</schema>
@@ -596,22 +596,19 @@
     <fields>
       <field>
         <name>playerid</name>
-        <rename/>
       </field>
       <field>
         <name>country</name>
-        <rename/>
       </field>
       <field>
         <name>created</name>
-        <rename/>
       </field>
       <select_unspecified>N</select_unspecified>
       <meta>
         <name>playerid</name>
         <rename>playerid</rename>
         <type>None</type>
-        <length>30</length>
+        <length>1073741823</length>
         <precision>-2</precision>
         <conversion_mask/>
         <date_format_lenient>false</date_format_lenient>
@@ -628,7 +625,7 @@
         <name>country</name>
         <rename>country</rename>
         <type>None</type>
-        <length>10</length>
+        <length>1073741823</length>
         <precision>-2</precision>
         <conversion_mask/>
         <date_format_lenient>false</date_format_lenient>
@@ -645,12 +642,12 @@
         <name>created</name>
         <rename>created</rename>
         <type>Timestamp</type>
-        <length>30</length>
+        <length>-2</length>
         <precision>-2</precision>
         <conversion_mask>%Y-%m-%d %H:%M:%S</conversion_mask>
-        <date_format_lenient>true</date_format_lenient>
+        <date_format_lenient>false</date_format_lenient>
         <date_format_locale/>
-        <date_format_timezone>UTC</date_format_timezone>
+        <date_format_timezone/>
         <lenient_string_to_number>false</lenient_string_to_number>
         <encoding/>
         <decimal_symbol/>

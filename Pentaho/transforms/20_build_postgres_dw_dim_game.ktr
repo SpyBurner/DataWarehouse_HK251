@@ -535,13 +535,13 @@
     <description/>
     <distribute>Y</distribute>
     <custom_distribution/>
-    <copies>1</copies>
+    <copies>2</copies>
     <partitioning>
       <method>none</method>
       <schema_name/>
     </partitioning>
     <connection>Postgres_Warehouse</connection>
-    <commit>1000</commit>
+    <commit>20000</commit>
     <update_bypassed>N</update_bypassed>
     <lookup>
       <schema>dw</schema>
@@ -595,13 +595,13 @@
     </partitioning>
     <fields>
       <field>
-        <name>playerid</name>
+        <name>gameid</name>
       </field>
       <field>
-        <name>country</name>
+        <name>title</name>
       </field>
       <field>
-        <name>created</name>
+        <name>release_date</name>
       </field>
       <select_unspecified>N</select_unspecified>
       <meta>
@@ -644,7 +644,7 @@
         <type>Date</type>
         <length>-2</length>
         <precision>-2</precision>
-        <conversion_mask>dd/MM/yyyy</conversion_mask>
+        <conversion_mask>yyyy-MM-dd</conversion_mask>
         <date_format_lenient>false</date_format_lenient>
         <date_format_locale/>
         <date_format_timezone/>

@@ -551,7 +551,7 @@
       <schema_name/>
     </partitioning>
     <connection>Postgres_Warehouse</connection>
-    <commit>1000</commit>
+    <commit>20000</commit>
     <update_bypassed>N</update_bypassed>
     <lookup>
       <schema>dw</schema>
