@@ -173,3 +173,68 @@ CREATE TABLE IF NOT EXISTS dm.dm_datamart_refresh_log (
     player_count INTEGER,
     status       VARCHAR(20)
 );
+
+-- -----------------------------------------------------------------------------
+-- Default Data Initialization (-1 values for Referential Integrity Fallbacks)
+-- -----------------------------------------------------------------------------
+INSERT INTO dw.dim_player (playerid, country, created, is_private) VALUES ('-1', 'Unknown', '1970-01-01', false) ON CONFLICT (playerid) DO NOTHING;
+INSERT INTO dw.dim_game (gameid, title, release_date) VALUES ('-1', 'Unknown', '1970-01-01') ON CONFLICT (gameid) DO NOTHING;
+INSERT INTO dw.dim_achievement (achievementid, gameid, title, description) VALUES ('-1', '-1', 'Unknown', 'Unknown') ON CONFLICT (achievementid) DO NOTHING;
+INSERT INTO dw.dim_developer (developerid, name) VALUES (-1, 'Unknown') ON CONFLICT (developerid) DO NOTHING;
+INSERT INTO dw.dim_publisher (publisherid, name) VALUES (-1, 'Unknown') ON CONFLICT (publisherid) DO NOTHING;
+INSERT INTO dw.dim_genre (genreid, name) VALUES (-1, 'Unknown') ON CONFLICT (genreid) DO NOTHING;
+INSERT INTO dw.dim_language (languageid, name) VALUES (-1, 'Unknown') ON CONFLICT (languageid) DO NOTHING;
+
+-- -----------------------------------------------------------------------------
+-- Transformation Handling via Database Triggers
+-- -----------------------------------------------------------------------------
+-- Bypasses Pentaho row-level Error Hop degradation by actively intercepting 
+-- inserts/updates and routing missing FK associations to our '-1' dummy records.
+
+CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_review() RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN NEW.playerid := '-1'; END IF;
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_game WHERE gameid = NEW.gameid) THEN NEW.gameid := '-1'; END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE TRIGGER trg_review_fk BEFORE INSERT OR UPDATE ON dw.fact_review FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_review();
+
+CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_achievement() RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN NEW.playerid := '-1'; END IF;
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_achievement WHERE achievementid = NEW.achievementid) THEN NEW.achievementid := '-1'; END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE TRIGGER trg_achieve_fk BEFORE INSERT OR UPDATE ON dw.fact_achievement_unlock FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_achievement();
+
+CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_library() RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN NEW.playerid := '-1'; END IF;
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_game WHERE gameid = NEW.appid) THEN NEW.appid := '-1'; END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE TRIGGER trg_library_fk BEFORE INSERT OR UPDATE ON dw.fact_library FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_library();
+
+CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_bridge_game_attribute() RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_game  WHERE gameid = NEW.gameid) THEN NEW.gameid := '-1'; END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE TRIGGER trg_gd_game_fk BEFORE INSERT OR UPDATE ON dw.bridge_game_developer FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_bridge_game_attribute();
+CREATE OR REPLACE TRIGGER trg_gp_game_fk BEFORE INSERT OR UPDATE ON dw.bridge_game_publisher FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_bridge_game_attribute();
+CREATE OR REPLACE TRIGGER trg_gg_game_fk BEFORE INSERT OR UPDATE ON dw.bridge_game_genre FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_bridge_game_attribute();
+CREATE OR REPLACE TRIGGER trg_gl_game_fk BEFORE INSERT OR UPDATE ON dw.bridge_game_language FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_bridge_game_attribute();
+
+CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_bridge_friend() RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN NEW.playerid := '-1'; END IF;
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.friend_playerid) THEN NEW.friend_playerid := '-1'; END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE TRIGGER trg_friend_fk BEFORE INSERT OR UPDATE ON dw.bridge_friend FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_bridge_friend();
