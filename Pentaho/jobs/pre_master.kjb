@@ -4,6 +4,7 @@
   <description/>
   <extended_description/>
   <job_version/>
+  <job_status>0</job_status>
   <directory>/</directory>
   <created_user>-</created_user>
   <created_date>2026/04/28 22:17:58.023</created_date>
@@ -319,7 +320,7 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>412</xloc>
+      <xloc>400</xloc>
       <yloc>160</yloc>
       <attributes_kjc/>
     </entry>
@@ -364,7 +365,7 @@
       <attributes/>
       <specification_method>filename</specification_method>
       <job_object_id/>
-      <filename/>
+      <filename>D:/GeneralProjectSpace/.UNI/.HKVIII/Datawarehouse/BTL DW/Pentaho/jobs/build_dm.kjb</filename>
       <jobname/>
       <directory/>
       <arg_from_previous>N</arg_from_previous>

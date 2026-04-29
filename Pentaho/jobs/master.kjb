@@ -364,7 +364,7 @@
       <attributes/>
       <specification_method>filename</specification_method>
       <job_object_id/>
-      <filename/>
+      <filename>D:/GeneralProjectSpace/.UNI/.HKVIII/Datawarehouse/BTL DW/Pentaho/jobs/build_dm.kjb</filename>
       <jobname/>
       <directory/>
       <arg_from_previous>N</arg_from_previous>
@@ -390,7 +390,7 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>817</xloc>
+      <xloc>816</xloc>
       <yloc>176</yloc>
       <attributes_kjc/>
     </entry>
@@ -424,7 +424,7 @@
         <pass_all_parameters>Y</pass_all_parameters>
       </parameters>
       <set_append_logfile>N</set_append_logfile>
-      <parallel>Y</parallel>
+      <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
       <xloc>614</xloc>
@@ -456,7 +456,7 @@
       <to>Build Datamarts</to>
       <from_nr>0</from_nr>
       <to_nr>0</to_nr>
-      <enabled>N</enabled>
+      <enabled>Y</enabled>
       <evaluation>Y</evaluation>
       <unconditional>N</unconditional>
     </hop>

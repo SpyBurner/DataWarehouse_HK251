@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS dw.dim_game (
 CREATE TABLE IF NOT EXISTS dw.dim_achievement (
     achievementid   VARCHAR(200) PRIMARY KEY,
     gameid          VARCHAR(30),
-    title           VARCHAR(255),
+    title           TEXT,
     description     TEXT
 );
 
