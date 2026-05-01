@@ -21,11 +21,12 @@ def main():
     
     # Use python's subprocess to invoke docker compose with the custom entrypoint
     cmd = [
-        "docker", "compose", "run", "--rm",
-        "--entrypoint", "python -m steam_crawler.cli_playtime_update",
+        "docker", "compose", "run", "--rm", "--build",
+        "--entrypoint", "python",
         "steam-crawler",
-        "--playerids", *playerids
-    ]
+        "-m", "steam_crawler.cli_playtime_update",
+        "--playerids"
+    ] + playerids
     
     # Note: passing too many IDs via CLI could hit length limits. Better to extract to a txt file in Datasets, and pass --playerids-file
     target_txt_path = os.path.join(root_dir, "Datasets", "raw", "temp_playerids_for_playtime.txt")
@@ -36,9 +37,10 @@ def main():
     container_txt_path = "Datasets/raw/temp_playerids_for_playtime.txt"
     
     cmd_file = [
-        "docker", "compose", "run", "--rm",
-        "--entrypoint", "python -m steam_crawler.cli_playtime_update",
+        "docker", "compose", "run", "--rm", "--build",
+        "--entrypoint", "python",
         "steam-crawler",
+        "-m", "steam_crawler.cli_playtime_update",
         "--playerids-file", container_txt_path
     ]
     
