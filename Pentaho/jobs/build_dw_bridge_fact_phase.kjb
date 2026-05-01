@@ -572,7 +572,7 @@
       <attributes/>
       <specification_method>filename</specification_method>
       <trans_object_id/>
-      <filename>D:\GeneralProjectSpace\.UNI\.HKVIII\Datawarehouse\BTL DW\Pentaho\transforms\20_build_postgres_dw_dim_achievement.ktr</filename>
+      <filename>D:\GeneralProjectSpace\.UNI\.HKVIII\Datawarehouse\BTL DW\Pentaho\transforms\20_build_postgres_dw_fact_achievement.ktr</filename>
       <transname/>
       <arg_from_previous>N</arg_from_previous>
       <params_from_previous>N</params_from_previous>
@@ -612,10 +612,21 @@
       <sql>INSERT INTO dw.fact_library (playerid, appid, playtime_mins)
 SELECT 
     playerid,
-    (game_element->>'appid')::int,
-    (game_element->>'playtime_mins')::int
+    -- Dynamically extract appid based on the JSON element type
+    CASE 
+        WHEN json_typeof(game_element) = 'object' THEN (game_element->>'appid')::int
+        ELSE (game_element#>>'{}')::int 
+    END as appid,
+    -- Dynamically extract playtime, defaulting to 0 for the old format
+    CASE 
+        WHEN json_typeof(game_element) = 'object' THEN COALESCE((game_element->>'playtime_mins')::int, 0)
+        ELSE 0 
+    END as playtime_mins
 FROM dw.stg_library_temp,
-LATERAL json_array_elements(library::json) AS game_element;</sql>
+-- NULLIF prevents errors if the crawler accidentally passed an empty string instead of an empty array
+LATERAL json_array_elements(NULLIF(library, '')::json) AS game_element
+WHERE library IS NOT NULL 
+  AND library != '[]';</sql>
       <useVariableSubstitution>F</useVariableSubstitution>
       <sqlfromfile>F</sqlfromfile>
       <sqlfilename/>
