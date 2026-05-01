@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <transformation>
   <info>
-    <name>20_build_postgres_dw_fact_achievement</name>
-    <description>MSSQL stg_players → Postgres dw.dim_player (upsert)</description>
+    <name>10_load_mssql_staging_achievement</name>
+    <description/>
     <extended_description/>
     <trans_version/>
     <trans_type>Normal</trans_type>
@@ -417,7 +417,7 @@
     <shared_objects_file/>
     <capture_step_performance>N</capture_step_performance>
     <step_performance_capturing_delay>1000</step_performance_capturing_delay>
-    <step_performance_capturing_size_limit/>
+    <step_performance_capturing_size_limit>100</step_performance_capturing_size_limit>
     <dependencies>
     </dependencies>
     <partitionschemas>
@@ -426,10 +426,10 @@
     </slaveservers>
     <clusterschemas>
     </clusterschemas>
-    <created_user/>
-    <created_date>2026/04/26 00:33:05.707</created_date>
-    <modified_user/>
-    <modified_date>2026/04/26 00:33:05.707</modified_date>
+    <created_user>-</created_user>
+    <created_date>2026/05/02 00:45:38.563</created_date>
+    <modified_user>-</modified_user>
+    <modified_date>2026/05/02 00:45:38.563</modified_date>
     <key_for_session_key>H4sIAAAAAAAAAAMAAAAAAAAAAAA=</key_for_session_key>
     <is_key_private>N</is_key_private>
   </info>
@@ -498,245 +498,13 @@
       </attribute>
     </attributes>
   </connection>
-  <connection>
-    <name>Postgres_Warehouse</name>
-    <server>localhost</server>
-    <type>POSTGRESQL</type>
-    <access>Native</access>
-    <database>Warehouse</database>
-    <port>5432</port>
-    <username>postgres</username>
-    <password>Encrypted 2be98affb5b97cad6fb49fa50f29faed5</password>
-    <servername/>
-    <data_tablespace/>
-    <index_tablespace/>
-    <attributes>
-      <attribute>
-        <code>FORCE_IDENTIFIERS_TO_LOWERCASE</code>
-        <attribute>N</attribute>
-      </attribute>
-      <attribute>
-        <code>FORCE_IDENTIFIERS_TO_UPPERCASE</code>
-        <attribute>N</attribute>
-      </attribute>
-      <attribute>
-        <code>IS_CLUSTERED</code>
-        <attribute>N</attribute>
-      </attribute>
-      <attribute>
-        <code>PORT_NUMBER</code>
-        <attribute>5432</attribute>
-      </attribute>
-      <attribute>
-        <code>PRESERVE_RESERVED_WORD_CASE</code>
-        <attribute>Y</attribute>
-      </attribute>
-      <attribute>
-        <code>QUOTE_ALL_FIELDS</code>
-        <attribute>N</attribute>
-      </attribute>
-      <attribute>
-        <code>SUPPORTS_BOOLEAN_DATA_TYPE</code>
-        <attribute>Y</attribute>
-      </attribute>
-      <attribute>
-        <code>SUPPORTS_TIMESTAMP_DATA_TYPE</code>
-        <attribute>N</attribute>
-      </attribute>
-      <attribute>
-        <code>USE_POOLING</code>
-        <attribute>N</attribute>
-      </attribute>
-    </attributes>
-  </connection>
   <order>
-    <hop>
-      <from>Select Values</from>
-      <to>Insert Update</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Table Input</from>
-      <to>Select Values</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Select Values</from>
-      <to>Text file output</to>
-      <enabled>Y</enabled>
-    </hop>
   </order>
   <step>
-    <name>Insert Update</name>
-    <type>InsertUpdate</type>
+    <name>Table Output</name>
+    <type>TableOutput</type>
     <description/>
     <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <connection>Postgres_Warehouse</connection>
-    <commit>20000</commit>
-    <update_bypassed>N</update_bypassed>
-    <lookup>
-      <schema>dw</schema>
-      <table>fact_achievement</table>
-      <key>
-        <name>achievementid</name>
-        <field>achievementid</field>
-        <condition>=</condition>
-        <name2/>
-      </key>
-      <value>
-        <name>achievementid</name>
-        <rename>achievementid</rename>
-        <update>N</update>
-      </value>
-      <value>
-        <name>gameid</name>
-        <rename>gameid</rename>
-        <update>Y</update>
-      </value>
-      <value>
-        <name>title</name>
-        <rename>title</rename>
-        <update>Y</update>
-      </value>
-      <value>
-        <name>description</name>
-        <rename>description</rename>
-        <update>Y</update>
-      </value>
-    </lookup>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>512</xloc>
-      <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Select Values</name>
-    <type>SelectValues</type>
-    <description/>
-    <distribute>N</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <fields>
-      <field>
-        <name>achievementid</name>
-      </field>
-      <field>
-        <name>gameid</name>
-      </field>
-      <field>
-        <name>title</name>
-      </field>
-      <field>
-        <name>description</name>
-      </field>
-      <select_unspecified>N</select_unspecified>
-      <meta>
-        <name>achievementid</name>
-        <rename>achievementid</rename>
-        <type>String</type>
-        <length>1073741823</length>
-        <precision>-2</precision>
-        <conversion_mask/>
-        <date_format_lenient>false</date_format_lenient>
-        <date_format_locale/>
-        <date_format_timezone/>
-        <lenient_string_to_number>false</lenient_string_to_number>
-        <encoding/>
-        <decimal_symbol/>
-        <grouping_symbol/>
-        <currency_symbol/>
-        <storage_type/>
-      </meta>
-      <meta>
-        <name>gameid</name>
-        <rename>gameid</rename>
-        <type>String</type>
-        <length>1073741823</length>
-        <precision>-2</precision>
-        <conversion_mask/>
-        <date_format_lenient>false</date_format_lenient>
-        <date_format_locale/>
-        <date_format_timezone/>
-        <lenient_string_to_number>false</lenient_string_to_number>
-        <encoding/>
-        <decimal_symbol/>
-        <grouping_symbol/>
-        <currency_symbol/>
-        <storage_type/>
-      </meta>
-      <meta>
-        <name>title</name>
-        <rename>title</rename>
-        <type>String</type>
-        <length>1073741823</length>
-        <precision>-2</precision>
-        <conversion_mask/>
-        <date_format_lenient>false</date_format_lenient>
-        <date_format_locale/>
-        <date_format_timezone/>
-        <lenient_string_to_number>false</lenient_string_to_number>
-        <encoding/>
-        <decimal_symbol/>
-        <grouping_symbol/>
-        <currency_symbol/>
-        <storage_type/>
-      </meta>
-      <meta>
-        <name>description</name>
-        <rename>description</rename>
-        <type>String</type>
-        <length>1073741823</length>
-        <precision>-2</precision>
-        <conversion_mask/>
-        <date_format_lenient>false</date_format_lenient>
-        <date_format_locale/>
-        <date_format_timezone/>
-        <lenient_string_to_number>false</lenient_string_to_number>
-        <encoding/>
-        <decimal_symbol/>
-        <grouping_symbol/>
-        <currency_symbol/>
-        <storage_type/>
-      </meta>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>296</xloc>
-      <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Table Input</name>
-    <type>TableInput</type>
-    <description/>
-    <distribute>N</distribute>
     <custom_distribution/>
     <copies>1</copies>
     <partitioning>
@@ -744,172 +512,23 @@
       <schema_name/>
     </partitioning>
     <connection>MSSQL_Staging</connection>
-    <sql>SELECT achievementid, gameid, title, description
-FROM (
-    SELECT achievementid, gameid, title, description,
-           ROW_NUMBER() OVER(PARTITION BY achievementid ORDER BY loaded_at DESC) as rn
-    FROM dbo.stg_achievements
-) sub
-WHERE rn = 1</sql>
-    <limit>0</limit>
-    <lookup/>
-    <execute_each_row>N</execute_each_row>
-    <variables_active>Y</variables_active>
-    <lazy_conversion_active>N</lazy_conversion_active>
-    <cached_row_meta_active>N</cached_row_meta_active>
-    <row-meta/>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>80</xloc>
-      <yloc>160</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Text file output</name>
-    <type>TextFileOutput</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <separator>;</separator>
-    <enclosure>"</enclosure>
-    <enclosure_forced>N</enclosure_forced>
-    <enclosure_fix_disabled>N</enclosure_fix_disabled>
-    <header>Y</header>
-    <footer>N</footer>
-    <format>DOS</format>
-    <compression>None</compression>
-    <encoding/>
-    <endedLine/>
-    <fileNameInField>N</fileNameInField>
-    <fileNameField/>
-    <create_parent_folder>Y</create_parent_folder>
-    <file>
-      <name>err_log</name>
-      <servlet_output>N</servlet_output>
-      <do_not_open_new_file_init>N</do_not_open_new_file_init>
-      <extention>csv</extention>
-      <append>Y</append>
-      <split>N</split>
-      <haspartno>N</haspartno>
-      <add_date>N</add_date>
-      <add_time>N</add_time>
-      <SpecifyFormat>N</SpecifyFormat>
-      <date_time_format/>
-      <add_to_result_filenames>Y</add_to_result_filenames>
-      <pad>N</pad>
-      <fast_dump>N</fast_dump>
-      <splitevery/>
-    </file>
+    <schema>dbo</schema>
+    <table>stg_achievements</table>
+    <commit>20000</commit>
+    <truncate>Y</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>N</specify_fields>
+    <partitioning_enabled>N</partitioning_enabled>
+    <partitioning_field/>
+    <partitioning_daily>N</partitioning_daily>
+    <partitioning_monthly>N</partitioning_monthly>
+    <tablename_in_field>N</tablename_in_field>
+    <tablename_field/>
+    <tablename_in_table>N</tablename_in_table>
+    <return_keys>N</return_keys>
+    <return_field/>
     <fields>
-      <field>
-        <name>achievementid</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <nullif/>
-        <trim_type>none</trim_type>
-        <length>1073741823</length>
-        <precision>-1</precision>
-      </field>
-      <field>
-        <name>gameid</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <nullif/>
-        <trim_type>none</trim_type>
-        <length>1073741823</length>
-        <precision>-1</precision>
-      </field>
-      <field>
-        <name>title</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <nullif/>
-        <trim_type>none</trim_type>
-        <length>1073741823</length>
-        <precision>-1</precision>
-      </field>
-      <field>
-        <name>description</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <nullif/>
-        <trim_type>none</trim_type>
-        <length>1073741823</length>
-        <precision>-1</precision>
-      </field>
-      <field>
-        <name>err_cnt</name>
-        <type>Integer</type>
-        <format>####0;-####0</format>
-        <currency/>
-        <decimal>.</decimal>
-        <group>,</group>
-        <nullif/>
-        <trim_type>none</trim_type>
-        <length>3</length>
-        <precision>0</precision>
-      </field>
-      <field>
-        <name>err_dscr</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <nullif/>
-        <trim_type>none</trim_type>
-        <length>-1</length>
-        <precision>-1</precision>
-      </field>
-      <field>
-        <name>err_fieldname</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <nullif/>
-        <trim_type>none</trim_type>
-        <length>-1</length>
-        <precision>-1</precision>
-      </field>
-      <field>
-        <name>err_code</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <nullif/>
-        <trim_type>none</trim_type>
-        <length>-1</length>
-        <precision>-1</precision>
-      </field>
     </fields>
     <attributes/>
     <cluster_schema/>
@@ -920,24 +539,56 @@ WHERE rn = 1</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>296</xloc>
-      <yloc>256</yloc>
+      <xloc>432</xloc>
+      <yloc>224</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>Table Output 2</name>
+    <type>TableOutput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>MSSQL_Staging</connection>
+    <schema>dbo</schema>
+    <table>stg_games</table>
+    <commit>20000</commit>
+    <truncate>Y</truncate>
+    <ignore_errors>N</ignore_errors>
+    <use_batch>Y</use_batch>
+    <specify_fields>N</specify_fields>
+    <partitioning_enabled>N</partitioning_enabled>
+    <partitioning_field/>
+    <partitioning_daily>N</partitioning_daily>
+    <partitioning_monthly>N</partitioning_monthly>
+    <tablename_in_field>N</tablename_in_field>
+    <tablename_field/>
+    <tablename_in_table>N</tablename_in_table>
+    <return_keys>N</return_keys>
+    <return_field/>
+    <fields>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>432</xloc>
+      <yloc>304</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
   <step_error_handling>
-    <error>
-      <source_step>Select Values</source_step>
-      <target_step>Text file output</target_step>
-      <is_enabled>Y</is_enabled>
-      <nr_valuename>err_cnt</nr_valuename>
-      <descriptions_valuename>err_dscr</descriptions_valuename>
-      <fields_valuename>err_fieldname</fields_valuename>
-      <codes_valuename>err_code</codes_valuename>
-      <max_errors/>
-      <max_pct_errors/>
-      <min_pct_rows/>
-    </error>
   </step_error_handling>
   <slave-step-copy-partition-distribution>
   </slave-step-copy-partition-distribution>

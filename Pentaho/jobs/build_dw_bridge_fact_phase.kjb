@@ -626,7 +626,10 @@ FROM dw.stg_library_temp,
 -- NULLIF prevents errors if the crawler accidentally passed an empty string instead of an empty array
 LATERAL json_array_elements(NULLIF(library, '')::json) AS game_element
 WHERE library IS NOT NULL 
-  AND library != '[]';</sql>
+  AND library != '[]';
+
+-- Clean up the temporary staging table after successful insertion
+TRUNCATE TABLE dw.stg_library_temp;</sql>
       <useVariableSubstitution>F</useVariableSubstitution>
       <sqlfromfile>F</sqlfromfile>
       <sqlfilename/>

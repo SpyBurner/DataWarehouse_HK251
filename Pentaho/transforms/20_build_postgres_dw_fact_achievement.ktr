@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <transformation>
   <info>
-    <name>20_build_postgres_dw_fact_library</name>
+    <name>20_build_postgres_dw_fact_achievement</name>
     <description>MSSQL stg_players → Postgres dw.dim_player (upsert)</description>
     <extended_description/>
     <trans_version/>
@@ -552,10 +552,58 @@
   <order>
     <hop>
       <from>Table Input</from>
-      <to>Table output</to>
+      <to>Insert Update</to>
       <enabled>Y</enabled>
     </hop>
   </order>
+  <step>
+    <name>Insert Update</name>
+    <type>InsertUpdate</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>3</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <connection>Postgres_Warehouse</connection>
+    <commit>20000</commit>
+    <update_bypassed>N</update_bypassed>
+    <lookup>
+      <schema>dw</schema>
+      <table>fact_achievement</table>
+      <key>
+        <name>achievementid</name>
+        <field>achievementid</field>
+        <condition>=</condition>
+        <name2/>
+      </key>
+      <value>
+        <name>achievementid</name>
+        <rename>achievementid</rename>
+        <update>Y</update>
+      </value>
+      <value>
+        <name>gameid</name>
+        <rename>gameid</rename>
+        <update>Y</update>
+      </value>
+    </lookup>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>512</xloc>
+      <yloc>160</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
   <step>
     <name>Table Input</name>
     <type>TableInput</type>
@@ -568,11 +616,11 @@
       <schema_name/>
     </partitioning>
     <connection>MSSQL_Staging</connection>
-    <sql>SELECT playerid, library
+    <sql>SELECT achievementid, gameid
 FROM (
-    SELECT playerid, library,
-           ROW_NUMBER() OVER(PARTITION BY playerid ORDER BY loaded_at DESC) as rn
-    FROM dbo.stg_purchased_games
+    SELECT achievementid, gameid,
+           ROW_NUMBER() OVER(PARTITION BY achievementid ORDER BY loaded_at DESC) as rn
+    FROM dbo.stg_achievements
 ) sub
 WHERE rn = 1</sql>
     <limit>0</limit>
@@ -585,11 +633,11 @@ WHERE rn = 1</sql>
       <value-meta>
         <type>String</type>
         <storagetype>normal</storagetype>
-        <name>playerid</name>
+        <name>achievementid</name>
         <length>1073741823</length>
         <precision>-1</precision>
         <origin>Table Input</origin>
-        <comments>playerid</comments>
+        <comments>achievementid</comments>
         <conversion_Mask/>
         <decimal_symbol>.</decimal_symbol>
         <grouping_symbol>,</grouping_symbol>
@@ -608,11 +656,11 @@ WHERE rn = 1</sql>
       <value-meta>
         <type>String</type>
         <storagetype>normal</storagetype>
-        <name>library</name>
+        <name>gameid</name>
         <length>1073741823</length>
         <precision>-1</precision>
         <origin>Table Input</origin>
-        <comments>library</comments>
+        <comments>gameid</comments>
         <conversion_Mask/>
         <decimal_symbol>.</decimal_symbol>
         <grouping_symbol>,</grouping_symbol>
@@ -638,60 +686,8 @@ WHERE rn = 1</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>336</xloc>
-      <yloc>208</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>Table output</name>
-    <type>TableOutput</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <connection>Postgres_Warehouse</connection>
-    <schema>dw</schema>
-    <table>stg_library_temp</table>
-    <commit>20000</commit>
-    <truncate>Y</truncate>
-    <ignore_errors>N</ignore_errors>
-    <use_batch>Y</use_batch>
-    <specify_fields>Y</specify_fields>
-    <partitioning_enabled>N</partitioning_enabled>
-    <partitioning_field/>
-    <partitioning_daily>N</partitioning_daily>
-    <partitioning_monthly>Y</partitioning_monthly>
-    <tablename_in_field>N</tablename_in_field>
-    <tablename_field/>
-    <tablename_in_table>Y</tablename_in_table>
-    <return_keys>N</return_keys>
-    <return_field/>
-    <fields>
-      <field>
-        <column_name>playerid</column_name>
-        <stream_name>playerid</stream_name>
-      </field>
-      <field>
-        <column_name>library</column_name>
-        <stream_name>library</stream_name>
-      </field>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>496</xloc>
-      <yloc>208</yloc>
+      <xloc>368</xloc>
+      <yloc>160</yloc>
       <draw>Y</draw>
     </GUI>
   </step>

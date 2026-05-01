@@ -68,8 +68,6 @@ CREATE TABLE IF NOT EXISTS dw.dim_game (
 CREATE TABLE IF NOT EXISTS dw.fact_achievement (
     achievementid   VARCHAR(200) PRIMARY KEY,
     gameid          VARCHAR(30),
-    title           TEXT,
-    description     TEXT
 );
 
 
@@ -88,6 +86,7 @@ ALTER TABLE dw.fact_library
 
 ALTER TABLE dw.fact_achievement
     ADD CONSTRAINT fk_dim_achieve_game FOREIGN KEY (gameid) REFERENCES dw.dim_game(gameid);
+
 CREATE OR REPLACE FUNCTION dw.calculate_shannon_entropy(hour_counts INT[])
 RETURNS NUMERIC AS $$
 DECLARE
@@ -167,16 +166,44 @@ INSERT INTO dw.fact_achievement (achievementid, gameid, title, description) VALU
 -- -----------------------------------------------------------------------------
 -- Transformation Handling via Database Triggers
 -- -----------------------------------------------------------------------------
--- Bypasses Pentaho row-level Error Hop degradation by actively intercepting 
--- inserts/updates and routing missing FK associations to our '-1' dummy records.
+-- Goal:
+-- - Reject rows with missing PRIMARY KEY fields (NULL PK).
+-- - Never rewrite PRIMARY KEY fields to '-1'.
+-- - Only apply '-1' fallback to NON-PK foreign key columns.
 
-CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_review() RETURNS TRIGGER AS $$
+-- Idempotent trigger install (PostgreSQL does not support CREATE OR REPLACE TRIGGER)
+DROP TRIGGER IF EXISTS trg_review_fk ON dw.fact_review;
+DROP TRIGGER IF EXISTS trg_achieve_dim_fk ON dw.fact_achievement;
+DROP TRIGGER IF EXISTS trg_achieve_fk ON dw.fact_achievement_unlock;
+DROP TRIGGER IF EXISTS trg_library_fk ON dw.fact_library;
+
+CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_review()
+RETURNS TRIGGER AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN NEW.playerid := '-1'; END IF;
-    IF NOT EXISTS (SELECT 1 FROM dw.dim_game WHERE gameid = NEW.gameid) THEN NEW.gameid := '-1'; END IF;
+    -- PK = (reviewid, playerid)
+    IF NEW.reviewid IS NULL OR NEW.playerid IS NULL THEN
+        RETURN NULL;
+    END IF;
 
+    -- playerid is PK+FK -> reject if missing in dimension (do not rewrite PK)
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN
+        RETURN NULL;
+    END IF;
+
+    -- gameid is non-PK FK -> fallback allowed
+    NEW.gameid := COALESCE(NEW.gameid, '-1');
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_game WHERE gameid = NEW.gameid) THEN
+        NEW.gameid := '-1';
+    END IF;
+
+    -- De-dupe inserts by PK
     IF TG_OP = 'INSERT' THEN
-        IF EXISTS (SELECT 1 FROM dw.fact_review WHERE reviewid = NEW.reviewid AND playerid = NEW.playerid) THEN
+        IF EXISTS (
+            SELECT 1
+            FROM dw.fact_review
+            WHERE reviewid = NEW.reviewid
+              AND playerid = NEW.playerid
+        ) THEN
             RETURN NULL;
         END IF;
     END IF;
@@ -184,14 +211,38 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE OR REPLACE TRIGGER trg_review_fk BEFORE INSERT OR UPDATE ON dw.fact_review FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_review();
 
-CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_achievement() RETURNS TRIGGER AS $$
+CREATE TRIGGER trg_review_fk
+BEFORE INSERT OR UPDATE ON dw.fact_review
+FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_review();
+
+-- -----------------------------------------------------------------------------
+-- dw.fact_achievement trigger
+-- (IMPORTANT: dw.fact_achievement has NO playerid. Do not reference NEW.playerid here.)
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_achievement()
+RETURNS TRIGGER AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dw.dim_game WHERE gameid = NEW.gameid) THEN NEW.gameid := '-1'; END IF;
+    -- PK = achievementid
+    IF NEW.achievementid IS NULL THEN
+        RETURN NULL;
+    END IF;
 
+    -- Normalize non-PK
+    NEW.gameid := COALESCE(NEW.gameid, '-1');
+
+    -- FK fallback
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_game WHERE gameid = NEW.gameid) THEN
+        NEW.gameid := '-1';
+    END IF;
+
+    -- De-dupe inserts by PK (achievementid)
     IF TG_OP = 'INSERT' THEN
-        IF EXISTS (SELECT 1 FROM dw.fact_achievement WHERE achievementid = NEW.achievementid) THEN
+        IF EXISTS (
+            SELECT 1
+            FROM dw.fact_achievement
+            WHERE achievementid = NEW.achievementid
+        ) THEN
             RETURN NULL;
         END IF;
     END IF;
@@ -199,15 +250,40 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE OR REPLACE TRIGGER trg_achieve_dim_fk BEFORE INSERT OR UPDATE ON dw.fact_achievement FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_achievement();
 
-CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_achievement() RETURNS TRIGGER AS $$
+CREATE TRIGGER trg_achieve_dim_fk
+BEFORE INSERT OR UPDATE ON dw.fact_achievement
+FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_achievement();
+
+-- -----------------------------------------------------------------------------
+-- dw.fact_achievement_unlock trigger
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_achievement_unlock()
+RETURNS TRIGGER AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN NEW.playerid := '-1'; END IF;
-    IF NOT EXISTS (SELECT 1 FROM dw.fact_achievement WHERE achievementid = NEW.achievementid) THEN NEW.achievementid := '-1'; END IF;
+    -- PK = (playerid, achievementid)
+    IF NEW.playerid IS NULL OR NEW.achievementid IS NULL THEN
+        RETURN NULL;
+    END IF;
 
+    -- playerid is PK+FK -> reject if missing in dimension
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN
+        RETURN NULL;
+    END IF;
+
+    -- achievementid is PK+FK -> reject if missing in dimension
+    IF NOT EXISTS (SELECT 1 FROM dw.fact_achievement WHERE achievementid = NEW.achievementid) THEN
+        RETURN NULL;
+    END IF;
+
+    -- De-dupe inserts by PK
     IF TG_OP = 'INSERT' THEN
-        IF EXISTS (SELECT 1 FROM dw.fact_achievement_unlock WHERE playerid = NEW.playerid AND achievementid = NEW.achievementid) THEN
+        IF EXISTS (
+            SELECT 1
+            FROM dw.fact_achievement_unlock
+            WHERE playerid = NEW.playerid
+              AND achievementid = NEW.achievementid
+        ) THEN
             RETURN NULL;
         END IF;
     END IF;
@@ -215,15 +291,39 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE OR REPLACE TRIGGER trg_achieve_fk BEFORE INSERT OR UPDATE ON dw.fact_achievement_unlock FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_achievement();
 
-CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_library() RETURNS TRIGGER AS $$
+CREATE TRIGGER trg_achieve_fk
+BEFORE INSERT OR UPDATE ON dw.fact_achievement_unlock
+FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_achievement_unlock();
+
+CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_library()
+RETURNS TRIGGER AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN NEW.playerid := '-1'; END IF;
-    IF NOT EXISTS (SELECT 1 FROM dw.dim_game WHERE gameid = NEW.appid) THEN NEW.appid := '-1'; END IF;
+    -- PK = (playerid, appid)
+    IF NEW.playerid IS NULL OR NEW.appid IS NULL THEN
+        RETURN NULL;
+    END IF;
 
+    -- playerid is PK+FK -> reject if missing
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN
+        RETURN NULL;
+    END IF;
+
+    -- appid is PK+FK -> reject if missing in dim_game (do not rewrite PK)
+    IF NOT EXISTS (SELECT 1 FROM dw.dim_game WHERE gameid = NEW.appid) THEN
+        RETURN NULL;
+    END IF;
+
+    NEW.playtime_mins := COALESCE(NEW.playtime_mins, 0);
+
+    -- De-dupe inserts by PK
     IF TG_OP = 'INSERT' THEN
-        IF EXISTS (SELECT 1 FROM dw.fact_library WHERE playerid = NEW.playerid AND appid = NEW.appid) THEN
+        IF EXISTS (
+            SELECT 1
+            FROM dw.fact_library
+            WHERE playerid = NEW.playerid
+              AND appid = NEW.appid
+        ) THEN
             RETURN NULL;
         END IF;
     END IF;
@@ -231,4 +331,7 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-CREATE OR REPLACE TRIGGER trg_library_fk BEFORE INSERT OR UPDATE ON dw.fact_library FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_library();
+
+CREATE TRIGGER trg_library_fk
+BEFORE INSERT OR UPDATE ON dw.fact_library
+FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_library();

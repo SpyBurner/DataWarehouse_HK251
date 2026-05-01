@@ -97,8 +97,6 @@ BEGIN
 	CREATE TABLE dbo.stg_achievements (
 		[achievementid] NVARCHAR(MAX),
 		[gameid]        NVARCHAR(MAX),
-		[title]         NVARCHAR(MAX),
-		[description]   NVARCHAR(MAX),
 		loaded_at     DATETIME2     NOT NULL DEFAULT SYSUTCDATETIME()
 	);
 END;

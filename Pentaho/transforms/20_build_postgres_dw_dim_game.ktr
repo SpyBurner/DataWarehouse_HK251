@@ -557,12 +557,12 @@
     </hop>
     <hop>
       <from>Select Values</from>
-      <to>Insert Update</to>
+      <to>Text file output</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
       <from>Select Values</from>
-      <to>Text file output</to>
+      <to>Insert Update</to>
       <enabled>Y</enabled>
     </hop>
   </order>
@@ -592,7 +592,7 @@
       <value>
         <name>gameid</name>
         <rename>gameid</rename>
-        <update>N</update>
+        <update>Y</update>
       </value>
       <value>
         <name>title</name>
@@ -623,7 +623,7 @@
     <name>Select Values</name>
     <type>SelectValues</type>
     <description/>
-    <distribute>N</distribute>
+    <distribute>Y</distribute>
     <custom_distribution/>
     <copies>1</copies>
     <partitioning>
