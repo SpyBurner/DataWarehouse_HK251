@@ -59,7 +59,7 @@ services:
       context: ./steam_crawler
     container_name: steam-crawler
     volumes:
-      - ./Datasets/landing:/app/Datasets/landing
+      - ./Datasets:/app/Datasets
     working_dir: /app
     entrypoint: ["python", "-m", "steam_crawler.cli"]
 

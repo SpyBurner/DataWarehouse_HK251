@@ -32,8 +32,9 @@ CREATE TABLE IF NOT EXISTS dw.fact_review (
 );
 
 CREATE TABLE IF NOT EXISTS dw.fact_library (
-    playerid    VARCHAR(30) NOT NULL,
-    appid       VARCHAR(30) NOT NULL,
+    playerid      VARCHAR(30) NOT NULL,
+    appid         VARCHAR(30) NOT NULL,
+    playtime_mins INTEGER DEFAULT 0,
     PRIMARY KEY (playerid, appid)
 );
 
