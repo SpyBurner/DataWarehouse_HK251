@@ -623,12 +623,16 @@ SELECT
         ELSE 0 
     END as playtime_mins
 FROM dw.stg_library_temp,
--- NULLIF prevents errors if the crawler accidentally passed an empty string instead of an empty array
 LATERAL json_array_elements(NULLIF(library, '')::json) AS game_element
 WHERE library IS NOT NULL 
-  AND library != '[]';
+  AND library != '[]'
+-- The Upsert Logic:
+ON CONFLICT (playerid, appid) 
+DO UPDATE SET 
+    -- EXCLUDED represents the incoming row that caused the conflict
+    playtime_mins = EXCLUDED.playtime_mins; 
 
--- Clean up the temporary staging table after successful insertion
+-- Clean up the temporary staging table after successful insertion/update
 TRUNCATE TABLE dw.stg_library_temp;</sql>
       <useVariableSubstitution>F</useVariableSubstitution>
       <sqlfromfile>F</sqlfromfile>

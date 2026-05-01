@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS dw.dim_game (
 
 CREATE TABLE IF NOT EXISTS dw.fact_achievement (
     achievementid   VARCHAR(200) PRIMARY KEY,
-    gameid          VARCHAR(30),
+    gameid          VARCHAR(30)
 );
 
 
@@ -161,7 +161,7 @@ CREATE TABLE IF NOT EXISTS dm.dm_datamart_refresh_log (
 -- -----------------------------------------------------------------------------
 INSERT INTO dw.dim_player (playerid, country, created, is_private) VALUES ('-1', 'Unknown', '1970-01-01', false) ON CONFLICT (playerid) DO NOTHING;
 INSERT INTO dw.dim_game (gameid, title, release_date) VALUES ('-1', 'Unknown', '1970-01-01') ON CONFLICT (gameid) DO NOTHING;
-INSERT INTO dw.fact_achievement (achievementid, gameid, title, description) VALUES ('-1', '-1', 'Unknown', 'Unknown') ON CONFLICT (achievementid) DO NOTHING;
+INSERT INTO dw.fact_achievement (achievementid, gameid) VALUES ('-1', '-1') ON CONFLICT (achievementid) DO NOTHING;
 
 -- -----------------------------------------------------------------------------
 -- Transformation Handling via Database Triggers

@@ -553,28 +553,6 @@
         <precision>-1</precision>
         <trim_type>none</trim_type>
       </field>
-      <field>
-        <name>title</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <length>-1</length>
-        <precision>-1</precision>
-        <trim_type>none</trim_type>
-      </field>
-      <field>
-        <name>description</name>
-        <type>String</type>
-        <format/>
-        <currency/>
-        <decimal/>
-        <group/>
-        <length>-1</length>
-        <precision>-1</precision>
-        <trim_type>none</trim_type>
-      </field>
     </fields>
     <attributes/>
     <cluster_schema/>
