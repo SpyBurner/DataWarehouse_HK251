@@ -568,13 +568,18 @@
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>join_abcdef</from>
-      <to>Filter rows</to>
+      <from>Filter rows</from>
+      <to>Output</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>Filter rows</from>
-      <to>Output</to>
+      <from>join_abcdef</from>
+      <to>If field value is null</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>If field value is null</from>
+      <to>Filter rows</to>
       <enabled>Y</enabled>
     </hop>
   </order>
@@ -590,12 +595,16 @@
       <schema_name/>
     </partitioning>
     <connection>Postgres_Warehouse</connection>
-    <sql>WITH intervals AS (
-    SELECT playerid,
-           EXTRACT(EPOCH FROM (date_acquired - LAG(date_acquired) OVER (PARTITION BY playerid ORDER BY date_acquired))) AS interval_sec,
-           date_trunc('minute', date_acquired) as acq_minute,
-           date_trunc('day', date_acquired) as acq_day
-    FROM dw.fact_achievement_unlock
+    <sql>WITH valid_players AS (
+    SELECT playerid FROM dw.dim_player WHERE is_private = FALSE
+),
+intervals AS (
+    SELECT u.playerid,
+           EXTRACT(EPOCH FROM (u.date_acquired - LAG(u.date_acquired) OVER (PARTITION BY u.playerid ORDER BY u.date_acquired))) AS interval_sec,
+           date_trunc('minute', u.date_acquired) as acq_minute,
+           date_trunc('day', u.date_acquired) as acq_day
+    FROM dw.fact_achievement_unlock u
+    JOIN valid_players p ON u.playerid = p.playerid
 ),
 minute_counts AS (
     SELECT playerid, acq_minute, COUNT(*) as cnt FROM intervals GROUP BY playerid, acq_minute
@@ -808,8 +817,9 @@ ORDER BY b.playerid;</sql>
         u.date_acquired,
         MOD((EXTRACT(HOUR FROM u.date_acquired)::INT + COALESCE(o.utc_offset, 0) + 24), 24) AS local_hour
     FROM dw.fact_achievement_unlock u
-    LEFT JOIN dw.dim_player p ON u.playerid = p.playerid
+    INNER JOIN dw.dim_player p ON u.playerid = p.playerid
     LEFT JOIN dw.dim_country_utc_offset o ON p.country = o.country
+    WHERE p.is_private = FALSE
 )
 SELECT 
     playerid,
@@ -985,24 +995,29 @@ ORDER BY playerid;</sql>
       <schema_name/>
     </partitioning>
     <connection>Postgres_Warehouse</connection>
-    <sql>WITH base_stats AS (
+    <sql>WITH valid_players AS (
+    SELECT playerid FROM dw.dim_player WHERE is_private = FALSE
+),
+base_stats AS (
     SELECT 
         u.playerid,
         COUNT(u.achievementid) AS total_achievements,
         COUNT(DISTINCT da.gameid) AS games_with_achievements,
         (SELECT COUNT(*) FROM dw.fact_library l WHERE l.playerid = u.playerid) AS library_size
     FROM dw.fact_achievement_unlock u
+    JOIN valid_players vp ON u.playerid = vp.playerid
     LEFT JOIN dw.fact_achievement da ON u.achievementid = da.achievementid
     GROUP BY u.playerid
 ),
 game_props AS (
     SELECT 
-        playerid,
-        COUNT(*) / NULLIF(SUM(COUNT(*)) OVER (PARTITION BY playerid), 0)::NUMERIC as prop,
-        ROW_NUMBER() OVER (PARTITION BY playerid ORDER BY COUNT(*) DESC) as rnk
+        au.playerid,
+        COUNT(*) / NULLIF(SUM(COUNT(*)) OVER (PARTITION BY au.playerid), 0)::NUMERIC as prop,
+        ROW_NUMBER() OVER (PARTITION BY au.playerid ORDER BY COUNT(*) DESC) as rnk
     FROM dw.fact_achievement_unlock au
+    JOIN valid_players vp ON au.playerid = vp.playerid
     LEFT JOIN dw.fact_achievement da ON au.achievementid = da.achievementid
-    GROUP BY playerid, da.gameid
+    GROUP BY au.playerid, da.gameid
 )
 SELECT 
     b.playerid,
@@ -1267,7 +1282,9 @@ ORDER BY b.playerid;</sql>
     COUNT(*) FILTER (WHERE l.playtime_mins = 0)::NUMERIC / NULLIF(COUNT(r.reviewid), 0) AS review_unplayed_ratio,
     1.0 - (COUNT(DISTINCT LOWER(TRIM(r.review)))::NUMERIC / NULLIF(COUNT(r.reviewid), 0)) AS review_duplication_rate
 FROM dw.fact_review r
+JOIN dw.dim_player p ON r.playerid = p.playerid
 LEFT JOIN dw.fact_library l ON r.playerid = l.playerid AND r.gameid = l.appid
+WHERE p.is_private = FALSE
 GROUP BY r.playerid
 ORDER BY r.playerid;</sql>
     <limit>0</limit>
@@ -1276,7 +1293,146 @@ ORDER BY r.playerid;</sql>
     <variables_active>N</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <cached_row_meta_active>N</cached_row_meta_active>
-    <row-meta/>
+    <row-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>playerid</name>
+        <length>30</length>
+        <precision>-1</precision>
+        <origin>Branch D: Review Features</origin>
+        <comments>playerid</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>Integer</type>
+        <storagetype>normal</storagetype>
+        <name>total_reviews</name>
+        <length>15</length>
+        <precision>0</precision>
+        <origin>Branch D: Review Features</origin>
+        <comments>total_reviews</comments>
+        <conversion_Mask>####0;-####0</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>BigNumber</type>
+        <storagetype>normal</storagetype>
+        <name>avg_review_length</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch D: Review Features</origin>
+        <comments>avg_review_length</comments>
+        <conversion_Mask>######0.0###################;-######0.0###################</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>Integer</type>
+        <storagetype>normal</storagetype>
+        <name>min_review_length</name>
+        <length>9</length>
+        <precision>0</precision>
+        <origin>Branch D: Review Features</origin>
+        <comments>min_review_length</comments>
+        <conversion_Mask>####0;-####0</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>BigNumber</type>
+        <storagetype>normal</storagetype>
+        <name>review_unplayed_ratio</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch D: Review Features</origin>
+        <comments>review_unplayed_ratio</comments>
+        <conversion_Mask>######0.0###################;-######0.0###################</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>BigNumber</type>
+        <storagetype>normal</storagetype>
+        <name>review_duplication_rate</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch D: Review Features</origin>
+        <comments>review_duplication_rate</comments>
+        <conversion_Mask>######0.0###################;-######0.0###################</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+    </row-meta>
     <attributes/>
     <cluster_schema/>
     <remotesteps>
@@ -1305,10 +1461,11 @@ ORDER BY r.playerid;</sql>
     <connection>Postgres_Warehouse</connection>
     <sql>SELECT 
     p.playerid,
-    EXTRACT(DAY FROM (MIN(u.date_acquired) - p.created)) AS days_before_first_achievement,
-    EXTRACT(DAY FROM (NOW() - p.created)) AS account_age_days
+    TRUNC(EXTRACT(EPOCH FROM (MIN(u.date_acquired) - p.created)) / 86400) AS days_before_first_achievement,
+    TRUNC(EXTRACT(EPOCH FROM (NOW() - p.created)) / 86400) AS account_age_days
 FROM dw.dim_player p
 LEFT JOIN dw.fact_achievement_unlock u ON p.playerid = u.playerid
+WHERE p.is_private = FALSE
 GROUP BY p.playerid, p.created
 ORDER BY p.playerid;</sql>
     <limit>0</limit>
@@ -1317,7 +1474,77 @@ ORDER BY p.playerid;</sql>
     <variables_active>N</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <cached_row_meta_active>N</cached_row_meta_active>
-    <row-meta/>
+    <row-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>playerid</name>
+        <length>30</length>
+        <precision>-1</precision>
+        <origin>Branch E: Account Age Features</origin>
+        <comments>playerid</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>BigNumber</type>
+        <storagetype>normal</storagetype>
+        <name>days_before_first_achievement</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch E: Account Age Features</origin>
+        <comments>days_before_first_achievement</comments>
+        <conversion_Mask>######0.0###################;-######0.0###################</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>BigNumber</type>
+        <storagetype>normal</storagetype>
+        <name>account_age_days</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch E: Account Age Features</origin>
+        <comments>account_age_days</comments>
+        <conversion_Mask>######0.0###################;-######0.0###################</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+    </row-meta>
     <attributes/>
     <cluster_schema/>
     <remotesteps>
@@ -1344,28 +1571,133 @@ ORDER BY p.playerid;</sql>
       <schema_name/>
     </partitioning>
     <connection>Postgres_Warehouse</connection>
-    <sql>WITH unique_playtime AS (
-    SELECT playerid, appid, MAX(playtime_mins) as playtime_mins
-    FROM dw.fact_library
-    GROUP BY playerid, appid
+    <sql>WITH valid_players AS (
+    SELECT playerid FROM dw.dim_player WHERE is_private = FALSE
+),
+unique_playtime AS (
+    SELECT l.playerid, l.appid, MAX(l.playtime_mins) as playtime_mins
+    FROM dw.fact_library l
+    JOIN valid_players p ON l.playerid = p.playerid
+    GROUP BY l.playerid, l.appid
+),
+ach_counts AS (
+    SELECT u.playerid, da.gameid, COUNT(u.achievementid) as ach_cnt
+    FROM dw.fact_achievement_unlock u
+    JOIN valid_players p ON u.playerid = p.playerid
+    JOIN dw.fact_achievement da ON u.achievementid = da.achievementid
+    GROUP BY u.playerid, da.gameid
 )
 SELECT 
-    u.playerid,
-    COUNT(u.achievementid) FILTER (WHERE l.playtime_mins = 0)::NUMERIC / NULLIF(COUNT(u.achievementid), 0) AS zero_playtime_achievements_ratio,
+    a.playerid,
+    SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins = 0)::NUMERIC / 
+        NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) AS zero_playtime_achievements_ratio,
     SUM(l.playtime_mins) AS total_playtime_mins,
-    SUM(l.playtime_mins)::NUMERIC / NULLIF(COUNT(u.achievementid), 0) AS playtime_per_achievement
-FROM dw.fact_achievement_unlock u
-LEFT JOIN dw.fact_achievement da ON u.achievementid = da.achievementid
-LEFT JOIN unique_playtime l ON u.playerid = l.playerid AND da.gameid = l.appid
-GROUP BY u.playerid
-ORDER BY u.playerid;</sql>
+    SUM(l.playtime_mins)::NUMERIC / 
+        NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) AS playtime_per_achievement
+FROM ach_counts a
+LEFT JOIN unique_playtime l ON a.playerid = l.playerid AND a.gameid = l.appid
+GROUP BY a.playerid
+ORDER BY a.playerid;</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
     <variables_active>N</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <cached_row_meta_active>N</cached_row_meta_active>
-    <row-meta/>
+    <row-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>playerid</name>
+        <length>30</length>
+        <precision>-1</precision>
+        <origin>Branch F: Playtime Features</origin>
+        <comments>playerid</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>BigNumber</type>
+        <storagetype>normal</storagetype>
+        <name>zero_playtime_achievements_ratio</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch F: Playtime Features</origin>
+        <comments>zero_playtime_achievements_ratio</comments>
+        <conversion_Mask>######0.0###################;-######0.0###################</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>Integer</type>
+        <storagetype>normal</storagetype>
+        <name>total_playtime_mins</name>
+        <length>15</length>
+        <precision>0</precision>
+        <origin>Branch F: Playtime Features</origin>
+        <comments>total_playtime_mins</comments>
+        <conversion_Mask>####0;-####0</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>BigNumber</type>
+        <storagetype>normal</storagetype>
+        <name>playtime_per_achievement</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch F: Playtime Features</origin>
+        <comments>playtime_per_achievement</comments>
+        <conversion_Mask>######0.0###################;-######0.0###################</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+    </row-meta>
     <attributes/>
     <cluster_schema/>
     <remotesteps>
@@ -1396,9 +1728,72 @@ ORDER BY u.playerid;</sql>
     <compare>
       <condition>
         <negated>N</negated>
-        <leftvalue>playerid</leftvalue>
-        <function>IS NOT NULL</function>
-        <rightvalue/>
+        <conditions>
+          <condition>
+            <negated>N</negated>
+            <leftvalue>playerid</leftvalue>
+            <function>IS NOT NULL</function>
+            <rightvalue/>
+          </condition>
+          <condition>
+            <negated>N</negated>
+            <operator>AND</operator>
+            <conditions>
+              <condition>
+                <negated>N</negated>
+                <conditions>
+                  <condition>
+                    <negated>N</negated>
+                    <leftvalue>total_achievements</leftvalue>
+                    <function>&gt;=</function>
+                    <rightvalue/>
+                    <value>
+                      <name>constant</name>
+                      <type>Integer</type>
+                      <text>10</text>
+                      <length>-1</length>
+                      <precision>0</precision>
+                      <isnull>N</isnull>
+                      <mask>####0;-####0</mask>
+                    </value>
+                  </condition>
+                  <condition>
+                    <negated>N</negated>
+                    <operator>OR</operator>
+                    <leftvalue>total_reviews</leftvalue>
+                    <function>&gt;=</function>
+                    <rightvalue/>
+                    <value>
+                      <name>constant</name>
+                      <type>Integer</type>
+                      <text>3</text>
+                      <length>-1</length>
+                      <precision>0</precision>
+                      <isnull>N</isnull>
+                      <mask>####0;-####0</mask>
+                    </value>
+                  </condition>
+                </conditions>
+              </condition>
+              <condition>
+                <negated>N</negated>
+                <operator>AND</operator>
+                <leftvalue>library_size</leftvalue>
+                <function>&gt;=</function>
+                <rightvalue/>
+                <value>
+                  <name>constant</name>
+                  <type>Integer</type>
+                  <text>1</text>
+                  <length>-1</length>
+                  <precision>0</precision>
+                  <isnull>N</isnull>
+                  <mask>####0;-####0</mask>
+                </value>
+              </condition>
+            </conditions>
+          </condition>
+        </conditions>
       </condition>
     </compare>
     <attributes/>
@@ -1410,7 +1805,7 @@ ORDER BY u.playerid;</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>1222</xloc>
+      <xloc>1326</xloc>
       <yloc>503</yloc>
       <draw>Y</draw>
     </GUI>
@@ -1562,7 +1957,7 @@ ORDER BY u.playerid;</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>1344</xloc>
+      <xloc>1439</xloc>
       <yloc>503</yloc>
       <draw>Y</draw>
     </GUI>
@@ -1986,6 +2381,58 @@ ORDER BY u.playerid;</sql>
     <GUI>
       <xloc>300</xloc>
       <yloc>600</yloc>
+      <draw>Y</draw>
+    </GUI>
+  </step>
+  <step>
+    <name>If field value is null</name>
+    <type>IfNull</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <replaceAllByValue/>
+    <replaceAllMask/>
+    <selectFields>Y</selectFields>
+    <selectValuesType>N</selectValuesType>
+    <setEmptyStringAll>N</setEmptyStringAll>
+    <valuetypes>
+      </valuetypes>
+    <fields>
+      <field>
+        <name>total_achievements</name>
+        <value>0</value>
+        <mask/>
+        <set_empty_string>N</set_empty_string>
+      </field>
+      <field>
+        <name>total_reviews</name>
+        <value>0</value>
+        <mask/>
+        <set_empty_string>N</set_empty_string>
+      </field>
+      <field>
+        <name>review_unplayed_ratio</name>
+        <value>0</value>
+        <mask/>
+        <set_empty_string>N</set_empty_string>
+      </field>
+    </fields>
+    <attributes/>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>1213</xloc>
+      <yloc>503</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
