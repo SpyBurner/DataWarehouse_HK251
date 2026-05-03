@@ -1,1 +1,1 @@
-kitchen.bat /file:"./full_run.kjb" /level:Detailed > ./overnight.log
+kitchen.bat /file:"./master.kjb" /level:Detailed > ./overnight.log

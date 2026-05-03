@@ -83,6 +83,7 @@ services:
     command: ["python", "main.py"]
     volumes:
       - ./ML_analytics:/app
+      - ml_outputs:/app/outputs
     restart: "no"
 
   ml-dashboard:
@@ -101,9 +102,11 @@ services:
     command: ["streamlit", "run", "streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501"]
     volumes:
       - ./ML_analytics:/app
+      - ml_outputs:/app/outputs
     restart: unless-stopped
 
 # Define named volumes
 volumes:
   mssql_data:
   postgres_data:
+  ml_outputs:
