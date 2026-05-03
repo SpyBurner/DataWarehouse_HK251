@@ -600,26 +600,181 @@
 minute_counts AS (
     SELECT playerid, acq_minute, COUNT(*) as cnt FROM intervals GROUP BY playerid, acq_minute
 ),
+max_minute_counts AS (
+    SELECT playerid, MAX(cnt) as max_achievements_per_minute FROM minute_counts GROUP BY playerid
+),
 day_counts AS (
     SELECT playerid, acq_day, COUNT(*) as cnt FROM intervals GROUP BY playerid, acq_day
+),
+max_day_counts AS (
+    SELECT playerid, MAX(cnt) as max_achievements_per_day FROM day_counts GROUP BY playerid
+),
+base_stats AS (
+    SELECT 
+        playerid,
+        COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY interval_sec), 0) AS median_unlock_interval_sec,
+        COALESCE(stddev_pop(interval_sec), 0) AS std_unlock_interval_sec,
+        CASE WHEN avg(interval_sec) > 0 THEN stddev_pop(interval_sec) / avg(interval_sec) ELSE 0 END AS cv_unlock_interval
+    FROM intervals
+    GROUP BY playerid
 )
 SELECT 
-    i.playerid,
-    COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY interval_sec), 0) AS median_unlock_interval_sec,
-    COALESCE(stddev_pop(interval_sec), 0) AS std_unlock_interval_sec,
-    CASE WHEN avg(interval_sec) > 0 THEN stddev_pop(interval_sec) / avg(interval_sec) ELSE 0 END AS cv_unlock_interval,
-    (SELECT MAX(cnt) FROM minute_counts m WHERE m.playerid = i.playerid) AS max_achievements_per_minute,
-    (SELECT MAX(cnt) FROM day_counts d WHERE d.playerid = i.playerid) AS max_achievements_per_day
-FROM intervals i
-GROUP BY i.playerid
-ORDER BY i.playerid;</sql>
+    b.playerid,
+    b.median_unlock_interval_sec,
+    b.std_unlock_interval_sec,
+    b.cv_unlock_interval,
+    COALESCE(mm.max_achievements_per_minute, 0) AS max_achievements_per_minute,
+    COALESCE(md.max_achievements_per_day, 0) AS max_achievements_per_day
+FROM base_stats b
+LEFT JOIN max_minute_counts mm ON b.playerid = mm.playerid
+LEFT JOIN max_day_counts md ON b.playerid = md.playerid
+ORDER BY b.playerid;</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
     <variables_active>N</variables_active>
     <lazy_conversion_active>N</lazy_conversion_active>
     <cached_row_meta_active>N</cached_row_meta_active>
-    <row-meta/>
+    <row-meta>
+      <value-meta>
+        <type>String</type>
+        <storagetype>normal</storagetype>
+        <name>playerid</name>
+        <length>30</length>
+        <precision>-1</precision>
+        <origin>Branch A: Speed Features</origin>
+        <comments>playerid</comments>
+        <conversion_Mask/>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>Number</type>
+        <storagetype>normal</storagetype>
+        <name>median_unlock_interval_sec</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch A: Speed Features</origin>
+        <comments>median_unlock_interval_sec</comments>
+        <conversion_Mask>####0.0#########;-####0.0#########</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>BigNumber</type>
+        <storagetype>normal</storagetype>
+        <name>std_unlock_interval_sec</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch A: Speed Features</origin>
+        <comments>std_unlock_interval_sec</comments>
+        <conversion_Mask>######0.0###################;-######0.0###################</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>BigNumber</type>
+        <storagetype>normal</storagetype>
+        <name>cv_unlock_interval</name>
+        <length>-1</length>
+        <precision>-1</precision>
+        <origin>Branch A: Speed Features</origin>
+        <comments>cv_unlock_interval</comments>
+        <conversion_Mask>######0.0###################;-######0.0###################</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol/>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>Integer</type>
+        <storagetype>normal</storagetype>
+        <name>max_achievements_per_minute</name>
+        <length>15</length>
+        <precision>0</precision>
+        <origin>Branch A: Speed Features</origin>
+        <comments>max_achievements_per_minute</comments>
+        <conversion_Mask>####0;-####0</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+      <value-meta>
+        <type>Integer</type>
+        <storagetype>normal</storagetype>
+        <name>max_achievements_per_day</name>
+        <length>15</length>
+        <precision>0</precision>
+        <origin>Branch A: Speed Features</origin>
+        <comments>max_achievements_per_day</comments>
+        <conversion_Mask>####0;-####0</conversion_Mask>
+        <decimal_symbol>.</decimal_symbol>
+        <grouping_symbol>,</grouping_symbol>
+        <currency_symbol/>
+        <trim_type>none</trim_type>
+        <case_insensitive>N</case_insensitive>
+        <collator_disabled>Y</collator_disabled>
+        <collator_strength>0</collator_strength>
+        <sort_descending>N</sort_descending>
+        <output_padding>N</output_padding>
+        <date_format_lenient>N</date_format_lenient>
+        <date_format_locale>en_US</date_format_locale>
+        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <lenient_string_to_number>N</lenient_string_to_number>
+      </value-meta>
+    </row-meta>
     <attributes/>
     <cluster_schema/>
     <remotesteps>

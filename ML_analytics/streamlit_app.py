@@ -24,6 +24,7 @@ import joblib
 import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+from datamart import load_datamart_table
 from models import apply_log_transform
 
 st.set_page_config(page_title="Steam Anomaly Detection Dashboard", layout="wide")
@@ -980,7 +981,7 @@ def render_profile(
 
 ensemble = load_csv("outputs/ensemble_results.csv")
 features = load_csv("outputs/feature_matrix.csv")
-players = load_csv("data/raw/players.csv")
+players = load_datamart_table("dw.dim_player")
 top50 = load_csv("outputs/top50_flagged_profiles.csv")
 loading = load_csv("outputs/pca_loading_matrix.csv")
 

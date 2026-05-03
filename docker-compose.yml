@@ -50,6 +50,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data # Persist Postgres data
       - ./SQL/SQL_Postgres_InitWarehouse.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d Warehouse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   # -----------------------------------
   # 3. STEAM CRAWLER (CSV landing drops)
@@ -62,6 +67,41 @@ services:
       - ./Datasets:/app/Datasets
     working_dir: /app
     entrypoint: ["python", "-m", "steam_crawler.cli"]
+
+  # -----------------------------------
+  # 4. ML ANALYTICS (Pipeline + Dashboard)
+  # -----------------------------------
+  ml-pipeline:
+    build:
+      context: ./ML_analytics
+    container_name: ml-pipeline
+    env_file:
+      - ./ML_analytics/.env
+    depends_on:
+      postgres-warehouse:
+        condition: service_healthy
+    command: ["python", "main.py"]
+    volumes:
+      - ./ML_analytics:/app
+    restart: "no"
+
+  ml-dashboard:
+    build:
+      context: ./ML_analytics
+    container_name: ml-dashboard
+    env_file:
+      - ./ML_analytics/.env
+    depends_on:
+      postgres-warehouse:
+        condition: service_healthy
+      ml-pipeline:
+        condition: service_completed_successfully
+    ports:
+      - "8501:8501"
+    command: ["streamlit", "run", "streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+    volumes:
+      - ./ML_analytics:/app
+    restart: unless-stopped
 
 # Define named volumes
 volumes:

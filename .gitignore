@@ -1,3 +1,5 @@
 Datasets/
 Pentaho/schema.txt
 steam_crawler/.env
+ML_analytics/outputs
+ML_analytics/.env

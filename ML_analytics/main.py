@@ -23,12 +23,9 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
+from datamart import load_feature_matrix_from_datamart
 from active_learning import generate_review_sample, integrate_human_labels
-from features import (
-    add_time_components,
-    build_feature_matrix,
-    build_heuristic_labels,
-)
+from features import build_heuristic_labels
 from models import (
     apply_log_transform,
     build_ensemble,
@@ -47,8 +44,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-PROCESSED_DIR = os.path.join(os.path.dirname(__file__), "data", "processed")
-OUTPUTS_DIR   = os.path.join(os.path.dirname(__file__), "outputs")
+OUTPUTS_DIR = os.getenv("ML_ANALYTICS_OUTPUTS_DIR", os.path.join(os.path.dirname(__file__), "outputs"))
+PLOTS_DIR_NAME = os.getenv("ML_ANALYTICS_PLOTS_DIR", "plots")
 REVIEWED_CSV = os.path.join(os.path.dirname(__file__), "data", "reviewed.csv")
 
 
@@ -56,17 +53,11 @@ REVIEWED_CSV = os.path.join(os.path.dirname(__file__), "data", "reviewed.csv")
 # Data loading
 # ---------------------------------------------------------------------------
 
-def load_parquets() -> tuple:
-    log.info("Loading processed parquet files from %s …", PROCESSED_DIR)
-    history   = pd.read_parquet(os.path.join(PROCESSED_DIR, "history.parquet"))
-    players   = pd.read_parquet(os.path.join(PROCESSED_DIR, "players.parquet"))
-    reviews   = pd.read_parquet(os.path.join(PROCESSED_DIR, "reviews.parquet"))
-    purchased = pd.read_parquet(os.path.join(PROCESSED_DIR, "purchased.parquet"))
-    log.info("  history:   %d rows  |  columns: %s", len(history),   history.columns.tolist())
-    log.info("  players:   %d rows  |  columns: %s", len(players),   players.columns.tolist())
-    log.info("  reviews:   %d rows  |  columns: %s", len(reviews),   reviews.columns.tolist())
-    log.info("  purchased: %d rows  |  columns: %s", len(purchased), purchased.columns.tolist())
-    return history, players, reviews, purchased
+def load_feature_matrix() -> pd.DataFrame:
+    log.info("Loading datamart feature matrix from Postgres …")
+    feature_matrix = load_feature_matrix_from_datamart()
+    log.info("  feature_matrix: %d rows  |  columns: %s", len(feature_matrix), feature_matrix.columns.tolist())
+    return feature_matrix
 
 
 # ---------------------------------------------------------------------------
@@ -75,18 +66,21 @@ def load_parquets() -> tuple:
 
 def main() -> None:
     os.makedirs(OUTPUTS_DIR, exist_ok=True)
-    os.makedirs(os.path.join(OUTPUTS_DIR, "plots"), exist_ok=True)
+    os.makedirs(os.path.join(OUTPUTS_DIR, PLOTS_DIR_NAME), exist_ok=True)
 
     # ── Load ──────────────────────────────────────────────────────────────────
-    history, players, reviews, purchased = load_parquets()
-    history = add_time_components(history)
-    feature_reference_time = pd.to_datetime(history["date_acquired"], errors="coerce").max()
-    log.info("Feature reference timestamp (last achievement record): %s", feature_reference_time)
+    feature_matrix = load_feature_matrix()
+    if feature_matrix.empty:
+        raise ValueError(
+            "Datamart feature matrix is empty (0 rows). "
+            "Check source table contents and ETL load before running ML training."
+        )
+    feature_reference_time = pd.to_datetime(feature_matrix["refreshed_at"], errors="coerce").max() if "refreshed_at" in feature_matrix.columns else None
+    if feature_reference_time is not None and not pd.isna(feature_reference_time):
+        log.info("Datamart refresh timestamp: %s", feature_reference_time)
 
-    # ── Step 3: Feature Engineering (FIRST — heuristic labels reuse results) ──
-    feature_matrix = build_feature_matrix(
-        history, reviews, players, purchased, feature_reference_time,
-    )
+    # Datamart already contains the computed modeling features.
+    feature_matrix = feature_matrix.drop(columns=["refreshed_at"], errors="ignore")
     fm_path = os.path.join(OUTPUTS_DIR, "feature_matrix.csv")
     feature_matrix.to_csv(fm_path)
     log.info("Saved → %s", fm_path)
@@ -109,6 +103,11 @@ def main() -> None:
     y_normal    = heuristic_df.loc[common_ids, "heuristic_normal"]
     original_feature_names = X_raw.columns.tolist()
     log.info("Common players for modelling: %d", len(common_ids))
+    if X_raw.empty:
+        raise ValueError(
+            "No training rows after feature/label alignment (common_ids=0). "
+            "Check playerid type consistency and heuristic label generation input."
+        )
 
     # ── Path A: IsolationForest — log-transform → impute → scale ─────────────
     # IF uses random splits on individual features; extreme outliers (6+ orders

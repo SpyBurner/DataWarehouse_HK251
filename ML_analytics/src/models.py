@@ -115,6 +115,14 @@ def preprocess(X_raw: pd.DataFrame, save_path: str) -> tuple[pd.DataFrame, Pipel
     charts without any manual name tracking.
     """
     log.info("Step 4 — Preprocessing (Imputer + StandardScaler) …")
+    if X_raw.empty:
+        raise ValueError(
+            f"Preprocess received empty feature matrix: shape={X_raw.shape}. "
+            "Expected at least 1 row before SimpleImputer."
+        )
+    if X_raw.shape[1] == 0:
+        raise ValueError("Preprocess received 0 feature columns. Check datamart drop-column configuration.")
+
     preprocessor = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
         ("scaler",  StandardScaler()),
@@ -211,12 +219,24 @@ def train_xgboost_semisupervised(
     X_train = X_all.loc[pu_mask]
     y_train = y_bot_all.loc[pu_mask]   # 1=bot, 0=normal (grey area removed)
 
+    if X_train.empty:
+        raise ValueError(
+            "PU training set is empty after filtering to confident labels. "
+            "Adjust heuristic_bot/heuristic_normal rules or verify label input."
+        )
+
     pos_count = int(y_train.sum())
     neg_count = int((y_train == 0).sum())
     log.info("  Full set: %d players", len(X_all))
     log.info("  PU training set: %d players (bot=%d, confirmed_normal=%d)",
              len(y_train), pos_count, neg_count)
     log.info("  Grey area excluded: %d players", int((~pu_mask).sum()))
+
+    if pos_count == 0 or neg_count == 0:
+        raise ValueError(
+            "PU training set must contain both classes (bot and confirmed normal). "
+            f"Got bot={pos_count}, confirmed_normal={neg_count}."
+        )
 
     scale_pos_weight = neg_count / max(pos_count, 1)
     log.info("  Class imbalance ratio (scale_pos_weight): %.2f", scale_pos_weight)
