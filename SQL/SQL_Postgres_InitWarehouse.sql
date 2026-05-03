@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS dw.dim_player (
     playerid        VARCHAR(30) PRIMARY KEY,
     country         VARCHAR(50),
     created         TIMESTAMP,
-    is_private      BOOLEAN,
+    is_private      BOOLEAN DEFAULT FALSE,
     updated_at      TIMESTAMP DEFAULT NOW()
 );
  
