@@ -488,52 +488,7 @@
   </connection>
   <order>
     <hop>
-      <from>Branch A: Speed Features</from>
-      <to>sort_a</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Branch B: Temporal Features</from>
-      <to>sort_b</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Branch C: Diversity Features</from>
-      <to>sort_c</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Branch D: Review Features</from>
-      <to>sort_d</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Branch E: Account Age Features</from>
-      <to>sort_e</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>Branch F: Playtime Features</from>
-      <to>sort_f</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>sort_a</from>
-      <to>join_ab</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>sort_b</from>
-      <to>join_ab</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
       <from>join_ab</from>
-      <to>join_abc</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>sort_c</from>
       <to>join_abc</to>
       <enabled>Y</enabled>
     </hop>
@@ -543,27 +498,12 @@
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>sort_d</from>
-      <to>join_abcd</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
       <from>join_abcd</from>
       <to>join_abcde</to>
       <enabled>Y</enabled>
     </hop>
     <hop>
-      <from>sort_e</from>
-      <to>join_abcde</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
       <from>join_abcde</from>
-      <to>join_abcdef</to>
-      <enabled>Y</enabled>
-    </hop>
-    <hop>
-      <from>sort_f</from>
       <to>join_abcdef</to>
       <enabled>Y</enabled>
     </hop>
@@ -580,6 +520,36 @@
     <hop>
       <from>If field value is null</from>
       <to>Filter rows</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Branch A: Speed Features</from>
+      <to>join_ab</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Branch B: Temporal Features</from>
+      <to>join_ab</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Branch C: Diversity Features</from>
+      <to>join_abc</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Branch D: Review Features</from>
+      <to>join_abcd</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Branch E: Account Age Features</from>
+      <to>join_abcde</to>
+      <enabled>Y</enabled>
+    </hop>
+    <hop>
+      <from>Branch F: Playtime Features</from>
+      <to>join_abcdef</to>
       <enabled>Y</enabled>
     </hop>
   </order>
@@ -793,8 +763,8 @@ ORDER BY b.playerid;</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>100</xloc>
-      <yloc>100</yloc>
+      <xloc>336</xloc>
+      <yloc>150</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -978,8 +948,8 @@ ORDER BY playerid;</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>100</xloc>
-      <yloc>200</yloc>
+      <xloc>336</xloc>
+      <yloc>251</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -1257,8 +1227,8 @@ ORDER BY b.playerid;</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>100</xloc>
-      <yloc>300</yloc>
+      <xloc>336</xloc>
+      <yloc>352</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -1442,8 +1412,8 @@ ORDER BY r.playerid;</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>100</xloc>
-      <yloc>400</yloc>
+      <xloc>336</xloc>
+      <yloc>453</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -1554,8 +1524,8 @@ ORDER BY p.playerid;</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>100</xloc>
-      <yloc>500</yloc>
+      <xloc>336</xloc>
+      <yloc>554</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -1573,31 +1543,39 @@ ORDER BY p.playerid;</sql>
     <connection>Postgres_Warehouse</connection>
     <sql>WITH valid_players AS (
     SELECT playerid FROM dw.dim_player WHERE is_private = FALSE
-),
-unique_playtime AS (
+  ),
+  unique_playtime AS (
     SELECT l.playerid, l.appid, MAX(l.playtime_mins) as playtime_mins
     FROM dw.fact_library l
     JOIN valid_players p ON l.playerid = p.playerid
     GROUP BY l.playerid, l.appid
-),
-ach_counts AS (
+  ),
+  ach_counts AS (
     SELECT u.playerid, da.gameid, COUNT(u.achievementid) as ach_cnt
     FROM dw.fact_achievement_unlock u
     JOIN valid_players p ON u.playerid = p.playerid
     JOIN dw.fact_achievement da ON u.achievementid = da.achievementid
     GROUP BY u.playerid, da.gameid
-)
-SELECT 
-    a.playerid,
-    SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins = 0)::NUMERIC / 
-        NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) AS zero_playtime_achievements_ratio,
-    SUM(l.playtime_mins) AS total_playtime_mins,
-    SUM(l.playtime_mins)::NUMERIC / 
-        NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) AS playtime_per_achievement
-FROM ach_counts a
-LEFT JOIN unique_playtime l ON a.playerid = l.playerid AND a.gameid = l.appid
-GROUP BY a.playerid
-ORDER BY a.playerid;</sql>
+  ),
+  total_play AS (
+    SELECT l.playerid, SUM(l.playtime_mins) AS total_playtime_mins
+    FROM dw.fact_library l
+    JOIN valid_players p ON l.playerid = p.playerid
+    GROUP BY l.playerid
+  )
+  SELECT 
+    COALESCE(a.playerid, t.playerid) AS playerid,
+    -- ratio of achievements with zero recorded playtime (NULL when no achievements)
+    CASE WHEN SUM(a.ach_cnt) IS NULL THEN NULL ELSE SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins = 0)::NUMERIC / 
+      NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) END AS zero_playtime_achievements_ratio,
+    COALESCE(t.total_playtime_mins, SUM(l.playtime_mins)) AS total_playtime_mins,
+    CASE WHEN SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL) IS NULL THEN NULL ELSE SUM(l.playtime_mins)::NUMERIC / 
+      NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) END AS playtime_per_achievement
+  FROM ach_counts a
+  FULL OUTER JOIN total_play t ON a.playerid = t.playerid
+  LEFT JOIN unique_playtime l ON COALESCE(a.playerid, t.playerid) = l.playerid AND a.gameid = l.appid
+  GROUP BY COALESCE(a.playerid, t.playerid), t.total_playtime_mins
+  ORDER BY COALESCE(a.playerid, t.playerid);</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>
@@ -1707,8 +1685,8 @@ ORDER BY a.playerid;</sql>
       </output>
     </remotesteps>
     <GUI>
-      <xloc>100</xloc>
-      <yloc>600</yloc>
+      <xloc>336</xloc>
+      <yloc>655</yloc>
       <draw>Y</draw>
     </GUI>
   </step>
@@ -2026,8 +2004,8 @@ ORDER BY a.playerid;</sql>
       <schema_name/>
     </partitioning>
     <join_type>FULL OUTER</join_type>
-    <step1>sort_a</step1>
-    <step2>sort_b</step2>
+    <step1>Branch A: Speed Features</step1>
+    <step2>Branch B: Temporal Features</step2>
     <keys_1>
       <key>playerid</key>
     </keys_1>
@@ -2061,7 +2039,7 @@ ORDER BY a.playerid;</sql>
     </partitioning>
     <join_type>FULL OUTER</join_type>
     <step1>join_ab</step1>
-    <step2>sort_c</step2>
+    <step2>Branch C: Diversity Features</step2>
     <keys_1>
       <key>playerid</key>
     </keys_1>
@@ -2095,7 +2073,7 @@ ORDER BY a.playerid;</sql>
     </partitioning>
     <join_type>FULL OUTER</join_type>
     <step1>join_abc</step1>
-    <step2>sort_d</step2>
+    <step2>Branch D: Review Features</step2>
     <keys_1>
       <key>playerid</key>
     </keys_1>
@@ -2129,7 +2107,7 @@ ORDER BY a.playerid;</sql>
     </partitioning>
     <join_type>FULL OUTER</join_type>
     <step1>join_abcd</step1>
-    <step2>sort_e</step2>
+    <step2>Branch E: Account Age Features</step2>
     <keys_1>
       <key>playerid</key>
     </keys_1>
@@ -2163,7 +2141,7 @@ ORDER BY a.playerid;</sql>
     </partitioning>
     <join_type>FULL OUTER</join_type>
     <step1>join_abcde</step1>
-    <step2>sort_f</step2>
+    <step2>Branch F: Playtime Features</step2>
     <keys_1>
       <key>playerid</key>
     </keys_1>
@@ -2181,258 +2159,6 @@ ORDER BY a.playerid;</sql>
     <GUI>
       <xloc>1100</xloc>
       <yloc>503</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>sort_a</name>
-    <type>SortRows</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <directory>%%java.io.tmpdir%%</directory>
-    <prefix>out</prefix>
-    <sort_size>1000000</sort_size>
-    <free_memory/>
-    <compress>N</compress>
-    <compress_variable/>
-    <unique_rows>N</unique_rows>
-    <fields>
-      <field>
-        <name>playerid</name>
-        <ascending>Y</ascending>
-        <case_sensitive>N</case_sensitive>
-        <collator_enabled>N</collator_enabled>
-        <collator_strength>0</collator_strength>
-        <presorted>N</presorted>
-      </field>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>300</xloc>
-      <yloc>100</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>sort_b</name>
-    <type>SortRows</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <directory>%%java.io.tmpdir%%</directory>
-    <prefix>out</prefix>
-    <sort_size>1000000</sort_size>
-    <free_memory/>
-    <compress>N</compress>
-    <compress_variable/>
-    <unique_rows>N</unique_rows>
-    <fields>
-      <field>
-        <name>playerid</name>
-        <ascending>Y</ascending>
-        <case_sensitive>N</case_sensitive>
-        <collator_enabled>N</collator_enabled>
-        <collator_strength>0</collator_strength>
-        <presorted>N</presorted>
-      </field>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>300</xloc>
-      <yloc>200</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>sort_c</name>
-    <type>SortRows</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <directory>%%java.io.tmpdir%%</directory>
-    <prefix>out</prefix>
-    <sort_size>1000000</sort_size>
-    <free_memory/>
-    <compress>N</compress>
-    <compress_variable/>
-    <unique_rows>N</unique_rows>
-    <fields>
-      <field>
-        <name>playerid</name>
-        <ascending>Y</ascending>
-        <case_sensitive>N</case_sensitive>
-        <collator_enabled>N</collator_enabled>
-        <collator_strength>0</collator_strength>
-        <presorted>N</presorted>
-      </field>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>300</xloc>
-      <yloc>300</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>sort_d</name>
-    <type>SortRows</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <directory>%%java.io.tmpdir%%</directory>
-    <prefix>out</prefix>
-    <sort_size>1000000</sort_size>
-    <free_memory/>
-    <compress>N</compress>
-    <compress_variable/>
-    <unique_rows>N</unique_rows>
-    <fields>
-      <field>
-        <name>playerid</name>
-        <ascending>Y</ascending>
-        <case_sensitive>N</case_sensitive>
-        <collator_enabled>N</collator_enabled>
-        <collator_strength>0</collator_strength>
-        <presorted>N</presorted>
-      </field>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>300</xloc>
-      <yloc>400</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>sort_e</name>
-    <type>SortRows</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <directory>%%java.io.tmpdir%%</directory>
-    <prefix>out</prefix>
-    <sort_size>1000000</sort_size>
-    <free_memory/>
-    <compress>N</compress>
-    <compress_variable/>
-    <unique_rows>N</unique_rows>
-    <fields>
-      <field>
-        <name>playerid</name>
-        <ascending>Y</ascending>
-        <case_sensitive>N</case_sensitive>
-        <collator_enabled>N</collator_enabled>
-        <collator_strength>0</collator_strength>
-        <presorted>N</presorted>
-      </field>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>300</xloc>
-      <yloc>500</yloc>
-      <draw>Y</draw>
-    </GUI>
-  </step>
-  <step>
-    <name>sort_f</name>
-    <type>SortRows</type>
-    <description/>
-    <distribute>Y</distribute>
-    <custom_distribution/>
-    <copies>1</copies>
-    <partitioning>
-      <method>none</method>
-      <schema_name/>
-    </partitioning>
-    <directory>%%java.io.tmpdir%%</directory>
-    <prefix>out</prefix>
-    <sort_size>1000000</sort_size>
-    <free_memory/>
-    <compress>N</compress>
-    <compress_variable/>
-    <unique_rows>N</unique_rows>
-    <fields>
-      <field>
-        <name>playerid</name>
-        <ascending>Y</ascending>
-        <case_sensitive>N</case_sensitive>
-        <collator_enabled>N</collator_enabled>
-        <collator_strength>0</collator_strength>
-        <presorted>N</presorted>
-      </field>
-    </fields>
-    <attributes/>
-    <cluster_schema/>
-    <remotesteps>
-      <input>
-      </input>
-      <output>
-      </output>
-    </remotesteps>
-    <GUI>
-      <xloc>300</xloc>
-      <yloc>600</yloc>
       <draw>Y</draw>
     </GUI>
   </step>

@@ -3,3 +3,7 @@ Pentaho/schema.txt
 steam_crawler/.env
 ML_analytics/outputs
 ML_analytics/.env
+test_zone
+**/.venv
+**/.pyenv
+**/__pycache__/**
