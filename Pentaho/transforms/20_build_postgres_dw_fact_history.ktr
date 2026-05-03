@@ -690,7 +690,7 @@
         <conversion_mask>DD/MM/YYYY HH:mm</conversion_mask>
         <date_format_lenient>false</date_format_lenient>
         <date_format_locale/>
-        <date_format_timezone/>
+        <date_format_timezone>UTC</date_format_timezone>
         <lenient_string_to_number>false</lenient_string_to_number>
         <encoding/>
         <decimal_symbol/>
@@ -765,7 +765,7 @@ WHERE rn = 1</sql>
         <output_padding>N</output_padding>
         <date_format_lenient>N</date_format_lenient>
         <date_format_locale>en_US</date_format_locale>
-        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <date_format_timezone>UTC</date_format_timezone>
         <lenient_string_to_number>N</lenient_string_to_number>
       </value-meta>
       <value-meta>
@@ -788,7 +788,7 @@ WHERE rn = 1</sql>
         <output_padding>N</output_padding>
         <date_format_lenient>N</date_format_lenient>
         <date_format_locale>en_US</date_format_locale>
-        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <date_format_timezone>UTC</date_format_timezone>
         <lenient_string_to_number>N</lenient_string_to_number>
       </value-meta>
       <value-meta>
@@ -811,7 +811,7 @@ WHERE rn = 1</sql>
         <output_padding>N</output_padding>
         <date_format_lenient>N</date_format_lenient>
         <date_format_locale>en_US</date_format_locale>
-        <date_format_timezone>Asia/Saigon</date_format_timezone>
+        <date_format_timezone>UTC</date_format_timezone>
         <lenient_string_to_number>N</lenient_string_to_number>
       </value-meta>
     </row-meta>

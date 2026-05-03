@@ -321,7 +321,7 @@
       <attributes_kjc/>
     </entry>
     <entry>
-      <name>Transformation</name>
+      <name>Build DM</name>
       <description/>
       <type>TRANS</type>
       <attributes/>
@@ -363,7 +363,7 @@
   <hops>
     <hop>
       <from>Start</from>
-      <to>Transformation</to>
+      <to>Build DM</to>
       <from_nr>0</from_nr>
       <to_nr>0</to_nr>
       <enabled>Y</enabled>
@@ -371,7 +371,7 @@
       <unconditional>Y</unconditional>
     </hop>
     <hop>
-      <from>Transformation</from>
+      <from>Build DM</from>
       <to>Success</to>
       <from_nr>0</from_nr>
       <to_nr>0</to_nr>

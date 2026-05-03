@@ -108,7 +108,7 @@ BEGIN
     FOREACH c IN ARRAY hour_counts LOOP
         IF c > 0 THEN
             p := c::NUMERIC / total_events;
-            entropy := entropy - (p * log(2.0, p));
+            entropy := entropy - (p * ln(p));
         END IF;
     END LOOP;
 
