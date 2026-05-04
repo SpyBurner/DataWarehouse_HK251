@@ -7,3 +7,5 @@ test_zone
 **/.venv
 **/.pyenv
 **/__pycache__/**
+
+scratch_scripts/
