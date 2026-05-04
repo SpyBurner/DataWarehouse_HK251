@@ -80,12 +80,6 @@ def _chunked(items: Sequence[str], chunk_size: int) -> Iterable[List[str]]:
     for i in range(0, len(items), chunk_size):
         yield list(items[i : i + chunk_size])
 
-@dataclass(frozen=True)
-class CrawlOutputs:
-    players_rows: List[Dict[str, Any]]
-    purchased_games_rows: List[Dict[str, Any]]
-    private_playerids: List[str]
-
 class SteamApiClient:
     def __init__(self, api_key: str, timeout_sec: int = 30):
         self._api_key = api_key
@@ -181,60 +175,66 @@ class SteamApiClient:
             return None
         return list(games)
 
-def crawl_all(playerids: Sequence[str], api_key: str) -> CrawlOutputs:
+def crawl_all(playerids: Sequence[str], api_key: str, output_dir: Path) -> None:
     api = SteamApiClient(api_key=api_key)
     playerids = [str(p) for p in playerids]
     summaries = api.get_player_summaries(playerids)
 
-    players_rows: List[Dict[str, Any]] = []
-    purchased_games_rows: List[Dict[str, Any]] = []
-    private_playerids: List[str] = []
-
     logger.info("Crawling %s playerids for playtime update", len(playerids))
 
-    for player_index, playerid in enumerate(playerids, start=1):
-        p = summaries.get(playerid)
-        if not p:
-            private_playerids.append(playerid)
-            logger.info("Player %s: missing from summaries (private/invalid)", playerid)
-            continue
+    players_csv = output_dir / "players.csv"
+    purchased_games_csv = output_dir / "purchased_games.csv"
+    private_csv = output_dir / "private_steamids.csv"
 
-        players_rows.append(
-            {
-                "playerid": playerid,
-                "country": p.get("loccountrycode") or "",
-                "created": _unix_to_datetime_string(p.get("timecreated")) or "",
-            }
-        )
+    with open(players_csv, "w", newline="", encoding="utf-8") as f_players, \
+         open(purchased_games_csv, "w", newline="", encoding="utf-8") as f_purchased, \
+         open(private_csv, "w", newline="", encoding="utf-8") as f_private:
 
-        games = api.get_owned_games(playerid)
-        if games is None:
-            private_playerids.append(playerid)
-            logger.info("Player %s: owned games unavailable (private/invalid)", playerid)
-            continue
+        players_writer = csv.DictWriter(f_players, fieldnames=["playerid", "country", "created"], quoting=csv.QUOTE_NONNUMERIC)
+        players_writer.writeheader()
 
-        library_json = json.dumps(
-            [{"appid": g["appid"], "playtime_mins": g.get("playtime_forever", 0)} for g in games if "appid" in g],
-            separators=(",", ":")
-        )
-        purchased_games_rows.append({"playerid": playerid, "library": library_json})
+        purchased_writer = csv.DictWriter(f_purchased, fieldnames=["playerid", "library"], quoting=csv.QUOTE_NONNUMERIC)
+        purchased_writer.writeheader()
 
-        if player_index % 10 == 0:
-            logger.info("Processed %s/%s players", player_index, len(playerids))
+        private_writer = csv.DictWriter(f_private, fieldnames=["playerid"], quoting=csv.QUOTE_NONNUMERIC)
+        private_writer.writeheader()
 
-    return CrawlOutputs(
-        players_rows=players_rows,
-        purchased_games_rows=purchased_games_rows,
-        private_playerids=sorted(set(private_playerids)),
-    )
+        for player_index, playerid in enumerate(playerids, start=1):
+            p = summaries.get(playerid)
+            if not p or p.get("communityvisibilitystate") != 3:
+                private_writer.writerow({"playerid": playerid})
+                f_private.flush()
+                logger.info("Player %s: missing from summaries or private (visibility %s)", playerid, p.get("communityvisibilitystate") if p else "None")
+                continue
 
-def _write_csv(path: Path, fieldnames: List[str], rows: List[Dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_NONNUMERIC)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({k: row.get(k, "") for k in fieldnames})
+            country = p.get("loccountrycode") or ""
+            created = _unix_to_datetime_string(p.get("timecreated")) or ""
+
+            players_writer.writerow(
+                {
+                    "playerid": playerid,
+                    "country": country,
+                    "created": created,
+                }
+            )
+            f_players.flush()
+
+            games = api.get_owned_games(playerid)
+            if games is None:
+                private_writer.writerow({"playerid": playerid})
+                f_private.flush()
+                logger.info("Player %s: owned games unavailable (private/invalid)", playerid)
+                continue
+
+            library_json = json.dumps(
+                [{"appid": g["appid"], "playtime_mins": g.get("playtime_forever", -1)} for g in games if "appid" in g],
+                separators=(",", ":")
+            )
+            purchased_writer.writerow({"playerid": playerid, "library": library_json})
+            f_purchased.flush()
+
+            if player_index % 10 == 0:
+                logger.info("Processed %s/%s players", player_index, len(playerids))
 
 def _write_manifest(output_dir: Path, extract_dt: str, files: List[Path]) -> None:
     manifest: Dict[str, Any] = {
@@ -303,21 +303,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     output_dir = output_root / f"extract_dt={extract_dt}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    outputs = crawl_all(playerids, api_key)
-
     players_csv = output_dir / "players.csv"
     purchased_games_csv = output_dir / "purchased_games.csv"
     history_csv = output_dir / "history.csv"
     reviews_csv = output_dir / "reviews.csv"
     private_csv = output_dir / "private_steamids.csv"
 
-    _write_csv(players_csv, ["playerid", "country", "created"], outputs.players_rows)
-    _write_csv(purchased_games_csv, ["playerid", "library"], outputs.purchased_games_rows)
-    
+    crawl_all(playerids, api_key, output_dir)
+
     # Write empty files for the others so output structure remains identical
-    _write_csv(history_csv, ["playerid", "achievementid", "date_acquired"], [])
-    _write_csv(reviews_csv, ["reviewid", "playerid", "gameid", "review", "helpful", "funny", "awards", "posted"], [])
-    _write_csv(private_csv, ["playerid"], [{"playerid": p} for p in outputs.private_playerids])
+    with open(history_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["playerid", "achievementid", "date_acquired"], quoting=csv.QUOTE_NONNUMERIC)
+        writer.writeheader()
+    with open(reviews_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["reviewid", "playerid", "gameid", "review", "helpful", "funny", "awards", "posted"], quoting=csv.QUOTE_NONNUMERIC)
+        writer.writeheader()
 
     _write_manifest(output_dir, extract_dt, [players_csv, purchased_games_csv, history_csv, reviews_csv, private_csv])
     (output_dir / "_SUCCESS").write_text("", encoding="utf-8")

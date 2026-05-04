@@ -1543,39 +1543,44 @@ ORDER BY p.playerid;</sql>
     <connection>Postgres_Warehouse</connection>
     <sql>WITH valid_players AS (
     SELECT playerid FROM dw.dim_player WHERE is_private = FALSE
-  ),
-  unique_playtime AS (
+),
+unique_playtime AS (
     SELECT l.playerid, l.appid, MAX(l.playtime_mins) as playtime_mins
     FROM dw.fact_library l
     JOIN valid_players p ON l.playerid = p.playerid
     GROUP BY l.playerid, l.appid
-  ),
-  ach_counts AS (
-    SELECT u.playerid, da.gameid, COUNT(u.achievementid) as ach_cnt
+),
+ach_counts AS (
+    SELECT 
+        u.playerid, 
+        SUBSTRING(u.achievementid FROM '^(\d+)_') AS gameid, 
+        COUNT(u.achievementid) as ach_cnt
     FROM dw.fact_achievement_unlock u
     JOIN valid_players p ON u.playerid = p.playerid
-    JOIN dw.fact_achievement da ON u.achievementid = da.achievementid
-    GROUP BY u.playerid, da.gameid
-  ),
-  total_play AS (
-    SELECT l.playerid, SUM(l.playtime_mins) AS total_playtime_mins
-    FROM dw.fact_library l
-    JOIN valid_players p ON l.playerid = p.playerid
-    GROUP BY l.playerid
-  )
-  SELECT 
-    COALESCE(a.playerid, t.playerid) AS playerid,
-    -- ratio of achievements with zero recorded playtime (NULL when no achievements)
-    CASE WHEN SUM(a.ach_cnt) IS NULL THEN NULL ELSE SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins = 0)::NUMERIC / 
-      NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) END AS zero_playtime_achievements_ratio,
-    COALESCE(t.total_playtime_mins, SUM(l.playtime_mins)) AS total_playtime_mins,
-    CASE WHEN SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL) IS NULL THEN NULL ELSE SUM(l.playtime_mins)::NUMERIC / 
-      NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) END AS playtime_per_achievement
-  FROM ach_counts a
-  FULL OUTER JOIN total_play t ON a.playerid = t.playerid
-  LEFT JOIN unique_playtime l ON COALESCE(a.playerid, t.playerid) = l.playerid AND a.gameid = l.appid
-  GROUP BY COALESCE(a.playerid, t.playerid), t.total_playtime_mins
-  ORDER BY COALESCE(a.playerid, t.playerid);</sql>
+    GROUP BY u.playerid, SUBSTRING(u.achievementid FROM '^(\d+)_')
+)
+SELECT 
+    a.playerid,
+    
+    -- C / (B + C)
+    CASE WHEN SUM(a.ach_cnt) IS NULL THEN NULL 
+         ELSE SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins = 0)::NUMERIC / 
+              NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) 
+    END AS zero_playtime_achievements_ratio,
+    
+    -- Only sum playtime for games that appear in ach_counts (Condition B)
+    COALESCE(SUM(l.playtime_mins) FILTER (WHERE l.playtime_mins > 0), 0) AS total_playtime_mins,
+    
+    -- total_playtime_mins / (B + C)
+    CASE WHEN SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL) IS NULL THEN NULL 
+         ELSE COALESCE(SUM(l.playtime_mins) FILTER (WHERE l.playtime_mins > 0), 0)::NUMERIC / 
+              NULLIF(SUM(a.ach_cnt) FILTER (WHERE l.playtime_mins IS NOT NULL), 0) 
+    END AS playtime_per_achievement
+    
+FROM ach_counts a
+LEFT JOIN unique_playtime l ON a.playerid = l.playerid AND a.gameid = l.appid
+GROUP BY a.playerid
+ORDER BY a.playerid;</sql>
     <limit>0</limit>
     <lookup/>
     <execute_each_row>N</execute_each_row>

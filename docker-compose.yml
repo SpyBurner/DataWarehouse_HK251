@@ -80,7 +80,7 @@ services:
     depends_on:
       postgres-warehouse:
         condition: service_healthy
-    command: ["python", "main.py", ">", "outputs/pipeline.log"]
+    command: ["sh", "-c", "python main.py > outputs/pipeline.log"]
     volumes:
       - ./ML_analytics:/app
       - ml_outputs:/app/outputs
