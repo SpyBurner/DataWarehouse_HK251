@@ -22,7 +22,7 @@ DATAMART_FEATURE_TABLE = os.getenv(
 )
 DATAMART_DROP_COLUMNS = [
     col.strip()
-    for col in os.getenv("ML_ANALYTICS_DATAMART_DROP_COLUMNS", "country").split(",")
+    for col in os.getenv("ML_ANALYTICS_DATAMART_DROP_COLUMNS", "country,refreshed_at").split(",")
     if col.strip()
 ]
 
