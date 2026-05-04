@@ -1432,7 +1432,9 @@ ORDER BY r.playerid;</sql>
     <sql>SELECT 
     p.playerid,
     TRUNC(EXTRACT(EPOCH FROM (MIN(u.date_acquired) - p.created)) / 86400) AS days_before_first_achievement,
-    TRUNC(EXTRACT(EPOCH FROM (NOW() - p.created)) / 86400) AS account_age_days
+    TRUNC(EXTRACT(EPOCH FROM (
+      (SELECT MAX(date_acquired) FROM dw.fact_achievement_unlock) - p.created
+    )) / 86400) AS account_age_days
 FROM dw.dim_player p
 LEFT JOIN dw.fact_achievement_unlock u ON p.playerid = u.playerid
 WHERE p.is_private = FALSE
