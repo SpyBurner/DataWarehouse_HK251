@@ -120,7 +120,7 @@ CREATE SCHEMA IF NOT EXISTS dm;
 
 CREATE TABLE IF NOT EXISTS dm.dm_steam_player_features_v1 (
     playerid                        VARCHAR(30) PRIMARY KEY,
-    country                         VARCHAR(10),
+    country                         VARCHAR(50),
     account_age_days                DOUBLE PRECISION,
     days_before_first_achievement   DOUBLE PRECISION,
     library_size                    INTEGER,
