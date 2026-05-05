@@ -118,6 +118,17 @@ services:
     restart: unless-stopped
 
 
+  # -----------------------------------
+  # 5. REPORT BUILDER (LaTeX)
+  # -----------------------------------
+  texlive:
+    image: aergus/latex
+    container_name: texlive
+    volumes:
+      - ./Report:/workspace
+      - ./Report/Build:/workspace/Build
+    working_dir: /workspace
+
 # Define named volumes
 volumes:
   mssql_data:
