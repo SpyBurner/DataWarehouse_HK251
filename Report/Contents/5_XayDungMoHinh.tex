@@ -93,20 +93,21 @@ Tỷ lệ này giúp XGBoost cân bằng chi phí lỗi giữa class bot và nor
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{Images/Model_Diagram.png}{
-        \includegraphics[width=0.7\linewidth]{Images/Model_Diagram}
+    \IfFileExists{Images/Slide/img141.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/img141}
     }{
         \fbox{\begin{minipage}{0.7\linewidth}
             \centering
             \vspace{2cm}
             [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Model\_Diagram}\\
+            \texttt{Images/Slide/img141.jpg}\\
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Sơ đồ hệ thống Dual Ensemble (XGBoost + Isolation Forest)}
+    \caption{Sơ đồ kiến trúc mô hình Dual Ensemble}
     \label{fig:model_diagram}
 \end{figure}
+
 
 \section{Xây Dựng Ensemble}
 
@@ -137,20 +138,21 @@ Ngưỡng 85 là điểm cắt để phân loại tài khoản là bot hay norma
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{Images/Weight_Sensitivity.png}{
-        \includegraphics[width=0.7\linewidth]{Images/Weight_Sensitivity}
+    \IfFileExists{Images/Slide/img146.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/img146}
     }{
         \fbox{\begin{minipage}{0.7\linewidth}
             \centering
             \vspace{2cm}
             [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Weight\_Sensitivity}\\
+            \texttt{Images/Slide/img146.jpg}\\
             \vspace{2cm}
         \end{minipage}}
     }
     \caption{Phân tích độ nhạy của trọng số Ensemble}
     \label{fig:weight_sensitivity}
 \end{figure}
+
 
 \subsection{Tuning Trọng Số Ensemble (Optional)}
 

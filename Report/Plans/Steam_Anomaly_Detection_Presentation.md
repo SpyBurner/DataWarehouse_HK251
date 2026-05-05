@@ -46,10 +46,12 @@
 * **Gaming Profiles 2025 (Steam, PlayStation, Xbox) (Kaggle)**
 * **Core Data Tables:**
     * `history` - user gaming activity for 2008-2025 (rows: 10,693,879; unique playerid: 4,838)
-    * `players` - a list of Steam users (424k userID)
-    * `private_steamids` - users with hidden profiles
-    * `purchased_games` - a list of games purchased by each user (rows: 102,553)
     * `reviews` - user-submitted reviews for various games (rows: 1,204,534)
+    * `players` - users
+    * `purchased_games` - a list of games purchased by each user (rows: 102,553)
+    [Image 2.1]
+    [Image 2.2]
+    [Image 2.3]
 
 ### ETL & Preprocessing
 * **history Table:** Feature Selection, ID Extraction (Regex), Time Normalization, Privacy Filter, Deduplication.
@@ -57,6 +59,7 @@
 * **reviews Table:** Type Casting, Privacy Filter, Deduplication.
 * **purchased Table:** Data Parsing (List of Dicts), Feature Derivation (library_size), Privacy Filter, Deduplication.
 
+<!-- Replace with image -->
 ### Player Coverage Across Datasets
 * Players in history: 3,206
 * Players in purchased: 49,844
@@ -64,7 +67,8 @@
 * Players in players.csv: 424,683
 * Coverage history -> purchased: 100.00%
 * Coverage purchased -> history: 6.43%
-
+<!--  -->
+[Image 2.4]
 [Image 3: Player overlap count by dataset pair heatmap]
 
 ### Exploratory Data Analysis (EDA)
@@ -82,6 +86,7 @@
 **Question 3: What are the key behavioral pacing disparities between extreme user groups and the general user base?**
 
 [Image 7: Hourly Line Chart (Circadian Rhythm Comparison)]
+[Image 7.1 Temporal heatmap 24/7 (Achievement Events)]
 
 ### Feature Engineering
 
@@ -178,14 +183,18 @@
 
 ### Evaluating Method
 * **Recall:** bot detected rate in real bots.
+[Image 9.1]
 * **Precision:** correct rate of detected bots.
+[Image 9.2]
 * **Accuracy:** correct detection rate for bots and normals.
+[Image 9.3]
 * **F1-score:** balance evaluate between Precision and Recall at a threshold.
 * **ROC-AUC:** trade-off between Recall and FPR → not helpful when bot << normal.
 * **PR-AUC:** trade-off between Precision and Recall → not affected by large normal.
 * **Precision@K:** correct rate of K detected bots.
 
 ### Evaluating Result (no HITL)
+<!-- Replace table with image -->
 | Model | ROC-AUC | PR-AUC | Flagged Rate % | Precision@100 | Precision@500 | Precision@1000 |
 | --- | --- | --- | --- | --- | --- | --- |
 | XGBoost | 0.9050 | 0.7252 | 5.0525 | 1.00 | 0.602 | 0.324 |
@@ -202,6 +211,8 @@
 | **accuracy** | | | **0.99** | **22583** |
 | **macro avg** | 0.95 | 0.83 | 0.88 | 22583 |
 | **weighted avg** | 0.99 | 0.99 | 0.99 | 22583 |
+<!--  -->
+[Image 9.4]
 
 [Image 10: XGBoost Feature Importance (Top 15) bar chart]
 [Image 11: SHAP Model Explanation - SHAP values scatter plot]
@@ -219,13 +230,14 @@
 * Enter a single ID, multiple IDs, or drag and drop a CSV/TXT file.
 * Provides: Quick assessment, Probability, XGB percentile, IF percentile, Composite score, and detailed behavioral metrics compared to baseline.
 
+[Image 13.1]
 [Image 14: Dashboard Details - View Details for playerid]
-
 **2) Real-time Steam Crawl (Online Inference)**
 * Baseline model: 2026-04-10 16:34:19 (Number of players in baseline: 3,154).
 * Allows scoring profiles with trained model on the fly.
 * Output: Assessment, Risk Level, Confidence, Anomaly Score, Normal Score.
 
+[Image 14.3]
 [Image 15: Comparison with Baseline (Showing Top 12 Most Deviant Metrics per Player) chart]
 
 **3) Data Overview and Insights**
@@ -244,6 +256,7 @@
 
 [Image 19: Consensus Matrix: XGBoost vs. Isolation Forest]
 
+<!-- Replace with image -->
 **Behavioral Insights & Differentiation**
 * Direct comparison between Flagged accounts (Anomaly) and Normal accounts.
 
@@ -260,6 +273,8 @@
 | Top 3 Games Concentration | 1.5594 | 0.9697 |
 | Total Achievements | 10.8906 | 0.905 |
 | Unlock Interval Std Dev | 0.283 | -0.5614 |
+<!--  -->
+[Image 19.1]
 
 [Image 20: Mean Ratio (Flagged vs. Normal) and Statistical Effect Size bar charts]
 [Image 21: Demographic & Behavioral Correlation charts - Account Age and Total Reviews]
@@ -272,11 +287,13 @@
 * **Data Source:** `[test_data.csv]`
 
 **Confusion Matrix**
+<!-- Replace with image -->
 | Actual \ Predicted | Predicted Positive | Predicted Negative |
 | --- | --- | --- |
 | **Actual Positive** | 17 (TP) | 3 (FN) |
 | **Actual Negative** | 1 (FP) | 19 (TN) |
-
+<!--  -->
+[Image 22.1]
 ---
 
 ## 5. Conclusion
