@@ -23,8 +23,9 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
+import json
+from sqlalchemy import create_engine
 from active_learning import generate_review_sample, integrate_human_labels
-from data_prep import get_engine, load_history, load_players, load_purchased, load_reviews
 from features import (
     add_time_components,
     build_feature_matrix,
@@ -57,13 +58,78 @@ REVIEWED_CSV = os.path.join(os.path.dirname(__file__), "data", "reviewed.csv")
 # Data loading
 # ---------------------------------------------------------------------------
 
+def _parse_list_fast(s: str) -> list:
+    if not isinstance(s, str) or not s.strip():
+        return []
+    try:
+        parsed_data = json.loads(s.replace("'", '"'))
+        if not parsed_data:
+            return []
+        if isinstance(parsed_data[0], (int, str)):
+            return [{"appid": int(appid), "playtime_mins": -1} for appid in parsed_data]
+        elif isinstance(parsed_data[0], dict):
+            return [{"appid": int(item.get("appid", -1)), "playtime_mins": int(item.get("playtime_mins", -1))} for item in parsed_data if "appid" in item]
+        return []
+    except (ValueError, TypeError):
+        return []
+
 def load_data_from_db() -> tuple:
     log.info("Loading data directly from PostgreSQL DW …")
-    engine = get_engine()
-    history = load_history(engine)
-    players = load_players(engine)
-    reviews = load_reviews(engine)
-    purchased = load_purchased(engine)
+    
+    host = os.getenv("DB_HOST", "localhost")
+    port = os.getenv("DB_PORT", "5432")
+    user = os.getenv("DB_USER", "postgres")
+    password = os.getenv("DB_PASSWORD", "31082004@Lmao")
+    dbname = os.getenv("DB_NAME", "Warehouse")
+    conn_str = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
+    engine = create_engine(conn_str)
+    
+    # 1. History
+    log.info("  -> Loading history...")
+    history = pd.read_sql("""
+        SELECT h.playerid, h.achievementid, h.date_acquired
+        FROM dw.fact_achievement_unlock h
+        JOIN dw.dim_player p ON h.playerid = p.playerid
+        WHERE p.is_private = FALSE
+    """, engine)
+    history["gameid"] = history["achievementid"].str.extract(r"^(\d+)_")[0].astype("Int32")
+    history["date_acquired"] = pd.to_datetime(history["date_acquired"], errors="coerce")
+    history = history.drop_duplicates(subset=["playerid", "achievementid", "date_acquired"], keep="last").reset_index(drop=True)
+
+    # 2. Players
+    log.info("  -> Loading players...")
+    players = pd.read_sql("""
+        SELECT playerid, country, created
+        FROM dw.dim_player
+        WHERE is_private = FALSE
+    """, engine)
+    players["created"] = pd.to_datetime(players["created"], errors="coerce")
+    players = players.drop_duplicates(subset=["playerid"], keep="last").reset_index(drop=True)
+
+    # 3. Reviews
+    log.info("  -> Loading reviews...")
+    reviews = pd.read_sql("""
+        SELECT r.reviewid, r.playerid, r.gameid, r.review, r.helpful, r.funny, r.awards, r.posted
+        FROM dw.fact_review r
+        JOIN dw.dim_player p ON r.playerid = p.playerid
+        WHERE p.is_private = FALSE
+    """, engine)
+    reviews["posted"] = pd.to_datetime(reviews["posted"], errors="coerce")
+    reviews = reviews.drop_duplicates(subset=["reviewid"], keep="last").reset_index(drop=True)
+
+    # 4. Purchased
+    log.info("  -> Loading purchased_games...")
+    purchased = pd.read_sql("""
+        SELECT l.playerid, json_agg(json_build_object('appid', l.appid, 'playtime_mins', l.playtime_mins))::text AS library
+        FROM dw.fact_library l
+        JOIN dw.dim_player p ON l.playerid = p.playerid
+        WHERE p.is_private = FALSE
+        GROUP BY l.playerid
+    """, engine)
+    purchased["playerid"] = purchased["playerid"].astype("int64")
+    purchased["library"] = purchased["library"].apply(_parse_list_fast)
+    purchased["library_size"] = purchased["library"].apply(len).astype("int32")
+    purchased = purchased.drop_duplicates(subset=["playerid"], keep="last").reset_index(drop=True)
     
     log.info("  history:   %d rows  |  columns: %s", len(history),   history.columns.tolist())
     log.info("  players:   %d rows  |  columns: %s", len(players),   players.columns.tolist())
