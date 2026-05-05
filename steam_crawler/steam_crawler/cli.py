@@ -93,7 +93,7 @@ def _read_playerids_from_file(path: Path) -> List[str]:
 
 
 def _read_playerids_from_env() -> List[str]:
-    raw = os.getenv("STEAM_PLAYERIDS") or os.getenv("PLAYERIDS")
+    raw = os.getenv("MANUAL_PLAYERIDS")
     if not raw:
         return []
 
@@ -104,15 +104,6 @@ def _read_playerids_from_env() -> List[str]:
 def _chunked(items: Sequence[str], chunk_size: int) -> Iterable[List[str]]:
     for i in range(0, len(items), chunk_size):
         yield list(items[i : i + chunk_size])
-
-
-@dataclass(frozen=True)
-class CrawlOutputs:
-    players_rows: List[Dict[str, Any]]
-    purchased_games_rows: List[Dict[str, Any]]
-    history_rows: List[Dict[str, Any]]
-    reviews_rows: List[Dict[str, Any]]
-    private_playerids: List[str]
 
 
 class SteamApiClient:
@@ -308,18 +299,12 @@ class SteamCommunityScraper:
         return reviews
 
 
-def crawl_all(playerids: Sequence[str], api_key: str) -> CrawlOutputs:
+def crawl_all(playerids: Sequence[str], api_key: str, output_dir: Path) -> None:
     api = SteamApiClient(api_key=api_key)
     scraper = SteamCommunityScraper()
 
     playerids = [str(p) for p in playerids]
     summaries = api.get_player_summaries(playerids)
-
-    players_rows: List[Dict[str, Any]] = []
-    purchased_games_rows: List[Dict[str, Any]] = []
-    history_rows: List[Dict[str, Any]] = []
-    reviews_rows: List[Dict[str, Any]] = []
-    private_playerids: List[str] = []
 
     logger.info("Crawling %s playerids", len(playerids))
 
@@ -332,83 +317,103 @@ def crawl_all(playerids: Sequence[str], api_key: str) -> CrawlOutputs:
         reviews_sleep_sec,
     )
 
-    for player_index, playerid in enumerate(playerids, start=1):
-        logger.info("Player %s/%s steamid=%s: start", player_index, len(playerids), playerid)
-        p = summaries.get(playerid)
-        if not p:
-            private_playerids.append(playerid)
-            logger.info("Player %s: missing from summaries (private/invalid)", playerid)
-            continue
+    players_csv = output_dir / "players.csv"
+    purchased_games_csv = output_dir / "purchased_games.csv"
+    history_csv = output_dir / "history.csv"
+    reviews_csv = output_dir / "reviews.csv"
+    private_csv = output_dir / "private_steamids.csv"
 
-        players_rows.append(
-            {
-                "playerid": playerid,
-                "country": p.get("loccountrycode") or "",
-                "created": _unix_to_datetime_string(p.get("timecreated")) or "",
-            }
-        )
+    with open(players_csv, "w", newline="", encoding="utf-8") as f_players, \
+         open(purchased_games_csv, "w", newline="", encoding="utf-8") as f_purchased, \
+         open(history_csv, "w", newline="", encoding="utf-8") as f_history, \
+         open(reviews_csv, "w", newline="", encoding="utf-8") as f_reviews, \
+         open(private_csv, "w", newline="", encoding="utf-8") as f_private:
 
-        games = api.get_owned_games(playerid)
-        if games is None:
-            private_playerids.append(playerid)
-            logger.info("Player %s: owned games unavailable (private/invalid)", playerid)
-            continue
+        players_writer = csv.DictWriter(f_players, fieldnames=["playerid", "country", "created"], quoting=csv.QUOTE_NONNUMERIC)
+        players_writer.writeheader()
 
-        appids = [int(g["appid"]) for g in games if "appid" in g]
-        library_list_string = "[" + ", ".join(str(a) for a in appids) + "]"
-        purchased_games_rows.append({"playerid": playerid, "library": library_list_string})
+        purchased_writer = csv.DictWriter(f_purchased, fieldnames=["playerid", "library"], quoting=csv.QUOTE_NONNUMERIC)
+        purchased_writer.writeheader()
 
-        logger.info("Player %s: owned games=%s", playerid, len(appids))
+        history_writer = csv.DictWriter(f_history, fieldnames=["playerid", "achievementid", "date_acquired"], quoting=csv.QUOTE_NONNUMERIC)
+        history_writer.writeheader()
 
-        unlocked_count = 0
-        for idx, appid in enumerate(appids):
-            achievements = api.get_player_achievements(playerid, appid)
-            # Keep the same default pacing as the original script, but configurable.
-            time.sleep(achievements_sleep_sec)
-            if not achievements:
+        reviews_writer = csv.DictWriter(f_reviews, fieldnames=["reviewid", "playerid", "gameid", "review", "helpful", "funny", "awards", "posted"], quoting=csv.QUOTE_NONNUMERIC)
+        reviews_writer.writeheader()
+
+        private_writer = csv.DictWriter(f_private, fieldnames=["playerid"], quoting=csv.QUOTE_NONNUMERIC)
+        private_writer.writeheader()
+
+        for player_index, playerid in enumerate(playerids, start=1):
+            logger.info("Player %s/%s steamid=%s: start", player_index, len(playerids), playerid)
+            p = summaries.get(playerid)
+            if not p or p.get("communityvisibilitystate") != 3:
+                private_writer.writerow({"playerid": playerid})
+                f_private.flush()
+                logger.info("Player %s: missing from summaries or private (visibility %s)", playerid, p.get("communityvisibilitystate") if p else "None")
                 continue
-            for ach in achievements:
-                if ach.get("achieved") == 1:
-                    unlocked_count += 1
-                    history_rows.append(
-                        {
-                            "playerid": playerid,
-                            "achievementid": f"{appid}_{ach.get('apiname', '')}",
-                            "date_acquired": _unix_to_datetime_string(ach.get("unlocktime")) or "",
-                        }
-                    )
 
-            if (idx + 1) % 25 == 0:
-                logger.info("Player %s: achievements progress %s/%s apps", playerid, idx + 1, len(appids))
+            players_writer.writerow(
+                {
+                    "playerid": playerid,
+                    "country": p.get("loccountrycode") or "",
+                    "created": _unix_to_datetime_string(p.get("timecreated")) or "",
+                }
+            )
+            f_players.flush()
 
-        logger.info("Player %s: unlocked achievements=%s", playerid, unlocked_count)
+            games = api.get_owned_games(playerid)
+            if games is None:
+                private_writer.writerow({"playerid": playerid})
+                f_private.flush()
+                logger.info("Player %s: owned games unavailable (private/invalid)", playerid)
+                continue
 
-        # Reviews scraping internally sleeps per page; allow extra pause between players if needed.
-        player_reviews = scraper.scrape_reviews(playerid)
-        reviews_rows.extend(player_reviews)
-        logger.info("Player %s: reviews=%s", playerid, len(player_reviews))
+            appids = [int(g["appid"]) for g in games if "appid" in g]
+            library_json = json.dumps(
+                [{"appid": g["appid"], "playtime_mins": g.get("playtime_forever", -1)} for g in games if "appid" in g],
+                separators=(",", ":")
+            )
+            purchased_writer.writerow({"playerid": playerid, "library": library_json})
+            f_purchased.flush()
 
-        if reviews_sleep_sec > 0:
-            time.sleep(reviews_sleep_sec)
+            logger.info("Player %s: owned games=%s", playerid, len(appids))
 
-        logger.info("Player %s: done", playerid)
+            unlocked_count = 0
+            for idx, appid in enumerate(appids):
+                achievements = api.get_player_achievements(playerid, appid)
+                # Keep the same default pacing as the original script, but configurable.
+                time.sleep(achievements_sleep_sec)
+                if not achievements:
+                    continue
+                for ach in achievements:
+                    if ach.get("achieved") == 1:
+                        unlocked_count += 1
+                        history_writer.writerow(
+                            {
+                                "playerid": playerid,
+                                "achievementid": f"{appid}_{ach.get('apiname', '')}",
+                                "date_acquired": _unix_to_datetime_string(ach.get("unlocktime")) or "",
+                            }
+                        )
+                f_history.flush()
 
-    return CrawlOutputs(
-        players_rows=players_rows,
-        purchased_games_rows=purchased_games_rows,
-        history_rows=history_rows,
-        reviews_rows=reviews_rows,
-        private_playerids=sorted(set(private_playerids)),
-    )
+                if (idx + 1) % 25 == 0:
+                    logger.info("Player %s: achievements progress %s/%s apps", playerid, idx + 1, len(appids))
 
+            logger.info("Player %s: unlocked achievements=%s", playerid, unlocked_count)
 
-def _write_csv(path: Path, fieldnames: List[str], rows: List[Dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, quoting=csv.QUOTE_NONNUMERIC)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({k: row.get(k, "") for k in fieldnames})
+            # Reviews scraping internally sleeps per page; allow extra pause between players if needed.
+            player_reviews = scraper.scrape_reviews(playerid)
+            for r in player_reviews:
+                reviews_writer.writerow(r)
+            f_reviews.flush()
+            logger.info("Player %s: reviews=%s", playerid, len(player_reviews))
+
+            if reviews_sleep_sec > 0:
+                time.sleep(reviews_sleep_sec)
+
+            logger.info("Player %s: done", playerid)
 
 
 def _write_manifest(output_dir: Path, extract_dt: str, files: List[Path]) -> None:
@@ -500,7 +505,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         playerids.extend(_read_playerids_from_env())
     playerids = [p.strip() for p in playerids if p.strip()]
     if not playerids:
-        logger.error("No player IDs provided. Use --playerids, --playerids-file, or set STEAM_PLAYERIDS in .env.")
+        logger.error("No player IDs provided. Use --playerids, --playerids-file, or set MANUAL_PLAYERIDS in .env.")
         return 2
     playerids = sorted(set(playerids))
 
@@ -512,32 +517,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     logger.info("Output directory: %s", output_dir.as_posix())
     logger.info("Partition extract_dt=%s", extract_dt)
 
-    outputs = crawl_all(playerids, api_key)
-
-    logger.info(
-        "Crawl finished. players=%s purchased_games=%s history=%s reviews=%s private=%s",
-        len(outputs.players_rows),
-        len(outputs.purchased_games_rows),
-        len(outputs.history_rows),
-        len(outputs.reviews_rows),
-        len(outputs.private_playerids),
-    )
-
     players_csv = output_dir / "players.csv"
     purchased_games_csv = output_dir / "purchased_games.csv"
     history_csv = output_dir / "history.csv"
     reviews_csv = output_dir / "reviews.csv"
     private_csv = output_dir / "private_steamids.csv"
 
-    _write_csv(players_csv, ["playerid", "country", "created"], outputs.players_rows)
-    _write_csv(purchased_games_csv, ["playerid", "library"], outputs.purchased_games_rows)
-    _write_csv(history_csv, ["playerid", "achievementid", "date_acquired"], outputs.history_rows)
-    _write_csv(
-        reviews_csv,
-        ["reviewid", "playerid", "gameid", "review", "helpful", "funny", "awards", "posted"],
-        outputs.reviews_rows,
-    )
-    _write_csv(private_csv, ["playerid"], [{"playerid": p} for p in outputs.private_playerids])
+    crawl_all(playerids, api_key, output_dir)
+
+    logger.info("Crawl finished.")
 
     _write_manifest(output_dir, extract_dt, [players_csv, purchased_games_csv, history_csv, reviews_csv, private_csv])
 

@@ -1,0 +1,1 @@
+kitchen.bat /file:"./full_run.kjb" /level:Detailed > ./overnight.log

@@ -1,0 +1,207 @@
+\chapter{Kỹ Thuật Trích Xuất Đặc Trưng (Feature Engineering)}
+
+\section{Tổng Quan}
+Quy trình trích xuất đặc trưng được thực hiện trong module \texttt{features.py}, tạo ra một ma trận đặc trưng gồm 25 cột từ dữ liệu lịch sử thành tựu, đánh giá, thông tin tài khoản và thông tin game đã mua.
+
+\section{Bước Loại Bỏ (Trimming)}
+Trước khi tính toán bất kỳ đặc trưng nào, hệ thống áp dụng tiêu chí loại bỏ để tập trung vào các tài khoản có hoạt động đáng kể:
+
+\begin{itemize}
+    \item Điều kiện: \textbf{$(\ge 10 \text{ achievements OR } \ge 3 \text{ reviews}) \text{ AND } \text{library\_size} \ge 1$}
+    \item Tác dụng: Giảm tập dữ liệu từ $\sim$196K xuống $\sim$3K tài khoản (98\%), loại bỏ ghost accounts và tài khoản không hoạt động
+    \item Lợi ích: Tăng tốc độ tính toán groupby/merge, loại bỏ feature rows chỉ toàn NaN
+    \item Lưu ý: Logic OR giữ lại các bot candidates có 0 achievements nhưng spam reviews
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/7.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/7}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/7.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Biểu đồ nhiệt thể hiện sự chồng lấp người dùng giữa các tập dữ liệu}
+    \label{fig:overlap_heatmap}
+\end{figure}
+
+
+
+\section{Nhóm A: Đặc Trưng Tốc Độ (Speed Features)}
+
+Nhóm này phản ánh tốc độ mở khóa thành tựu:
+
+\begin{itemize}
+    \item \texttt{median\_unlock\_interval\_sec}: Khoảng thời gian trung bình giữa các lần mở khóa (tính bằng giây)
+    \item \texttt{std\_unlock\_interval\_sec}: Độ lệch chuẩn của các khoảng thời gian mở khóa
+    \item \texttt{cv\_unlock\_interval}: Hệ số biến thiên (standard deviation / mean) của khoảng thời gian
+    \item \texttt{max\_achievements\_per\_minute}: Số lượng thành tựu tối đa mở khóa trong 1 phút
+    \item \texttt{max\_achievements\_per\_day}: Số lượng thành tựu tối đa mở khóa trong 1 ngày
+\end{itemize}
+
+\section{Nhóm B: Đặc Trưng Thời Gian (Temporal Features)}
+
+Nhóm này đặc trưng hóa mô hình hoạt động theo thời gian:
+
+\begin{itemize}
+    \item \texttt{night\_activity\_ratio}: Tỷ lệ thành tựu mở khóa trong giờ ban đêm (giờ địa phương < 6 sáng), có đưa vào tính toán múi giờ
+    \item \texttt{hour\_entropy}: Entropy Shannon của phân phối thành tựu theo 24 giờ (tính theo giờ địa phương), phản ánh tính ngẫu nhiên của hoạt động
+    \item \texttt{activity\_density}: Mật độ hoạt động = số ngày có hoạt động / khoảng thời gian từ ngày đầu đến ngày cuối
+\end{itemize}
+
+\section{Nhóm C: Đặc Trưng Đa Dạng (Diversity Features)}
+
+Nhóm này đánh giá phạm vi và sự phân bổ của hoạt động:
+
+\begin{itemize}
+    \item \texttt{total\_achievements}: Tổng số thành tựu đã mở khóa
+    \item \texttt{library\_size}: Số lượng game đã mua
+    \item \texttt{achievement\_game\_ratio}: Tỷ lệ = số game có achievements / tổng số game
+    \item \texttt{top1\_game\_concentration}: Phần trăm thành tựu từ game có nhiều achievements nhất
+    \item \texttt{top3\_game\_concentration}: Phần trăm thành tựu từ 3 game có nhiều achievements nhất
+    \item \texttt{game\_hhi}: Chỉ số Herfindahl = $\sum (\text{game\_proportion})^2$, đo mức độ tập trung
+    \item \texttt{avg\_achievements\_per\_game}: Trung bình = tổng achievements / số game có achievements
+\end{itemize}
+
+
+\section{Nhóm D: Đặc Trưng Đánh Giá (Review Features)}
+
+Nhóm này phân tích mô hình đánh giá của người dùng:
+
+\begin{itemize}
+    \item \texttt{total\_reviews}: Tổng số đánh giá đã viết
+    \item \texttt{review\_unplayed\_ratio}: Tỷ lệ đánh giá cho game chưa chơi (playtime == 0)
+    \item \texttt{review\_duplication\_rate}: Tỷ lệ = $1 - \frac{\text{unique\_texts}}{\text{total\_reviews}}$, phản ánh mức độ spam
+    \item \texttt{avg\_review\_length}: Độ dài trung bình của đánh giá
+    \item \texttt{min\_review\_length}: Độ dài tối thiểu của đánh giá
+\end{itemize}
+
+\section{Nhóm E: Đặc Trưng Tuổi Tài Khoản (Account Age Features)}
+
+Nhóm này liên quan đến lịch sử tài khoản:
+
+\begin{itemize}
+    \item \texttt{days\_before\_first\_achievement}: Số ngày từ khi tạo tài khoản đến lần mở khóa thành tựu đầu tiên
+    \item \texttt{account\_age\_days}: Số ngày từ khi tạo tài khoản đến thời điểm tham chiếu (mốc thời gian cố định)
+\end{itemize}
+
+\section{Nhóm F: Đặc Trưng Thời Gian Chơi (Playtime Features)}
+
+Nhóm này phân tích mối quan hệ giữa thành tựu và thời gian chơi thực tế:
+
+Quá trình kết hợp dữ liệu:
+\begin{itemize}
+    \item \textbf{Điều kiện A}: Game có trong lịch sử nhưng không trong library → bỏ qua (API delay)
+    \item \textbf{Điều kiện B}: Game trong library với playtime > 0 → hoạt động bình thường
+    \item \textbf{Điều kiện C}: Game trong library với playtime == 0 → tín hiệu bot (SAM/unlocker)
+\end{itemize}
+
+Các đặc trưng:
+\begin{itemize}
+    \item \texttt{zero\_playtime\_achievements\_ratio}: Tỷ lệ = $\frac{\text{achievements từ C}}{\text{B + C}}$
+    \item \texttt{total\_playtime\_mins}: Tổng thời gian chơi (game riêng biệt, tránh inflate)
+    \item \texttt{playtime\_per\_achievement}: Thời gian chơi trung bình trên mỗi thành tựu = $\frac{\text{total\_playtime\_mins}}{\text{B + C}}$
+\end{itemize}
+
+\section{Phân Tích Dữ Liệu Khám Phá (EDA)}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/8.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/8}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/8.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Biểu đồ Histogram của các đặc trưng quan trọng (Log transform)}
+    \label{fig:histograms}
+\end{figure}
+
+
+
+\subsection{Câu hỏi 1: Các cụm tài khoản cụ thể có tỷ lệ đạt được thành tựu bất thường không?}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/9.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/9}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/9.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Mật độ Hexbin giữa Thời gian chơi và Số lượng thành tựu}
+    \label{fig:hexbin_playtime}
+\end{figure}
+
+
+\subsection{Câu hỏi 2: Các thành tựu được phân bổ đa dạng hay tập trung quá mức?}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/10.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/10}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/10.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Sự tập trung danh mục trò chơi theo phân đoạn người dùng}
+    \label{fig:game_concentration}
+\end{figure}
+
+
+\subsection{Câu hỏi 3: Sự khác biệt về nhịp độ hành vi giữa các nhóm người dùng?}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/11.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/11}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/11.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{So sánh nhịp sinh học giữa các nhóm người dùng (Hourly activity)}
+    \label{fig:hourly_activity}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/12.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/12}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/12.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Biểu đồ nhiệt thời gian (24/7) của các sự kiện thành tựu}
+    \label{fig:temporal_heatmap}
+\end{figure}
+

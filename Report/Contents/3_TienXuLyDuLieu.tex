@@ -1,0 +1,159 @@
+\chapter{Tiền Xử Lý Dữ Liệu (ETL Pipeline)}
+
+\section{Tổng Quan Hệ Thống ETL}
+
+Quá trình tiền xử lý và tích hợp dữ liệu được thực hiện tự động bằng công cụ \textbf{Pentaho Data Integration (PDI / Spoon)}. Pipeline được thiết kế theo kiến trúc 3 lớp chuẩn:
+\begin{enumerate}
+    \item \textbf{Landing Zone (CSV)}: Dữ liệu thô thu thập từ các tập dữ liệu gốc (RAW CSV) và dữ liệu mới thu thập (crawled).
+    \item \textbf{Staging Area (MSSQL)}: Vùng đệm trung gian để chứa dữ liệu tạm thời. Vùng Staging được thiết kế để làm được sạch sau mỗi chu kỳ nạp dữ liệu.
+    \item \textbf{Data Warehouse (PostgreSQL)}: Nơi lưu trữ dữ liệu tập trung đã qua xử lý, làm sạch và chuẩn hóa.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Pentaho/full_run.png}{
+        \includegraphics[width=0.9\linewidth]{Images/Pentaho/full_run}
+    }{
+        \fbox{\begin{minipage}{0.9\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Pentaho/full\_run.png}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Toàn cảnh quá trình thực thi Full Run Pipeline}
+    \label{fig:pentaho_full_run}
+\end{figure}
+
+Quá trình chạy toàn bộ hệ thống (Full Run) bao gồm hai luồng chính chạy nối tiếp nhau: \textbf{Pre-Master} và \textbf{Master}.
+
+\section{Chi Tiết Các Luồng Thực Thi}
+
+\subsection{Luồng Khởi Tạo (Pre-Master)}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Pentaho/pre_master.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Pentaho/pre_master}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Pentaho/pre\_master.png}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Luồng Pre-Master nạp dữ liệu gốc ban đầu}
+    \label{fig:pentaho_pre_master}
+\end{figure}
+
+Luồng \textbf{Pre-Master} chịu trách nhiệm nạp toàn bộ lượng dữ liệu lịch sử khổng lồ từ tập dữ liệu ban đầu. Các bước thực thi bao gồm:
+\begin{itemize}
+    \item Đọc dữ liệu từ các file RAW CSV gốc.
+    \item Nạp dữ liệu vào các bảng trong Staging Area (MSSQL).
+    \item Chuyển và xử lý dữ liệu từ Staging Area sang Data Warehouse (PostgreSQL).
+\end{itemize}
+
+\subsection{Luồng Cập Nhật (Master)}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Pentaho/master.png}{
+        \includegraphics[width=0.9\linewidth]{Images/Pentaho/master}
+    }{
+        \fbox{\begin{minipage}{0.9\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Pentaho/master.png}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Luồng Master xử lý và cập nhật dữ liệu thu thập mới}
+    \label{fig:pentaho_master}
+\end{figure}
+
+Luồng \textbf{Master} là luồng được thiết lập để \textbf{lên lịch chạy tự động} trong hệ thống sản xuất. Chức năng chính của Master là:
+\begin{itemize}
+    \item Quét và xác thực sự hiện diện của dữ liệu mới được thu thập trong thư mục Landing.
+    \item Nạp các dữ liệu mới này vào vùng đệm Staging.
+    \item Chuyển từ Staging vào Data Warehouse để cập nhật dữ liệu mới nhất.
+\end{itemize}
+
+\section{Quá Trình Tiền Xử Lý Dữ Liệu}
+
+\subsection{Nạp Dữ Liệu Vào Staging}
+
+Dữ liệu thô từ file CSV được đọc và đẩy vào các bảng đệm tạm thời tại MSSQL.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Pentaho/Stage_Raw.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Pentaho/Stage_Raw}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Pentaho/Stage\_Raw.png}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Quá trình nạp dữ liệu thô vào Staging}
+    \label{fig:pentaho_stage_raw}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Pentaho/Stage_Update.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Pentaho/Stage_Update}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Pentaho/Stage\_Update.png}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Quá trình nạp dữ liệu cập nhật vào Staging}
+    \label{fig:pentaho_stage_update}
+\end{figure}
+
+\subsection{Xây Dựng Data Warehouse}
+
+Đây là bước thực hiện các thao tác tiền xử lý dữ liệu của toàn bộ pipeline ETL.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Pentaho/Build_DW.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Pentaho/Build_DW}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Pentaho/Build\_DW.png}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Quá trình tiền xử lý và xây dựng Data Warehouse}
+    \label{fig:pentaho_build_dw}
+\end{figure}
+
+Trong bước Build DW, hệ thống thực hiện các công việc sau:
+\begin{itemize}
+    \item Đọc dữ liệu tạm thời từ vùng Staging (MSSQL).
+    \item Loại bỏ dữ liệu trùng lặp (Deduplicate) do tính chất thu thập liên tục của hệ thống.
+    \item Ép kiểu dữ liệu (Data type casting) để đảm bảo dữ liệu phù hợp với chuẩn định dạng của Data Warehouse.
+    \item Ánh xạ và đẩy dữ liệu vào đúng các bảng tương ứng trong PostgreSQL.
+\end{itemize}
+
+Để đảm bảo tính toàn vẹn cấu trúc và thỏa mãn các ràng buộc khóa ngoại (key constraints) cũng như sự phụ thuộc giữa các bảng, quá trình Build DW bắt buộc phải được thực hiện qua 3 giai đoạn tuần tự:
+\begin{enumerate}
+    \item \textbf{Phase 1}: Xây dựng các bảng Dimension.
+    \item \textbf{Phase 2}: Xây dựng các bảng Fact / Bridge ưu tiên thứ nhất (các bảng có ít ràng buộc phụ thuộc phức tạp hơn).
+    \item \textbf{Phase 3}: Xây dựng các bảng Fact / Bridge cấp hai (phụ thuộc vào dữ liệu của các bảng đã được nạp ở giai đoạn trước).
+\end{enumerate}

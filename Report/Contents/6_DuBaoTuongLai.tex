@@ -1,0 +1,261 @@
+\chapter{Dự Báo và Dashboard (Inference \& Visualization)}
+
+\section{Giải thích mô hình (Explainable AI)}
+
+Để đảm bảo tính minh bạch trong việc phát hiện bot, hệ thống sử dụng SHAP (SHapley Additive exPlanations) để giải thích các quyết định của mô hình.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/19.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/19}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/19.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Tầm quan trọng của các đặc trưng trong mô hình XGBoost (Top 15)}
+    \label{fig:xgb_importance}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/20.jpg}{
+        \includegraphics[width=0.45\linewidth]{Images/Slide/20}
+        \includegraphics[width=0.45\linewidth]{Images/Slide/21}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/20, 21.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Giải thích mô hình bằng giá trị SHAP (Scatter plot và Waterfall plot)}
+    \label{fig:shap_explanation}
+\end{figure}
+
+\section{Hệ Thống Dashboard BI}
+
+Hệ thống cung cấp giao diện trực quan để theo dõi và phân tích các tài khoản bất thường.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/22.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/22}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/22.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Giao diện tìm kiếm tài khoản trên Dashboard (Hỗ trợ nhiều ID hoặc file CSV)}
+    \label{fig:dash_search}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/23.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/23}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/23.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Kết quả tìm kiếm và đánh giá nhanh rủi ro}
+    \label{fig:dash_result_quick}
+\end{figure}
+
+\subsection{Chi Tiết Hành Vi và So Sánh Baseline}
+Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức trung bình của cộng đồng.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/24.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/24}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/24.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Chi tiết các chỉ số hành vi và dự báo Online Inference}
+    \label{fig:dash_details}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/25.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/25}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/25.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Phân tích rủi ro chi tiết cho một tài khoản cụ thể}
+    \label{fig:dash_risk_analysis}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/26.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/26}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/26.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{So sánh các đặc trưng sai lệch nhất so với Baseline cộng đồng}
+    \label{fig:comp_baseline}
+\end{figure}
+
+\subsection{Phân Tích Tổng Quan Dữ Liệu}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/27.jpg}{
+        \includegraphics[width=0.45\linewidth]{Images/Slide/27}
+        \includegraphics[width=0.45\linewidth]{Images/Slide/28}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/27, 28.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Phân phối Composite Score và Bản đồ địa lý tài khoản bất thường}
+    \label{fig:global_overview}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/29.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/29}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/29.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Dashboard tương quan mô hình và đồng thuận Ensemble}
+    \label{fig:dash_consensus_overview}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/30.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/30}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/30.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Ma trận đồng thuận giữa XGBoost và Isolation Forest}
+    \label{fig:consensus_matrix}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/31.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/31}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/31.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Phân tích độ tin cậy và sự đồng thuận của các mô hình}
+    \label{fig:consensus_stats}
+\end{figure}
+
+\section{Phân Tích Đặc Trưng Discriminative}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/32.jpg}{
+        \includegraphics[width=0.45\linewidth]{Images/Slide/32}
+        \includegraphics[width=0.45\linewidth]{Images/Slide/33}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/32, 33.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{So sánh Mean Ratio (Bot vs Normal) và tương quan đặc trưng nhân khẩu học}
+    \label{fig:behavioral_insights}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/34.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/34}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/34.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Tỷ lệ bất thường theo quy mô thư viện và năm tạo tài khoản}
+    \label{fig:anomaly_rates}
+\end{figure}
+
+\section{Kiểm thử thực tế}
+
+Hệ thống đã được kiểm thử trên một tập dữ liệu gồm 40 hồ sơ (20 người dùng thật và 20 tài khoản bot được tạo giả lập).
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/35.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/35}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/35.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Ma trận nhầm lẫn (Confusion Matrix) trên tập dữ liệu kiểm thử (40 profiles)}
+    \label{fig:confusion_matrix_test}
+\end{figure}

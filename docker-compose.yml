@@ -50,6 +50,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data # Persist Postgres data
       - ./SQL/SQL_Postgres_InitWarehouse.sql:/docker-entrypoint-initdb.d/001_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d Warehouse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   # -----------------------------------
   # 3. STEAM CRAWLER (CSV landing drops)
@@ -59,11 +64,72 @@ services:
       context: ./steam_crawler
     container_name: steam-crawler
     volumes:
-      - ./Datasets/landing:/app/Datasets/landing
+      - ./Datasets:/app/Datasets
     working_dir: /app
     entrypoint: ["python", "-m", "steam_crawler.cli"]
+
+  # -----------------------------------
+  # 4. ML ANALYTICS (Pipeline + Dashboard)
+  # -----------------------------------
+  ml-pipeline:
+    build:
+      context: ./ML_analytics
+    container_name: ml-pipeline
+    env_file:
+      - ./ML_analytics/.env
+    environment:
+      - DB_HOST=postgres-warehouse
+      - DB_USER=postgres
+      - DB_PASSWORD=31082004@Lmao
+      - DB_NAME=Warehouse
+      - DB_PORT=5432
+    depends_on:
+      postgres-warehouse:
+        condition: service_healthy
+    command: ["sh", "-c", "python main.py > outputs/pipeline.log"]
+    volumes:
+      - ./ML_analytics:/app
+      - ml_outputs:/app/outputs
+    restart: "no"
+
+  ml-dashboard:
+    build:
+      context: ./ML_analytics
+    container_name: ml-dashboard
+    env_file:
+      - ./ML_analytics/.env
+    environment:
+      - DB_HOST=postgres-warehouse
+      - DB_USER=postgres
+      - DB_PASSWORD=31082004@Lmao
+      - DB_NAME=Warehouse
+      - DB_PORT=5432
+    depends_on:
+      postgres-warehouse:
+        condition: service_healthy
+      ml-pipeline:
+        condition: service_completed_successfully
+    ports:
+      - "8501:8501"
+    command: ["streamlit", "run", "streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+    volumes:
+      - ./ML_analytics:/app
+      - ml_outputs:/app/outputs
+    restart: unless-stopped
+
+
+  # -----------------------------------
+  # 5. REPORT BUILDER (LaTeX)
+  # -----------------------------------
+  texlive:
+    image: aergus/latex
+    container_name: texlive
+    volumes:
+      - ./Report:/workspace
+    working_dir: /workspace
 
 # Define named volumes
 volumes:
   mssql_data:
   postgres_data:
+  ml_outputs:

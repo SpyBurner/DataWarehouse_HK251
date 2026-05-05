@@ -1,0 +1,111 @@
+\chapter{Xây Dựng Mô Hình (Model Selection, Training \& Tuning)}
+
+\section{Tổng Quan}
+Hệ thống sử dụng hai mô hình machine learning chính: \textbf{XGBoost} và \textbf{IsolationForest}, được kết hợp trong một ensemble để tăng độ chính xác và độ tin cậy của phát hiện bot.
+
+\section{Lựa chọn thuật toán}
+Dựa trên so sánh các thuật toán phổ biến:
+\begin{itemize}
+    \item \textbf{XGBoost (Supervised)}: Phù hợp với dữ liệu mất cân bằng, dễ giải thích qua Feature Importance. Cần nhãn dữ liệu (Heuristic labeling).
+    \item \textbf{Isolation Forest (Unsupervised)}: Phát hiện các anomaly mới mà không phụ thuộc vào nhãn. Hiệu quả với dữ liệu lớn.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/13.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/13}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/13.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Sơ đồ kiến trúc mô hình Dual Ensemble (XGBoost + Isolation Forest)}
+    \label{fig:model_diagram}
+\end{figure}
+
+\section{Quy trình huấn luyện và tối ưu}
+
+\subsection{Tạo nhãn bằng Heuristic (PU-Learning style)}
+Do dữ liệu gốc không có nhãn, hệ thống sử dụng các quy tắc (heuristic rules) để xác định các mẫu "chắc chắn là bot" và "chắc chắn là người dùng bình thường":
+\begin{itemize}
+    \item \textbf{Bot Rules}: Tốc độ mở khóa cực nhanh (< 10s) hoặc tỷ lệ thành tựu với 0 phút chơi cao (> 0.9).
+    \item \textbf{Normal Rules}: Thời gian chơi dài, tốc độ mở khóa tự nhiên (> 600s).
+\end{itemize}
+
+\subsection{Hyperparameter Tuning}
+\begin{itemize}
+    \item \textbf{Isolation Forest}: Sử dụng Grid Search để tối ưu hóa \texttt{contamination} và \texttt{n\_estimators}.
+    \item \textbf{XGBoost}: Huấn luyện trên tập dữ liệu đã gán nhãn heuristic, tối ưu hóa qua cross-validation.
+\end{itemize}
+
+\section{Xây Dựng Ensemble}
+
+Kết quả từ hai mô hình được chuẩn hóa và kết hợp theo trọng số tối ưu.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/14.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/14}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/14.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Phân tích độ nhạy của trọng số Ensemble để tìm điểm cắt tối ưu}
+    \label{fig:weight_sensitivity}
+\end{figure}
+
+\section{Các chỉ số đánh giá}
+
+\begin{itemize}
+    \item \textbf{Recall}: Tỷ lệ bot được phát hiện trên tổng số bot thực tế.
+    \item \textbf{Precision}: Tỷ lệ chính xác trong số các tài khoản bị gắn thẻ là bot.
+    \item \textbf{Accuracy}: Tỷ lệ phát hiện đúng cho cả bot và người dùng bình thường.
+    \item \textbf{F1-score}: Cân bằng giữa Precision và Recall.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/15.jpg}{
+        \includegraphics[width=0.3\linewidth]{Images/Slide/15}
+        \includegraphics[width=0.3\linewidth]{Images/Slide/16}
+        \includegraphics[width=0.3\linewidth]{Images/Slide/17}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/15, 16, 17.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Các chỉ số đánh giá mô hình: Recall, Precision và Accuracy}
+    \label{fig:eval_metrics}
+\end{figure}
+
+\section{Kết quả đánh giá}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/18.jpg}{
+        \includegraphics[width=0.8\linewidth]{Images/Slide/18}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/18.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Bảng tổng hợp kết quả đánh giá các mô hình (XGBoost, Isolation Forest, Ensemble)}
+    \label{fig:eval_results}
+\end{figure}

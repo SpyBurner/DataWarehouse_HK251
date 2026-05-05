@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    image: steam-anomaly-detection
+    container_name: steam-anomaly
+    restart: no
+    tty: true
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+      - type: bind
+        source: ./outputs
+        target: /app/outputs
+    command: ["python", "batch_analysis.py", "--force-run"]
+
+ 
