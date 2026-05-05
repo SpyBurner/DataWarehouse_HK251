@@ -412,6 +412,16 @@ def _review_features(reviews: pd.DataFrame,
                      zero_playtime_library: dict) -> pd.DataFrame:
     """Group D: review behaviour signals."""
     total_reviews = reviews.groupby("playerid").size().rename("total_reviews")
+    
+    if reviews.empty:
+        review_unplayed = pd.Series(name="review_unplayed_ratio", dtype=float)
+        review_dup = pd.Series(name="review_duplication_rate", dtype=float)
+        avg_rev_len = pd.Series(name="avg_review_length", dtype=float)
+        min_rev_len = pd.Series(name="min_review_length", dtype=float)
+        return pd.concat(
+            [total_reviews, review_unplayed, review_dup, avg_rev_len, min_rev_len],
+            axis=1,
+        )
 
     # Fraction of reviews for games with playtime_mins == 0.
     def _unplayed_ratio(group: pd.DataFrame) -> float:
