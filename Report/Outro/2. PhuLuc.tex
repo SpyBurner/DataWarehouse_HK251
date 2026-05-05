@@ -1,0 +1,48 @@
+\section{Phụ lục}
+\subsection{ADR 01: Lựa chọn khung làm việc mạng giữa Unity Netcode và Photon Fusion 2} \label{adr:01}
+
+\begin{enumerate}
+	\item \textbf{Tiêu đề:} lựa chọn khung làm việc cho trò chơi nhiều người.
+	\item \textbf{Trạng thái:} Đã chấp nhận.
+	\item \textbf{Bối cảnh:}
+	\begin{enumerate}
+		\item Trò chơi yêu cầu kết nối tối đa 3 người chơi trong một trận đấu theo lượt, tốc độ chậm và không có giả lập vật lý phức tạp.
+		\item Cần một hệ thống đóng gói tốt các chi tiết mạng cấp thấp để tập trung vào logic thẻ bài và tương tác với máy chủ phía sau.
+		\item Đảm bảo tính ổn định của trạng thái trò chơi trên tất cả các máy khách mà không cần tự xây dựng lại các cơ chế bù lag hay dự đoán trạng thái.
+	\end{enumerate}
+	\item \textbf{Quyết định:}
+	\begin{enumerate}
+		\item Áp dụng \textbf{Photon Fusion 2} thay vì Netcode for GameObjects để tận dụng hệ thống quản lý trạng thái dựa trên tích tắc mạnh mẽ.
+		\item Sử dụng chế độ \textbf{Shared Mode} để đơn giản hóa việc kết nối cho nhóm nhỏ và giảm chi phí vận hành máy chủ.
+	\end{enumerate}
+	\item \textbf{Hệ quả:}
+	\begin{enumerate}
+		\item \textbf{Tăng độ chính xác dữ liệu:} Nhờ vào cơ chế đồng bộ thuộc tính mạng thay vì gửi lệnh thủ công qua RPC.
+		\item \textbf{Đường cong học tập cao hơn:} Đội ngũ phát triển cần làm quen với mô hình lập trình dựa trên tick thay vì hàm cập nhật truyền thống.
+		\item \textbf{Đóng gói tốt hơn:} Tách biệt rõ ràng giữa dữ liệu mạng và logic hiển thị theo nguyên tắc \textbf{SOLID}.
+	\end{enumerate}
+\end{enumerate}
+
+\subsection{ADR 02: Chuyển đổi hệ thống giao diện từ Legacy UI sang UI Toolkit} \label{adr:02}
+
+\begin{enumerate}
+	\item \textbf{Tiêu đề:} chuyển đổi từ hệ thống giao diện cũ sang ui toolkit.
+	\item \textbf{Trạng thái:} Đã chấp nhận.
+	\item \textbf{Bối cảnh:}
+	\begin{enumerate}
+		\item Mục tiêu áp dụng kiến trúc \textbf{MVC} để quản lý các lần gọi giao diện lập trình ứng dụng và cập nhật mô hình dữ liệu một cách nghiêm ngặt.
+		\item Hệ thống giao diện cũ gây khó khăn trong việc tách biệt logic và thẩm mỹ, đồng thời thường xuyên gây xung đột dữ liệu khi làm việc nhóm trên các tệp đúc sẵn.
+		\item Cần một giải pháp hỗ trợ \textbf{Data Binding} mạnh mẽ để tự động hóa việc hiển thị dữ liệu từ mô hình mà không cần viết mã thủ công quá nhiều.
+	\end{enumerate}
+	\item \textbf{Quyết định:}
+	\begin{enumerate}
+		\item Chuyển đổi toàn bộ hệ thống giao diện sang \textbf{UI Toolkit} trên Unity 6.
+		\item Thực hiện gắn kết sự kiện hoàn toàn qua mã nguồn thay vì sử dụng cửa sổ thuộc tính để đảm bảo tính đóng gói và dễ kiểm thử.
+	\end{enumerate}
+	\item \textbf{Hệ quả:}
+	\begin{enumerate}
+		\item \textbf{Tuân thủ nguyên tắc DRY:} Quản lý style tập trung qua các tệp style dùng chung, tránh lặp lại định dạng cho từng thành phần.
+		\item \textbf{Tối ưu hóa luồng dữ liệu:} Việc tách biệt cấu trúc giao diện và logic điều khiển giúp việc tích hợp với máy chủ phía sau trở nên minh bạch và dễ bảo trì hơn.
+		\item \textbf{Hiệu suất cải thiện:} Giảm bớt gánh nặng tính toán bố cục nhờ vào cơ chế dàn trang dựa trên Flexbox và ảo hóa danh sách.
+	\end{enumerate}
+\end{enumerate}
