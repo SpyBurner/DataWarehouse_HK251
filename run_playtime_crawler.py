@@ -4,7 +4,7 @@ import os
 
 def main():
     root_dir = os.path.dirname(os.path.abspath(__file__))
-    players_csv_path = os.path.join(root_dir, "Datasets", "raw", "players.csv")
+    players_csv_path = os.path.join(root_dir, "Datasets", "raw_min", "players.csv")
     
     if not os.path.exists(players_csv_path):
         print(f"Error: {players_csv_path} does not exist.")

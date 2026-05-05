@@ -653,7 +653,7 @@ TRUNCATE TABLE dw.stg_library_temp;</sql>
       <to>Private IDs</to>
       <from_nr>0</from_nr>
       <to_nr>0</to_nr>
-      <enabled>N</enabled>
+      <enabled>Y</enabled>
       <evaluation>Y</evaluation>
       <unconditional>Y</unconditional>
     </hop>
@@ -671,7 +671,7 @@ TRUNCATE TABLE dw.stg_library_temp;</sql>
       <to>Reviews</to>
       <from_nr>0</from_nr>
       <to_nr>0</to_nr>
-      <enabled>N</enabled>
+      <enabled>Y</enabled>
       <evaluation>Y</evaluation>
       <unconditional>Y</unconditional>
     </hop>
@@ -752,7 +752,7 @@ TRUNCATE TABLE dw.stg_library_temp;</sql>
       <to>Achievements</to>
       <from_nr>0</from_nr>
       <to_nr>0</to_nr>
-      <enabled>N</enabled>
+      <enabled>Y</enabled>
       <evaluation>Y</evaluation>
       <unconditional>Y</unconditional>
     </hop>
