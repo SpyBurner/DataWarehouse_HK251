@@ -11,3 +11,5 @@ shap
 SQLAlchemy
 streamlit
 xgboost
+requests
+beautifulsoup4

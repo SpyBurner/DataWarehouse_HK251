@@ -107,16 +107,14 @@ services:
     depends_on:
       postgres-warehouse:
         condition: service_healthy
-      ml-pipeline:
-        condition: service_completed_successfully
     ports:
       - "8501:8501"
     command: ["streamlit", "run", "streamlit_app.py", "--server.address=0.0.0.0", "--server.port=8501"]
     volumes:
       - ./ML_analytics:/app
+      - ./steam_crawler:/app/steam_crawler
+      - ./Datasets:/app/Datasets
       - ml_outputs:/app/outputs
-    restart: unless-stopped
-
 
   # -----------------------------------
   # 5. REPORT BUILDER (LaTeX)
@@ -133,3 +131,5 @@ volumes:
   mssql_data:
   postgres_data:
   ml_outputs:
+
+# 76561198287996067

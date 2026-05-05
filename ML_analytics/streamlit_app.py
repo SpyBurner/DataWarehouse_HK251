@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import streamlit as st
+from sqlalchemy import create_engine
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from models import apply_log_transform
@@ -595,15 +596,99 @@ def _parse_library_stats(cell) -> tuple[set[int], float, int]:
         return library_ids, np.nan, 0
     return library_ids, float(total_playtime_mins), games_with_playtime
 
-# Collect crawled data files into a single lookup bundle for scoring.
+# Collect crawl-equivalent data directly from the PostgreSQL warehouse.
+@st.cache_resource(show_spinner=False)
+def _get_postgres_engine():
+    import urllib.parse
+
+    host = os.getenv("DB_HOST", "postgres-warehouse")
+    port = os.getenv("DB_PORT", "5432")
+    user = os.getenv("DB_USER", "postgres")
+    password = os.getenv("DB_PASSWORD", "31082004@Lmao")
+    db_name = os.getenv("DB_NAME", "Warehouse")
+    encoded_password = urllib.parse.quote_plus(password)
+    conn_str = f"postgresql+psycopg2://{user}:{encoded_password}@{host}:{port}/{db_name}"
+    return create_engine(conn_str)
+
+
 def load_crawled_data() -> dict[str, pd.DataFrame | None]:
-    crawled = {
-        "players": load_csv("data/crawled/players.csv"),
-        "purchased": load_csv("data/crawled/purchased_games.csv"),
-        "history": load_csv("data/crawled/history.csv"),
-        "reviews": load_csv("data/crawled/reviews.csv"),
-    }
-    return crawled
+    try:
+        engine = _get_postgres_engine()
+
+        players = pd.read_sql(
+            """
+            SELECT playerid, country, created
+            FROM dw.dim_player
+            WHERE COALESCE(is_private, FALSE) = FALSE
+            """,
+            engine,
+        )
+
+        purchased = pd.read_sql(
+            """
+            SELECT
+                l.playerid,
+                json_agg(
+                    json_build_object('appid', l.appid, 'playtime_mins', l.playtime_mins)
+                    ORDER BY l.appid
+                )::text AS library
+            FROM dw.fact_library l
+            JOIN dw.dim_player p ON p.playerid = l.playerid
+            WHERE COALESCE(p.is_private, FALSE) = FALSE
+            GROUP BY l.playerid
+            """,
+            engine,
+        )
+
+        history = pd.read_sql(
+            """
+            SELECT
+                h.playerid,
+                h.achievementid,
+                h.date_acquired,
+                a.gameid
+            FROM dw.fact_achievement_unlock h
+            JOIN dw.dim_player p ON p.playerid = h.playerid
+            LEFT JOIN dw.fact_achievement a ON a.achievementid = h.achievementid
+            WHERE COALESCE(p.is_private, FALSE) = FALSE
+            """,
+            engine,
+        )
+
+        reviews = pd.read_sql(
+            """
+            SELECT r.reviewid, r.playerid, r.gameid, r.review, r.helpful, r.funny, r.awards, r.posted
+            FROM dw.fact_review r
+            JOIN dw.dim_player p ON p.playerid = r.playerid
+            WHERE COALESCE(p.is_private, FALSE) = FALSE
+            """,
+            engine,
+        )
+
+        for df in (players, purchased, history, reviews):
+            if "playerid" in df.columns:
+                df["playerid"] = pd.to_numeric(df["playerid"], errors="coerce")
+                df.dropna(subset=["playerid"], inplace=True)
+                df["playerid"] = df["playerid"].astype("int64")
+
+        if "created" in players.columns:
+            players["created"] = pd.to_datetime(players["created"], errors="coerce")
+
+        if "date_acquired" in history.columns:
+            history["date_acquired"] = pd.to_datetime(history["date_acquired"], errors="coerce")
+
+        if "posted" in reviews.columns:
+            reviews["posted"] = pd.to_datetime(reviews["posted"], errors="coerce")
+
+        return {
+            "players": players.drop_duplicates(subset=["playerid"], keep="last").reset_index(drop=True),
+            "purchased": purchased.drop_duplicates(subset=["playerid"], keep="last").reset_index(drop=True),
+            "history": history.drop_duplicates(subset=["playerid", "achievementid", "date_acquired"], keep="last").reset_index(drop=True),
+            "reviews": reviews.drop_duplicates(subset=["reviewid"], keep="last").reset_index(drop=True),
+        }
+    except Exception as exc:
+        st.error(f"Failed to load data from PostgreSQL DW: {exc}")
+        return {"players": None, "purchased": None, "history": None, "reviews": None}
 
 # Extract normalized player IDs from a crawled table.
 def _extract_playerid_set(df: pd.DataFrame | None) -> set[int]:
@@ -1150,12 +1235,10 @@ with c2:
             st.warning("You need to enter Steam ID before comparing.")
         else:
             crawled = load_crawled_data()
-            missing_files = [name for name, df in crawled.items() if df is None]
-            if len(missing_files) == 4:
-                st.error("No crawled data found in data/crawled. Please run the crawl first.")
+            if all(df is None or df.empty for df in crawled.values()):
+                st.error("No matching data found in PostgreSQL DW. Run the crawl and warehouse load first.")
             else:
-                if missing_files:
-                    st.info("Missing some crawl files: " + ", ".join(missing_files) + ". Analyzing with available data.")
+                st.info("Loading player data from PostgreSQL DW tables.")
 
                 rows = []
 
