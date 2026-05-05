@@ -1,23 +1,23 @@
-﻿\chapter{Dá»± BÃ¡o TÆ°Æ¡ng Lai \& á»¨ng Dá»¥ng MÃ´ HÃ¬nh}
+hapter{Dự Báo Tương Lai \& Ứng Dụng Mô Hình}
 
-\section{Tá»•ng Quan}
-Sau khi training, mÃ´ hÃ¬nh ensemble Ä‘Æ°á»£c sá»­ dá»¥ng Ä‘á»ƒ:
+\section{Tổng Quan}
+Sau khi training, mô hình ensemble được sử dụng để:
 \begin{enumerate}
-    \item Dá»± bÃ¡o trÃªn toÃ n bá»™ dá»¯ liá»‡u (inference)
-    \item XÃ¡c Ä‘á»‹nh tÃ i khoáº£n bot vá»›i Ä‘á»™ tin cáº­y cao
-    \item Táº¡o máº«u Ä‘á»ƒ human review vÃ  cáº£i thiá»‡n liÃªn tá»¥c (Active Learning)
-    \item ÄÃ¡nh giÃ¡ cháº¥t lÆ°á»£ng mÃ´ hÃ¬nh thÃ´ng qua cÃ¡c metrics toÃ n diá»‡n
+    \item Dự báo trên toàn bộ dữ liệu (inference)
+    \item Xác định tài khoản bot với độ tin cậy cao
+    \item Tạo mẫu để human review và cải thiện liên tục (Active Learning)
+    \item Đánh giá chất lượng mô hình thông qua các metrics toàn diện
 \end{enumerate}
 
-\section{Inference \& Dá»± BÃ¡o Bot}
+\section{Inference \& Dự Báo Bot}
 
-\subsection{Quy TrÃ¬nh}
+\subsection{Quy Trình}
 \begin{enumerate}
     \item Load trained models: \texttt{best\_if.pkl}, \texttt{best\_xgb.pkl}, \texttt{preprocessor.pkl}
-    \item Xá»­ lÃ½ feature matrix $X_{raw}$:
+    \item Xử lý feature matrix $X_{raw}$:
     \begin{itemize}
-        \item IF path: Log-transform â†’ Preprocess (SimpleImputer + StandardScaler)
-        \item XGBoost path: Sá»­ dá»¥ng $X_{raw}$ trá»±c tiáº¿p (khÃ´ng transform)
+        \item IF path: Log-transform → Preprocess (SimpleImputer + StandardScaler)
+        \item XGBoost path: Sử dụng $X_{raw}$ trực tiếp (không transform)
     \end{itemize}
     \item Prediction:
     \begin{itemize}
@@ -26,7 +26,7 @@ Sau khi training, mÃ´ hÃ¬nh ensemble Ä‘Æ°á»£c sá»­ dá»¥ng Ä�
     \end{itemize}
     \item Ensemble:
     \begin{itemize}
-        \item Convert sang percentile ranks: $if\_pct$, $xgb\_pct$ âˆˆ [0, 100]
+        \item Convert sang percentile ranks: $if\_pct$, $xgb\_pct$ ∈ [0, 100]
         \item Composite: $\text{composite} = 0.70 \times xgb\_pct + 0.30 \times if\_pct$
         \item Prediction: $is\_anomaly = \text{composite} \geq 85$
     \end{itemize}
@@ -34,56 +34,56 @@ Sau khi training, mÃ´ hÃ¬nh ensemble Ä‘Æ°á»£c sá»­ dá»¥ng Ä�
 
 \subsection{Output}
 \begin{itemize}
-    \item Danh sÃ¡ch tÃ i khoáº£n Ä‘Æ°á»£c flagged lÃ  bot (lÃ  nhá»¯ng tÃ i khoáº£n cÃ³ $is\_anomaly = 1$)
-    \item Composite score cho má»—i tÃ i khoáº£n (Ä‘á»™ tin cáº­y 0â€“100)
-    \item XGBoost probability score vÃ  IF anomaly score riÃªng láº» (Ä‘á»ƒ debug \& anÃ¡lysis)
+    \item Danh sách tài khoản được flagged là bot (là những tài khoản có $is\_anomaly = 1$)
+    \item Composite score cho mỗi tài khoản (độ tin cậy 0–100)
+    \item XGBoost probability score và IF anomaly score riêng lẻ (để debug \& análysis)
 \end{itemize}
 
 \section{Active Learning Loop}
 
-\subsection{XÃ¡c Äá»‹nh Máº«u Äá»ƒ Review}
+\subsection{Xác Định Mẫu Để Review}
 
-\textbf{Má»¥c tiÃªu}: TÃ¬m cÃ¡c trÆ°á»ng há»£p "conflict" Ä‘á»ƒ cáº£i thiá»‡n mÃ´ hÃ¬nh
+\textbf{Mục tiêu}: Tìm các trường hợp "conflict" để cải thiện mô hình
 
-\textbf{Äiá»u kiá»‡n}:
+\textbf{Điều kiện}:
 \begin{equation}
 \text{conflict} = (\text{composite} \geq 85) \text{ AND } (\text{heuristic\_bot} == 0)
 \end{equation}
 
-Nhá»¯ng tÃ i khoáº£n nÃ y lÃ :
+Những tài khoản này là:
 \begin{itemize}
-    \item MÃ´ hÃ¬nh há»c mÃ¡y dá»± bÃ¡o lÃ  BOT (composite â‰¥ 85)
-    \item NhÆ°ng heuristic rule khÃ´ng phÃ¡t hiá»‡n lÃ  bot
-    \item CÃ³ thá»ƒ lÃ  false positive hoáº·c heuristic bá» sÃ³t
+    \item Mô hình học máy dự báo là BOT (composite ≥ 85)
+    \item Nhưng heuristic rule không phát hiện là bot
+    \item Có thể là false positive hoặc heuristic bỏ sót
 \end{itemize}
 
-\subsection{Táº¡o Máº«u Äá»ƒ Review}
+\subsection{Tạo Mẫu Để Review}
 
 Module \texttt{active\_learning.py} - Function \texttt{generate\_review\_sample()}:
 
 \begin{enumerate}
-    \item Lá»c: Chá»‰ láº¥y conflict cases
-    \item Sáº¯p xáº¿p: Sort by $\text{composite\_score}$ descending (highest suspicion first)
-    \item Chá»n máº«u: Top 50 conflict cases
-    \item Merge: Káº¿t há»£p vá»›i feature matrix â†’ táº¡o context Ä‘áº§y Ä‘á»§ cho reviewer
-    \item LÆ°u: Output file \texttt{outputs/to\_review.csv}
+    \item Lọc: Chỉ lấy conflict cases
+    \item Sắp xếp: Sort by $\text{composite\_score}$ descending (highest suspicion first)
+    \item Chọn mẫu: Top 50 conflict cases
+    \item Merge: Kết hợp với feature matrix → tạo context đầy đủ cho reviewer
+    \item Lưu: Output file \texttt{outputs/to\_review.csv}
 \end{enumerate}
 
 \subsection{Human Labeling \& Feedback Loop}
 
 \begin{enumerate}
-    \item Human reviewer má»Ÿ \texttt{to\_review.csv}
-    \item Cho má»—i tÃ i khoáº£n, gÃ¡n nhÃ£n: $human\_label \in \{0, 1\}$
+    \item Human reviewer mở \texttt{to\_review.csv}
+    \item Cho mỗi tài khoản, gán nhãn: $human\_label \in \{0, 1\}$
     \begin{itemize}
-        \item 1 = Bot (mÃ´ hÃ¬nh Ä‘Ãºng)
-        \item 0 = Normal (mÃ´ hÃ¬nh sai)
-        \item Blank = KhÃ´ng cháº¯c cháº¯n (bá» qua)
+        \item 1 = Bot (mô hình đúng)
+        \item 0 = Normal (mô hình sai)
+        \item Blank = Không chắc chắn (bỏ qua)
     \end{itemize}
-    \item LÆ°u file Ä‘Ã£ gÃ¡n nhÃ£n: \texttt{data/reviewed.csv}
-    \item Re-run pipeline: MÃ´ hÃ¬nh Ä‘Æ°á»£c train láº¡i vá»›i:
+    \item Lưu file đã gán nhãn: \texttt{data/reviewed.csv}
+    \item Re-run pipeline: Mô hình được train lại với:
     \begin{itemize}
-        \item $integrate\_human\_labels()$ override heuristic labels báº±ng human labels (giai Ä‘oáº¡n preprocessing)
-        \item Confident subset Ä‘Æ°á»£c cáº£i thiá»‡n â†’ cháº¥t lÆ°á»£ng training signal tÄƒng
+        \item $integrate\_human\_labels()$ override heuristic labels bằng human labels (giai đoạn preprocessing)
+        \item Confident subset được cải thiện → chất lượng training signal tăng
     \end{itemize}
 \end{enumerate}
 
@@ -92,114 +92,115 @@ Module \texttt{active\_learning.py} - Function \texttt{generate\_review\_sample(
 Module \texttt{features.py} - Function \texttt{integrate\_human\_labels()}:
 
 \begin{itemize}
-    \item Äá»c \texttt{data/reviewed.csv}
-    \item Vá»›i má»—i row cÃ³ há»£p lá»‡ human\_label (0 hoáº·c 1):
+    \item Đọc \texttt{data/reviewed.csv}
+    \item Với mỗi row có hợp lệ human\_label (0 hoặc 1):
     \begin{itemize}
-        \item Override $y_{heuristic}[playerid]$ vÃ /hoáº·c $y_{normal}[playerid]$ báº±ng human label
+        \item Override $y_{heuristic}[playerid]$ và/hoặc $y_{normal}[playerid]$ bằng human label
     \end{itemize}
-    \item Bá» qua rows vá»›i blank labels
-    \item HITL (Human-in-the-Loop) loop tá»« pipeline phá»¥c vá»¥ cáº£i thiá»‡n liÃªn tá»¥c
+    \item Bỏ qua rows với blank labels
+    \item HITL (Human-in-the-Loop) loop từ pipeline phục vụ cải thiện liên tục
 \end{itemize}
 
 \section{Evaluation \& Model Quality Assessment}
 
 Module \texttt{evaluate.py}:
 
-\subsection{1. So SÃ¡nh CÃ¡c MÃ´ HÃ¬nh}
+\subsection{1. So Sánh Các Mô Hình}
 
 Function \texttt{\_model\_comparison()}:
 
-TÃ­nh cÃ¡c metrics cho 3 mÃ´ hÃ¬nh: XGBoost, IsolationForest, Ensemble
+Tính các metrics cho 3 mô hình: XGBoost, IsolationForest, Ensemble
 
 \begin{itemize}
-    \item \textbf{ROC-AUC}: Diá»‡n tÃ­ch dÆ°á»›i Ä‘Æ°á»ng cong ROC (tolerance má»©c Ä‘á»™ trade-off giá»¯a TPR \& FPR)
-    \item \textbf{PR-AUC}: Diá»‡n tÃ­ch dÆ°á»›i Ä‘Æ°á»ng cong Precision-Recall (phÃ¹ há»£p vá»›i dá»¯ liá»‡u imbalanced)
-    \item \textbf{Flagged Rate (\%)}: Tá»· lá»‡ tÃ i khoáº£n Ä‘Æ°á»£c phÃ¢n loáº¡i lÃ  bot
-    \item \textbf{Precision@100/500/1000}: Äá»™ chÃ­nh xÃ¡c trong top-N flagged accounts
+    \item \textbf{ROC-AUC}: Diện tích dưới đường cong ROC (tolerance mức độ trade-off giữa TPR \& FPR)
+    \item \textbf{PR-AUC}: Diện tích dưới đường cong Precision-Recall (phù hợp với dữ liệu imbalanced)
+    \item \textbf{Flagged Rate (\%)}: Tỷ lệ tài khoản được phân loại là bot
+    \item \textbf{Precision@100/500/1000}: Độ chính xác trong top-N flagged accounts
 \end{itemize}
 
 Output: \texttt{model\_comparison.csv}
 
-\subsection{2. ÄÃ¡nh GiÃ¡ Chi Tiáº¿t XGBoost}
+\subsection{2. Đánh Giá Chi Tiết XGBoost}
 
 Function \texttt{\_evaluate\_xgboost()}:
 
 \begin{itemize}
-    \item \textbf{PR-AUC}: Metric chÃ­nh cho lá»±a chá»n threshold tá»‘i Æ°u
+    \item \textbf{PR-AUC}: Metric chính cho lựa chọn threshold tối ưu
     \item \textbf{Optimal Threshold}: $\text{argmax } F1(\text{threshold})$
-    \item \textbf{Classification Report}: Precision, Recall, F1-Score táº¡i threshold tá»‘i Æ°u
+    \item \textbf{Classification Report}: Precision, Recall, F1-Score tại threshold tối ưu
     \item Output plots:
     \begin{itemize}
-        \item \texttt{xgb\_pr\_curve.png}: ÄÆ°á»ng cong Precision-Recall
-        \item \texttt{xgb\_feature\_importance.png}: Biá»ƒu Ä‘á»“ táº§m quan trá»ng Ä‘áº·c trÆ°ng
+        \item \texttt{xgb\_pr\_curve.png}: Đường cong Precision-Recall
+        \item \texttt{xgb\_feature\_importance.png}: Biểu đồ tầm quan trọng đặc trưng
     \end{itemize}
 \end{itemize}
 
-\subsection{3. PhÃ¢n TÃ­ch So SÃ¡nh Äáº·c TrÆ°ng}
+\subsection{3. Phân Tích So Sánh Đặc Trưng}
 
 \begin{itemize}
-    \item So sÃ¡nh: Top-50 flagged accounts vs Normal accounts
-    \item TÃ­nh: Mean cá»§a má»—i Ä‘áº·c trÆ°ng trong 2 nhÃ³m
-    \item Output: \texttt{top50\_flagged\_profiles.csv} â€” profile trung bÃ¬nh cá»§a bot vs normal
-    \item GiÃºp hiá»ƒu thÃ nh pháº§n nÃ o cá»§a feature matrix lÃ  discriminative nháº¥t
+    \item So sánh: Top-50 flagged accounts vs Normal accounts
+    \item Tính: Mean của mỗi đặc trưng trong 2 nhóm
+    \item Output: \texttt{top50\_flagged\_profiles.csv} — profile trung bình của bot vs normal
+    \item Giúp hiểu thành phần nào của feature matrix là discriminative nhất
 \end{itemize}
 
 \subsection{4. SHAP Explainability Analysis}
 
 Function \texttt{\_shap\_plots()}:
 
-Giáº£i thÃ­ch Ä‘á»™ Ä‘Ã³ng gÃ³p cá»§a tá»«ng Ä‘áº·c trÆ°ng Ä‘á»‘i vá»›i tá»«ng dá»± bÃ¡o:
+Giải thích độ đóng góp của từng đặc trưng đối với từng dự báo:
 
 \begin{enumerate}
-    \item Sampling: Chá»n ngáº«u nhiÃªn 5000 rows tá»« $X_{raw}$ (unscaled â€” giá»¯ axis values trÃªn thang Ä‘o gá»‘c)
-    \item SHAP Calculation: TÃ­nh SHAP values thÃ´ng qua native XGBoost \texttt{booster.predict(pred\_contribs=True)}
+    \item Sampling: Chọn ngẫu nhiên 5000 rows từ $X_{raw}$ (unscaled — giữ axis values trên thang đo gốc)
+    \item SHAP Calculation: Tính SHAP values thông qua native XGBoost \texttt{booster.predict(pred\_contribs=True)}
     \begin{itemize}
-        \item Bypass TreeExplainer parser (trÃ¡nh complexity)
-        \item TÃ­nh trá»±c tiáº¿p contribution cá»§a má»—i feature tá»›i output
+        \item Bypass TreeExplainer parser (tránh complexity)
+        \item Tính trực tiếp contribution của mỗi feature tới output
     \end{itemize}
     \item Output plots:
     \begin{itemize}
-        \item \texttt{shap\_summary.png}: Summary plot â€” global feature importance
+        \item \texttt{shap\_summary.png}: Summary plot — global feature importance
         \begin{itemize}
-            \item Trá»¥c X: SHAP value (Ä‘á»™ impact)
-            \item Trá»¥c Y: Feature rank by importance
-            \item MÃ u: Feature value (cao/tháº¥p)
+            \item Trục X: SHAP value (độ impact)
+            \item Trục Y: Feature rank by importance
+            \item Màu: Feature value (cao/thấp)
         \end{itemize}
-        \item \texttt{shap\_waterfall.png}: Waterfall plot â€” tÃ i khoáº£n Ä‘Ã¡ng ngá» nháº¥t
+        \item \texttt{shap\_waterfall.png}: Waterfall plot — tài khoản đáng ngờ nhất
         \begin{itemize}
-            \item Show tá»«ng feature contribution cá»™ng dá»“n Ä‘áº¿n prediction
-            \item GiÃºp debug individual cases
+            \item Show từng feature contribution cộng dồn đến prediction
+            \item Giúp debug individual cases
         \end{itemize}
-        \item \texttt{shap\_scatter\_<feat>.png}: Scatter plot cho top-3 features quan trá»ng
+        \item \texttt{shap\_scatter\_<feat>.png}: Scatter plot cho top-3 features quan trọng
         \begin{itemize}
-            \item Trá»¥c X: Feature value
-            \item Trá»¥c Y: SHAP value
-            \item PhÃ¡t hiá»‡n non-linear relationships
+            \item Trục X: Feature value
+            \item Trục Y: SHAP value
+            \item Phát hiện non-linear relationships
         \end{itemize}
     \end{itemize}
 \end{enumerate}
 
-\section{Cáº£i Tiáº¿n LiÃªn Tá»¥c}
+\section{Cải Tiến Liên Tục}
 
-\subsection{Chu Ká»³}
+\subsection{Chu Kỳ}
 \begin{enumerate}
-    \item \textbf{Inference}: Dá»± bÃ¡o trÃªn dá»¯ liá»‡u má»›i
-    \item \textbf{Active Learning}: Táº¡o máº«u conflict cho human review
-    \item \textbf{Human Labeling}: Reviewer gÃ¡n nhÃ£n
-    \item \textbf{Re-training}: Integrate human labels â†’ train mÃ´ hÃ¬nh láº¡i
-    \item \textbf{Evaluation}: ÄÃ¡nh giÃ¡ cháº¥t lÆ°á»£ng â†’ quay láº¡i bÆ°á»›c 1
+    \item \textbf{Inference}: Dự báo trên dữ liệu mới
+    \item \textbf{Active Learning}: Tạo mẫu conflict cho human review
+    \item \textbf{Human Labeling}: Reviewer gán nhãn
+    \item \textbf{Re-training}: Integrate human labels → train mô hình lại
+    \item \textbf{Evaluation}: Đánh giá chất lượng → quay lại bước 1
 \end{enumerate}
 
-\subsection{Metrics Theo DÃµi}
+\subsection{Metrics Theo Dõi}
 \begin{itemize}
-    \item \textbf{ROC-AUC}: KhÃ´ng cÃ²n auto-flip; log Ä‘á»ƒ theo dÃµi cháº¥t lÆ°á»£ng
-    \item \textbf{PR-AUC}: Metric chÃ­nh cho imbalanced data
-    \item \textbf{Precision@Top-K}: Äá»™ chÃ­nh xÃ¡c trong top-K suspicious accounts (K = 100, 500, 1000)
-    \item \textbf{Human Agreement Rate}: Tá»· lá»‡ mÃ´ hÃ¬nh dá»± bÃ¡o Ä‘Ãºng vá»›i human labels
+    \item \textbf{ROC-AUC}: Không còn auto-flip; log để theo dõi chất lượng
+    \item \textbf{PR-AUC}: Metric chính cho imbalanced data
+    \item \textbf{Precision@Top-K}: Độ chính xác trong top-K suspicious accounts (K = 100, 500, 1000)
+    \item \textbf{Human Agreement Rate}: Tỷ lệ mô hình dự báo đúng với human labels
 \end{itemize}
 
-\section{TÃ³m Táº¯t}
-Giai Ä‘oáº¡n dá»± bÃ¡o \& á»©ng dá»¥ng bao gá»“m: (1) Inference trÃªn dá»¯ liá»‡u má»›i, (2) Active Learning Ä‘á»ƒ xÃ¡c Ä‘á»‹nh máº«u cáº§n review, (3) Human-in-the-Loop labeling Ä‘á»ƒ cáº£i thiá»‡n, (4) ÄÃ¡nh giÃ¡ toÃ n diá»‡n cháº¥t lÆ°á»£ng mÃ´ hÃ¬nh qua 4 nhÃ³m metrics, (5) Chu ká»³ cáº£i tiáº¿n liÃªn tá»¥c. Há»‡ thá»‘ng Ä‘Æ°á»£c thiáº¿t káº¿ Ä‘á»ƒ tÄƒng Ä‘á»™ chÃ­nh xÃ¡c \& Ä‘á»™ tin cáº­y theo thá»i gian thÃ´ng qua feedback tá»« human reviewers.
+\section{Tóm Tắt}
+Giai đoạn dự báo \& ứng dụng bao gồm: (1) Inference trên dữ liệu mới, (2) Active Learning để xác định mẫu cần review, (3) Human-in-the-Loop labeling để cải thiện, (4) Đánh giá toàn diện chất lượng mô hình qua 4 nhóm metrics, (5) Chu kỳ cải tiến liên tục. Hệ thống được thiết kế để tăng độ chính xác \& độ tin cậy theo thời gian thông qua feedback từ human reviewers.
+``
 
 \section{Tóm Tắt}
 Hệ thống không chỉ dừng lại ở dự báo tĩnh, mà còn đưa ra cấu trúc học tập vòng lặp (Active Learning) nhờ human-in-the-loop, bảo đảm mô hình ngày càng chính xác theo thời gian.

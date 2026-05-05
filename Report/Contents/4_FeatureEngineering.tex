@@ -1,92 +1,93 @@
-﻿\chapter{Ká»¹ Thuáº­t TrÃ­ch Xuáº¥t Äáº·c TrÆ°ng (Feature Engineering)}
+hapter{Kỹ Thuật Trích Xuất Đặc Trưng (Feature Engineering)}
 
-\section{Tá»•ng Quan}
-Quy trÃ¬nh trÃ­ch xuáº¥t Ä‘áº·c trÆ°ng Ä‘Æ°á»£c thá»±c hiá»‡n trong module \texttt{features.py}, táº¡o ra má»™t ma tráº­n Ä‘áº·c trÆ°ng gá»“m 25 cá»™t tá»« dá»¯ liá»‡u lá»‹ch sá»­ thÃ nh tá»±u, Ä‘Ã¡nh giÃ¡, thÃ´ng tin tÃ i khoáº£n vÃ  thÃ´ng tin game Ä‘Ã£ mua.
+\section{Tổng Quan}
+Quy trình trích xuất đặc trưng được thực hiện trong module \texttt{features.py}, tạo ra một ma trận đặc trưng gồm 25 cột từ dữ liệu lịch sử thành tựu, đánh giá, thông tin tài khoản và thông tin game đã mua.
 
-\section{BÆ°á»›c Loáº¡i Bá» (Trimming)}
-TrÆ°á»›c khi tÃ­nh toÃ¡n báº¥t ká»³ Ä‘áº·c trÆ°ng nÃ o, há»‡ thá»‘ng Ã¡p dá»¥ng tiÃªu chÃ­ loáº¡i bá» Ä‘á»ƒ táº­p trung vÃ o cÃ¡c tÃ i khoáº£n cÃ³ hoáº¡t Ä‘á»™ng Ä‘Ã¡ng ká»ƒ:
-
-\begin{itemize}
-    \item Äiá»u kiá»‡n: \textbf{(â‰¥10 achievements HOáº¶C â‰¥3 reviews) VÃ€ library\_size â‰¥ 1}
-    \item TÃ¡c dá»¥ng: Giáº£m táº­p dá»¯ liá»‡u tá»« ~196K xuá»‘ng ~3K tÃ i khoáº£n (98\%), loáº¡i bá» ghost accounts vÃ  tÃ i khoáº£n khÃ´ng hoáº¡t Ä‘á»™ng
-    \item Lá»£i Ã­ch: TÄƒng tá»‘c Ä‘á»™ tÃ­nh toÃ¡n groupby/merge, loáº¡i bá» feature rows chá»‰ toÃ n NaN
-    \item LÆ°u Ã½: Logic OR giá»¯ láº¡i cÃ¡c bot candidates cÃ³ 0 achievements nhÆ°ng spam reviews
-\end{itemize}
-
-\section{NhÃ³m A: Äáº·c TrÆ°ng Tá»‘c Äá»™ (Speed Features)}
-
-NhÃ³m nÃ y pháº£n Ã¡nh tá»‘c Ä‘á»™ má»Ÿ khÃ³a thÃ nh tá»±u:
+\section{Bước Loại Bỏ (Trimming)}
+Trước khi tính toán bất kỳ đặc trưng nào, hệ thống áp dụng tiêu chí loại bỏ để tập trung vào các tài khoản có hoạt động đáng kể:
 
 \begin{itemize}
-    \item \texttt{median\_unlock\_interval\_sec}: Khoáº£ng thá»i gian trung bÃ¬nh giá»¯a cÃ¡c láº§n má»Ÿ khÃ³a (tÃ­nh báº±ng giÃ¢y)
-    \item \texttt{std\_unlock\_interval\_sec}: Äá»™ lá»‡ch chuáº©n cá»§a cÃ¡c khoáº£ng thá»i gian má»Ÿ khÃ³a
-    \item \texttt{cv\_unlock\_interval}: Há»‡ sá»‘ biáº¿n thiÃªn (standard deviation / mean) cá»§a khoáº£ng thá»i gian
-    \item \texttt{max\_achievements\_per\_minute}: Sá»‘ lÆ°á»£ng thÃ nh tá»±u tá»‘i Ä‘a má»Ÿ khÃ³a trong 1 phÃºt
-    \item \texttt{max\_achievements\_per\_day}: Sá»‘ lÆ°á»£ng thÃ nh tá»±u tá»‘i Ä‘a má»Ÿ khÃ³a trong 1 ngÃ y
+    \item Điều kiện: \textbf{(≥10 achievements HOẶC ≥3 reviews) VÀ library\_size ≥ 1}
+    \item Tác dụng: Giảm tập dữ liệu từ ~196K xuống ~3K tài khoản (98\%), loại bỏ ghost accounts và tài khoản không hoạt động
+    \item Lợi ích: Tăng tốc độ tính toán groupby/merge, loại bỏ feature rows chỉ toàn NaN
+    \item Lưu ý: Logic OR giữ lại các bot candidates có 0 achievements nhưng spam reviews
 \end{itemize}
 
-\section{NhÃ³m B: Äáº·c TrÆ°ng Thá»i Gian (Temporal Features)}
+\section{Nhóm A: Đặc Trưng Tốc Độ (Speed Features)}
 
-NhÃ³m nÃ y Ä‘áº·c trÆ°ng hÃ³a mÃ´ hÃ¬nh hoáº¡t Ä‘á»™ng theo thá»i gian:
+Nhóm này phản ánh tốc độ mở khóa thành tựu:
 
 \begin{itemize}
-    \item \texttt{night\_activity\_ratio}: Tá»· lá»‡ thÃ nh tá»±u má»Ÿ khÃ³a trong giá» ban Ä‘Ãªm (giá» Ä‘á»‹a phÆ°Æ¡ng < 6 sÃ¡ng), cÃ³ Ä‘Æ°a vÃ o tÃ­nh toÃ¡n mÃºi giá»
-    \item \texttt{hour\_entropy}: Entropy Shannon cá»§a phÃ¢n phá»‘i thÃ nh tá»±u theo 24 giá» (tÃ­nh theo giá» Ä‘á»‹a phÆ°Æ¡ng), pháº£n Ã¡nh tÃ­nh ngáº«u nhiÃªn cá»§a hoáº¡t Ä‘á»™ng
-    \item \texttt{activity\_density}: Máº­t Ä‘á»™ hoáº¡t Ä‘á»™ng = sá»‘ ngÃ y cÃ³ hoáº¡t Ä‘á»™ng / khoáº£ng thá»i gian tá»« ngÃ y Ä‘áº§u Ä‘áº¿n ngÃ y cuá»‘i
+    \item \texttt{median\_unlock\_interval\_sec}: Khoảng thời gian trung bình giữa các lần mở khóa (tính bằng giây)
+    \item \texttt{std\_unlock\_interval\_sec}: Độ lệch chuẩn của các khoảng thời gian mở khóa
+    \item \texttt{cv\_unlock\_interval}: Hệ số biến thiên (standard deviation / mean) của khoảng thời gian
+    \item \texttt{max\_achievements\_per\_minute}: Số lượng thành tựu tối đa mở khóa trong 1 phút
+    \item \texttt{max\_achievements\_per\_day}: Số lượng thành tựu tối đa mở khóa trong 1 ngày
 \end{itemize}
 
-\section{NhÃ³m C: Äáº·c TrÆ°ng Äa Dáº¡ng (Diversity Features)}
+\section{Nhóm B: Đặc Trưng Thời Gian (Temporal Features)}
 
-NhÃ³m nÃ y Ä‘Ã¡nh giÃ¡ pháº¡m vi vÃ  sá»± phÃ¢n bá»• cá»§a hoáº¡t Ä‘á»™ng:
+Nhóm này đặc trưng hóa mô hình hoạt động theo thời gian:
 
 \begin{itemize}
-    \item \texttt{total\_achievements}: Tá»•ng sá»‘ thÃ nh tá»±u Ä‘Ã£ má»Ÿ khÃ³a
-    \item \texttt{library\_size}: Sá»‘ lÆ°á»£ng game Ä‘Ã£ mua
-    \item \texttt{achievement\_game\_ratio}: Tá»· lá»‡ = sá»‘ game cÃ³ achievements / tá»•ng sá»‘ game
-    \item \texttt{top1\_game\_concentration}: Pháº§n trÄƒm thÃ nh tá»±u tá»« game cÃ³ nhiá»u achievements nháº¥t
-    \item \texttt{top3\_game\_concentration}: Pháº§n trÄƒm thÃ nh tá»±u tá»« 3 game cÃ³ nhiá»u achievements nháº¥t
-    \item \texttt{game\_hhi}: Chá»‰ sá»‘ Herfindahl = $\sum (game\_proportion)^2$, Ä‘o má»©c Ä‘á»™ táº­p trung
-    \item \texttt{avg\_achievements\_per\_game}: Trung bÃ¬nh = tá»•ng achievements / sá»‘ game cÃ³ achievements
+    \item \texttt{night\_activity\_ratio}: Tỷ lệ thành tựu mở khóa trong giờ ban đêm (giờ địa phương < 6 sáng), có đưa vào tính toán múi giờ
+    \item \texttt{hour\_entropy}: Entropy Shannon của phân phối thành tựu theo 24 giờ (tính theo giờ địa phương), phản ánh tính ngẫu nhiên của hoạt động
+    \item \texttt{activity\_density}: Mật độ hoạt động = số ngày có hoạt động / khoảng thời gian từ ngày đầu đến ngày cuối
 \end{itemize}
 
-\section{NhÃ³m D: Äáº·c TrÆ°ng ÄÃ¡nh GiÃ¡ (Review Features)}
+\section{Nhóm C: Đặc Trưng Đa Dạng (Diversity Features)}
 
-NhÃ³m nÃ y phÃ¢n tÃ­ch mÃ´ hÃ¬nh Ä‘Ã¡nh giÃ¡ cá»§a ngÆ°á»i dÃ¹ng:
+Nhóm này đánh giá phạm vi và sự phân bổ của hoạt động:
 
 \begin{itemize}
-    \item \texttt{total\_reviews}: Tá»•ng sá»‘ Ä‘Ã¡nh giÃ¡ Ä‘Ã£ viáº¿t
-    \item \texttt{review\_unplayed\_ratio}: Tá»· lá»‡ Ä‘Ã¡nh giÃ¡ cho game chÆ°a chÆ¡i (playtime == 0)
-    \item \texttt{review\_duplication\_rate}: Tá»· lá»‡ = $1 - \frac{\text{unique\_texts}}{\text{total\_reviews}}$, pháº£n Ã¡nh má»©c Ä‘á»™ spam
-    \item \texttt{avg\_review\_length}: Äá»™ dÃ i trung bÃ¬nh cá»§a Ä‘Ã¡nh giÃ¡
-    \item \texttt{min\_review\_length}: Äá»™ dÃ i tá»‘i thiá»ƒu cá»§a Ä‘Ã¡nh giÃ¡
+    \item \texttt{total\_achievements}: Tổng số thành tựu đã mở khóa
+    \item \texttt{library\_size}: Số lượng game đã mua
+    \item \texttt{achievement\_game\_ratio}: Tỷ lệ = số game có achievements / tổng số game
+    \item \texttt{top1\_game\_concentration}: Phần trăm thành tựu từ game có nhiều achievements nhất
+    \item \texttt{top3\_game\_concentration}: Phần trăm thành tựu từ 3 game có nhiều achievements nhất
+    \item \texttt{game\_hhi}: Chỉ số Herfindahl = $\sum (game\_proportion)^2$, đo mức độ tập trung
+    \item \texttt{avg\_achievements\_per\_game}: Trung bình = tổng achievements / số game có achievements
 \end{itemize}
 
-\section{NhÃ³m E: Äáº·c TrÆ°ng Tuá»•i TÃ i Khoáº£n (Account Age Features)}
+\section{Nhóm D: Đặc Trưng Đánh Giá (Review Features)}
 
-NhÃ³m nÃ y liÃªn quan Ä‘áº¿n lá»‹ch sá»­ tÃ i khoáº£n:
+Nhóm này phân tích mô hình đánh giá của người dùng:
 
 \begin{itemize}
-    \item \texttt{days\_before\_first\_achievement}: Sá»‘ ngÃ y tá»« khi táº¡o tÃ i khoáº£n Ä‘áº¿n láº§n má»Ÿ khÃ³a thÃ nh tá»±u Ä‘áº§u tiÃªn
-    \item \texttt{account\_age\_days}: Sá»‘ ngÃ y tá»« khi táº¡o tÃ i khoáº£n Ä‘áº¿n thá»i Ä‘iá»ƒm tham chiáº¿u (má»‘c thá»i gian cá»‘ Ä‘á»‹nh)
+    \item \texttt{total\_reviews}: Tổng số đánh giá đã viết
+    \item \texttt{review\_unplayed\_ratio}: Tỷ lệ đánh giá cho game chưa chơi (playtime == 0)
+    \item \texttt{review\_duplication\_rate}: Tỷ lệ = $1 - \frac{\text{unique\_texts}}{\text{total\_reviews}}$, phản ánh mức độ spam
+    \item \texttt{avg\_review\_length}: Độ dài trung bình của đánh giá
+    \item \texttt{min\_review\_length}: Độ dài tối thiểu của đánh giá
 \end{itemize}
 
-\section{NhÃ³m F: Äáº·c TrÆ°ng Thá»i Gian ChÆ¡i (Playtime Features)}
+\section{Nhóm E: Đặc Trưng Tuổi Tài Khoản (Account Age Features)}
 
-NhÃ³m nÃ y phÃ¢n tÃ­ch má»‘i quan há»‡ giá»¯a thÃ nh tá»±u vÃ  thá»i gian chÆ¡i thá»±c táº¿:
+Nhóm này liên quan đến lịch sử tài khoản:
 
-QuÃ¡ trÃ¬nh káº¿t há»£p dá»¯ liá»‡u:
 \begin{itemize}
-    \item \textbf{Äiá»u kiá»‡n A}: Game cÃ³ trong lá»‹ch sá»­ nhÆ°ng khÃ´ng trong library â†’ bá» qua (API delay)
-    \item \textbf{Äiá»u kiá»‡n B}: Game trong library vá»›i playtime > 0 â†’ hoáº¡t Ä‘á»™ng bÃ¬nh thÆ°á»ng
-    \item \textbf{Äiá»u kiá»‡n C}: Game trong library vá»›i playtime == 0 â†’ tÃ­n hiá»‡u bot (SAM/unlocker)
+    \item \texttt{days\_before\_first\_achievement}: Số ngày từ khi tạo tài khoản đến lần mở khóa thành tựu đầu tiên
+    \item \texttt{account\_age\_days}: Số ngày từ khi tạo tài khoản đến thời điểm tham chiếu (mốc thời gian cố định)
 \end{itemize}
 
-CÃ¡c Ä‘áº·c trÆ°ng:
+\section{Nhóm F: Đặc Trưng Thời Gian Chơi (Playtime Features)}
+
+Nhóm này phân tích mối quan hệ giữa thành tựu và thời gian chơi thực tế:
+
+Quá trình kết hợp dữ liệu:
 \begin{itemize}
-    \item \texttt{zero\_playtime\_achievements\_ratio}: Tá»· lá»‡ = $\frac{\text{achievements tá»« C}}{\text{B + C}}$
-    \item \texttt{total\_playtime\_mins}: Tá»•ng thá»i gian chÆ¡i (game riÃªng biá»‡t, trÃ¡nh inflate)
-    \item \texttt{playtime\_per\_achievement}: Thá»i gian chÆ¡i trung bÃ¬nh trÃªn má»—i thÃ nh tá»±u = $\frac{\text{total\_playtime\_mins}}{\text{B + C}}$
+    \item \textbf{Điều kiện A}: Game có trong lịch sử nhưng không trong library → bỏ qua (API delay)
+    \item \textbf{Điều kiện B}: Game trong library với playtime > 0 → hoạt động bình thường
+    \item \textbf{Điều kiện C}: Game trong library với playtime == 0 → tín hiệu bot (SAM/unlocker)
 \end{itemize}
 
-\section{TÃ³m Táº¯t}
-Tá»•ng cá»™ng \textbf{25 Ä‘áº·c trÆ°ng} Ä‘Æ°á»£c trÃ­ch xuáº¥t, cung cáº¥p cÃ¡i nhÃ¬n toÃ n diá»‡n vá» hÃ nh vi ngÆ°á»i dÃ¹ng tá»« nhiá»u khÃ­a cáº¡nh: tá»‘c Ä‘á»™, thá»i gian, Ä‘a dáº¡ng, hoáº¡t Ä‘á»™ng Ä‘Ã¡nh giÃ¡, tuá»•i tÃ i khoáº£n vÃ  má»‘i quan há»‡ giá»¯a achievements vÃ  gameplay thá»±c táº¿.
+Các đặc trưng:
+\begin{itemize}
+    \item \texttt{zero\_playtime\_achievements\_ratio}: Tỷ lệ = $\frac{\text{achievements từ C}}{\text{B + C}}$
+    \item \texttt{total\_playtime\_mins}: Tổng thời gian chơi (game riêng biệt, tránh inflate)
+    \item \texttt{playtime\_per\_achievement}: Thời gian chơi trung bình trên mỗi thành tựu = $\frac{\text{total\_playtime\_mins}}{\text{B + C}}$
+\end{itemize}
+
+\section{Tóm Tắt}
+Tổng cộng \textbf{25 đặc trưng} được trích xuất, cung cấp cái nhìn toàn diện về hành vi người dùng từ nhiều khía cạnh: tốc độ, thời gian, đa dạng, hoạt động đánh giá, tuổi tài khoản và mối quan hệ giữa achievements và gameplay thực tế.
+``
