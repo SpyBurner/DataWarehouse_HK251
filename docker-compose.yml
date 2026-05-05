@@ -126,7 +126,6 @@ services:
     container_name: texlive
     volumes:
       - ./Report:/workspace
-      - ./Report/Build:/workspace/Build
     working_dir: /workspace
 
 # Define named volumes

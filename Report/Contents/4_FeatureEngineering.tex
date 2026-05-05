@@ -7,11 +7,29 @@ Quy trình trích xuất đặc trưng được thực hiện trong module \text
 Trước khi tính toán bất kỳ đặc trưng nào, hệ thống áp dụng tiêu chí loại bỏ để tập trung vào các tài khoản có hoạt động đáng kể:
 
 \begin{itemize}
-    \item Điều kiện: \textbf{(≥10 achievements HOẶC ≥3 reviews) VÀ library\_size ≥ 1}
-    \item Tác dụng: Giảm tập dữ liệu từ ~196K xuống ~3K tài khoản (98\%), loại bỏ ghost accounts và tài khoản không hoạt động
+    \item Điều kiện: \textbf{$(\ge 10 \text{ achievements OR } \ge 3 \text{ reviews}) \text{ AND } \text{library\_size} \ge 1$}
+    \item Tác dụng: Giảm tập dữ liệu từ $\sim$196K xuống $\sim$3K tài khoản (98\%), loại bỏ ghost accounts và tài khoản không hoạt động
     \item Lợi ích: Tăng tốc độ tính toán groupby/merge, loại bỏ feature rows chỉ toàn NaN
     \item Lưu ý: Logic OR giữ lại các bot candidates có 0 achievements nhưng spam reviews
 \end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Overlap_Heatmap.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Overlap_Heatmap}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Overlap\_Heatmap}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Biểu đồ nhiệt thể hiện sự chồng lấp người chơi giữa các tập dữ liệu}
+    \label{fig:overlap_heatmap}
+\end{figure}
+
 
 \section{Nhóm A: Đặc Trưng Tốc Độ (Speed Features)}
 
@@ -45,9 +63,10 @@ Nhóm này đánh giá phạm vi và sự phân bổ của hoạt động:
     \item \texttt{achievement\_game\_ratio}: Tỷ lệ = số game có achievements / tổng số game
     \item \texttt{top1\_game\_concentration}: Phần trăm thành tựu từ game có nhiều achievements nhất
     \item \texttt{top3\_game\_concentration}: Phần trăm thành tựu từ 3 game có nhiều achievements nhất
-    \item \texttt{game\_hhi}: Chỉ số Herfindahl = $\sum (game\_proportion)^2$, đo mức độ tập trung
+    \item \texttt{game\_hhi}: Chỉ số Herfindahl = $\sum (\text{game\_proportion})^2$, đo mức độ tập trung
     \item \texttt{avg\_achievements\_per\_game}: Trung bình = tổng achievements / số game có achievements
 \end{itemize}
+
 
 \section{Nhóm D: Đặc Trưng Đánh Giá (Review Features)}
 
@@ -88,6 +107,81 @@ Các đặc trưng:
     \item \texttt{playtime\_per\_achievement}: Thời gian chơi trung bình trên mỗi thành tựu = $\frac{\text{total\_playtime\_mins}}{\text{B + C}}$
 \end{itemize}
 
+\section{Phân Tích Dữ Liệu Khám Phá (EDA)}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Feature_Histograms.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Feature_Histograms}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Feature\_Histograms}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Biểu đồ phân phối của các đặc trưng chính (Log transform)}
+    \label{fig:feature_histograms}
+\end{figure}
+
+\subsection{Câu hỏi 1: Các cụm tài khoản cụ thể có tỷ lệ đạt được thành tựu bất thường không?}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Playtime_Achievement_Hexbin.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Playtime_Achievement_Hexbin}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Playtime\_Achievement\_Hexbin}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Mật độ Hexbin giữa Thời gian chơi và Số lượng thành tựu}
+    \label{fig:hexbin_playtime}
+\end{figure}
+
+\subsection{Câu hỏi 2: Các thành tựu được phân bổ đa dạng hay tập trung quá mức?}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Portfolio_Concentration.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Portfolio_Concentration}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Portfolio\_Concentration}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Mức độ tập trung danh mục trò chơi theo phân khúc người dùng}
+    \label{fig:concentration}
+\end{figure}
+
+\subsection{Câu hỏi 3: Sự khác biệt về nhịp độ hành vi giữa các nhóm người dùng?}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Circadian_Rhythm.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Circadian_Rhythm}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Circadian\_Rhythm}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{So sánh nhịp sinh học giữa các nhóm người dùng (Hourly activity)}
+    \label{fig:circadian}
+\end{figure}
+
 \section{Tóm Tắt}
-Tổng cộng \textbf{25 đặc trưng} được trích xuất, cung cấp cái nhìn toàn diện về hành vi người dùng từ nhiều khía cạnh: tốc độ, thời gian, đa dạng, hoạt động đánh giá, tuổi tài khoản và mối quan hệ giữa achievements và gameplay thực tế.
-``
+Tổng cộng \textbf{25 đặc trưng} được trích xuất, cung cấp cái nhìn toàn diện về hành vi người dùng từ nhiều khía cạnh: tốc độ, thời gian, đa dạng, hoạt động đánh giá, tuổi tài khoản và mối quan hệ giữa achievements và gameplay thực tế.

@@ -1,4 +1,4 @@
-hapter{Dự Báo Tương Lai \& Ứng Dụng Mô Hình}
+\chapter{Dự Báo Tương Lai \& Ứng Dụng Mô Hình}
 
 \section{Tổng Quan}
 Sau khi training, mô hình ensemble được sử dụng để:
@@ -14,10 +14,10 @@ Sau khi training, mô hình ensemble được sử dụng để:
 \subsection{Quy Trình}
 \begin{enumerate}
     \item Load trained models: \texttt{best\_if.pkl}, \texttt{best\_xgb.pkl}, \texttt{preprocessor.pkl}
-    \item Xử lý feature matrix $X\_{raw}$:
+    \item Xử lý feature matrix $X_{\text{raw}}$:
     \begin{itemize}
         \item IF path: Log-transform → Preprocess (SimpleImputer + StandardScaler)
-        \item XGBoost path: Sử dụng $X\_{raw}$ trực tiếp (không transform)
+        \item XGBoost path: Sử dụng $X_{\text{raw}}$ trực tiếp (không transform)
     \end{itemize}
     \item Prediction:
     \begin{itemize}
@@ -122,18 +122,37 @@ Output: \texttt{model\_comparison.csv}
 
 \subsection{2. Đánh Giá Chi Tiết XGBoost}
 
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/XGB_Feature_Importance.png}{
+        \includegraphics[width=0.7\linewidth]{Images/XGB_Feature_Importance}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/XGB\_Feature\_Importance}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Tầm quan trọng của các đặc trưng trong mô hình XGBoost}
+    \label{fig:xgb_importance}
+\end{figure}
+
 Function \texttt{\_evaluate\_xgboost()}:
 
 \begin{itemize}
-    \item \textbf{PR-AUC}: Metric chính cho lựa chọn threshold tối ưu
-    \item \textbf{Optimal Threshold}: $\text{argmax } F1(\text{threshold})$
-    \item \textbf{Classification Report}: Precision, Recall, F1-Score tại threshold tối ưu
+    \item \textbf{PR-AUC}: 0.7252
+    \item \textbf{ROC-AUC}: 0.9050
+    \item \textbf{Optimal Threshold}: 0.9982 (F1-score tối ưu)
+    \item \textbf{Classification Report (Bot class)}: Precision: 0.91, Recall: 0.66, F1-Score: 0.76
     \item Output plots:
     \begin{itemize}
         \item \texttt{xgb\_pr\_curve.png}: Đường cong Precision-Recall
         \item \texttt{xgb\_feature\_importance.png}: Biểu đồ tầm quan trọng đặc trưng
     \end{itemize}
 \end{itemize}
+
 
 \subsection{3. Phân Tích So Sánh Đặc Trưng}
 
@@ -144,40 +163,217 @@ Function \texttt{\_evaluate\_xgboost()}:
     \item Giúp hiểu thành phần nào của feature matrix là discriminative nhất
 \end{itemize}
 
-\subsection{4. SHAP Explainability Analysis}
-
-Function \texttt{\_shap\_plots()}:
+\subsection{4. Phân Tích Khả Năng Giải Thích SHAP}
 
 Giải thích độ đóng góp của từng đặc trưng đối với từng dự báo:
 
 \begin{enumerate}
-    \item Sampling: Chọn ngẫu nhiên 5000 rows từ $X\_{raw}$ (unscaled — giữ axis values trên thang đo gốc)
-    \item SHAP Calculation: Tính SHAP values thông qua native XGBoost \texttt{booster.predict(pred\_contribs=True)}
-    \begin{itemize}
-        \item Bypass TreeExplainer parser (tránh complexity)
-        \item Tính trực tiếp contribution của mỗi feature tới output
-    \end{itemize}
-    \item Output plots:
-    \begin{itemize}
-        \item \texttt{shap\_summary.png}: Summary plot — global feature importance
-        \begin{itemize}
-            \item Trục X: SHAP value (độ impact)
-            \item Trục Y: Feature rank by importance
-            \item Màu: Feature value (cao/thấp)
-        \end{itemize}
-        \item \texttt{shap\_waterfall.png}: Waterfall plot — tài khoản đáng ngờ nhất
-        \begin{itemize}
-            \item Show từng feature contribution cộng dồn đến prediction
-            \item Giúp debug individual cases
-        \end{itemize}
-        \item \texttt{shap\_scatter\_<feat>.png}: Scatter plot cho top-3 features quan trọng
-        \begin{itemize}
-            \item Trục X: Feature value
-            \item Trục Y: SHAP value
-            \item Phát hiện non-linear relationships
-        \end{itemize}
-    \end{itemize}
+    \item \textbf{Sampling}: Chọn ngẫu nhiên 5000 hàng từ $X_{\text{raw}}$ (giữ thang đo gốc để dễ giải thích).
+    \item \textbf{SHAP Calculation}: Tính SHAP values thông qua tính năng \texttt{pred\_contribs} của XGBoost.
+    \item \textbf{Visualization}: Xuất các biểu đồ Summary, Waterfall và Scatter để phân tích tác động cục bộ và toàn cục.
 \end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/SHAP_Scatter.png}{
+        \includegraphics[width=0.7\linewidth]{Images/SHAP_Scatter}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/SHAP\_Scatter}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Biểu đồ SHAP scatter thể hiện tác động của các giá trị đặc trưng}
+    \label{fig:shap_scatter}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/SHAP_Waterfall.png}{
+        \includegraphics[width=0.7\linewidth]{Images/SHAP_Waterfall}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/SHAP\_Waterfall}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Biểu đồ SHAP waterfall giải thích cho một trường hợp cụ thể}
+    \label{fig:shap_waterfall}
+\end{figure}
+
+\section{Hệ Thống Dashboard BI}
+
+Hệ thống cung cấp giao diện trực quan để theo dõi và phân tích các tài khoản bất thường.
+
+\subsection{Giao Diện Tìm Kiếm và Truy Vấn}
+Người dùng có thể tìm kiếm theo Steam ID hoặc tải lên danh sách file CSV/TXT.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Dashboard_Search.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Dashboard_Search}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Dashboard\_Search}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Giao diện tìm kiếm tài khoản trên Dashboard}
+    \label{fig:dash_search}
+\end{figure}
+
+\subsection{Chi Tiết Hành Vi và So Sánh Baseline}
+Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức trung bình của cộng đồng.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Dashboard_Details.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Dashboard_Details}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Dashboard\_Details}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Chi tiết các chỉ số hành vi của một tài khoản}
+    \label{fig:dash_details}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Comparison_Baseline.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Comparison_Baseline}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Comparison\_Baseline}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{So sánh 12 đặc trưng sai lệch nhất so với Baseline}
+    \label{fig:comp_baseline}
+\end{figure}
+
+\subsection{Phân Tích Tổng Quan Dữ Liệu}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Score_Distribution.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Score_Distribution}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Score\_Distribution}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Phân phối điểm Composite Score trong toàn bộ tập dữ liệu}
+    \label{fig:dist_score}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Geographic_Distribution.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Geographic_Distribution}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Geographic\_Distribution}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Phân bố địa lý của các tài khoản bất thường}
+    \label{fig:geo_dist}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Model_Consensus.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Model_Consensus}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Model\_Consensus}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Ma trận đồng thuận giữa XGBoost và Isolation Forest}
+    \label{fig:consensus}
+\end{figure}
+
+\subsection{Phân Tích Đặc Trưng Discriminative}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Effect_Size_Comparison.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Effect_Size_Comparison}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Effect\_Size\_Comparison}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{So sánh tỷ lệ và chỉ số Cohen's d giữa nhóm Bot và Normal}
+    \label{fig:effect_size}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Behavioral_Correlation.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Behavioral_Correlation}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Behavioral\_Correlation}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Tương quan giữa độ tuổi tài khoản và hoạt động đánh giá}
+    \label{fig:corr_behavior}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Anomaly_Rate_Charts.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Anomaly_Rate_Charts}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Anomaly\_Rate\_Charts}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Tỷ lệ bất thường theo quy mô thư viện, thời gian chơi và năm tạo tài khoản}
+    \label{fig:anomaly_rates}
+\end{figure}
+
 
 \section{Cải Tiến Liên Tục}
 

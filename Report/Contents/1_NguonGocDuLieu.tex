@@ -1,3 +1,38 @@
-\chapter{Nguồn gốc dữ liệu}
+\chapter{Giới thiệu và Nguồn gốc dữ liệu}
 
-% TODO: Nguồn gốc dữ liệu
+\section{Tổng Quan về Gian Lận trên Steam}
+Steam đối mặt với nhiều hình thức gian lận tinh vi, trong đó nổi bật là:
+\begin{itemize}
+    \item \textbf{Achievement farming:} Sử dụng các công cụ (như SAM - Steam Achievement Manager) để mở khóa hàng loạt thành tựu trong thời gian ngắn nhằm tăng uy tín tài khoản hoặc bán tài khoản.
+    \item \textbf{Review bombing:} Sử dụng mạng lưới tài khoản giả để spam đánh giá, thao túng điểm số của trò chơi.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Steam_Cover.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Steam_Cover}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Steam\_Cover}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Hình ảnh minh họa Steam}
+    \label{fig:steam_cover}
+\end{figure}
+
+\section{Thách Thức}
+Việc phát hiện các hành vi này gặp nhiều khó khăn:
+\begin{itemize}
+    \item Dữ liệu không có nhãn (Unlabeled data).
+    \item Các công cụ gian lận liên tục được cập nhật để vượt qua sự kiểm soát.
+\end{itemize}
+
+\section{Mục Tiêu Đồ Án}
+\begin{itemize}
+    \item Xây dựng hệ thống Học máy (Machine Learning) có khả năng phát hiện các thực thể bất thường dựa trên lịch sử hành vi của người chơi (dữ liệu thu thập qua Steam API).
+    \item Bổ trợ cho hệ thống VAC (Valve Anti Cheat) hiện tại của Steam trong việc phát hiện các hành vi phi kỹ thuật (behavioral anomalies).
+\end{itemize}

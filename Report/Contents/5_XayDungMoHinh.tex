@@ -1,4 +1,4 @@
-hapter{Xây Dựng Mô Hình (Model Selection, Training \& Tuning)}
+\chapter{Xây Dựng Mô Hình (Model Selection, Training \& Tuning)}
 
 \section{Tổng Quan}
 Hệ thống sử dụng hai mô hình machine learning chính: \textbf{XGBoost} và \textbf{IsolationForest}, được kết hợp trong một ensemble để tăng độ chính xác và độ tin cậy của phát hiện bot.
@@ -11,8 +11,9 @@ Hệ thống sử dụng hai mô hình machine learning chính: \textbf{XGBoost}
 Để tăng ổn định của đường dẫn trong IsolationForest, hệ thống áp dụng log-transform cho 9 đặc trưng có phân phối nặng về đuôi (heavy-tailed):
 
 \begin{equation}
-\text{feature\_transformed} = \log\_1p(\text{clip}(x, \min=0))
+\text{feature\_transformed} = \log_{1p}(\text{clip}(x, \min=0))
 \end{equation}
+
 
 \textbf{Lý do}: Các đặc trưng như \texttt{max\_achievements\_per\_day}, \texttt{total\_achievements} có phạm vi 6+ bậc độ lớn. Random split không đều không đại diện đủ cho mật độ dữ liệu thực. Log transform cân bằng lại phạm vi.
 
@@ -20,13 +21,14 @@ Hệ thống sử dụng hai mô hình machine learning chính: \textbf{XGBoost}
 \begin{itemize}
     \item \texttt{SimpleImputer(strategy='median')}: Điền giá trị thiếu bằng median
     \item \texttt{StandardScaler}: Chuẩn hóa dữ liệu về trung bình = 0, độ lệch chuẩn = 1
-    \item Output: DataFrame $X\_{IF}$ được lưu sạch
+    \item Output: DataFrame $X_{IF}$ được lưu sạch
     \item Lưu trữ: File \texttt{preprocessor.pkl} chứa pipeline preprocessing
 \end{itemize}
 
+
 \subsection{Đường Dẫn B: XGBoost}
 
-\textbf{Chiến lược}: Sử dụng $X\_{raw}$ trực tiếp (không impute, không scale)
+\textbf{Chiến lược}: Sử dụng $X_{\text{raw}}$ trực tiếp (không impute, không scale)
 
 \textbf{Lý do}:
 \begin{itemize}
@@ -40,13 +42,13 @@ Hệ thống sử dụng hai mô hình machine learning chính: \textbf{XGBoost}
 \subsection{Tuning}
 \begin{itemize}
     \item Phương pháp: Grid search trên siêu tham số
-    \item Objective: Tối đa hóa ROC-AUC so với $y\_{heuristic}$ (nhãn sử dụng heuristic rule)
+    \item Objective: Tối đa hóa ROC-AUC so với $y_{\text{heuristic}}$ (nhãn sử dụng heuristic rule)
     \item Output: $best\_if\_params$ (best hyperparameters)
 \end{itemize}
 
 \subsection{Training}
 \begin{itemize}
-    \item Sử dụng $X\_{IF}$ (log-transformed + scaled)
+    \item Sử dụng $X_{\text{IF}}$ (log-transformed + scaled)
     \item Áp dụng $best\_if\_params$
     \item Output: Mô hình \texttt{best\_if.pkl}
     \item Metric: ROC-AUC để đánh giá chất lượng
@@ -57,8 +59,9 @@ Hệ thống sử dụng hai mô hình machine learning chính: \textbf{XGBoost}
 \subsection{Chuẩn Bị Dữ Liệu}
 Training chỉ diễn ra trên \textbf{confident subset}:
 \begin{equation}
-\text{confident\_mask} = (y\_{heuristic} == 1) \text{ OR } (y\_{normal} == 1)
+\text{confident\_mask} = (y_{\text{heuristic}} == 1) \text{ OR } (y_{\text{normal}} == 1)
 \end{equation}
+
 
 Các tài khoản trong "grey area" (không bot, không chắc chắn normal) được loại bỏ để tăng chất lượng training signal.
 
@@ -82,13 +85,31 @@ Tỷ lệ này giúp XGBoost cân bằng chi phí lỗi giữa class bot và nor
 
 \subsection{Training \& Prediction}
 \begin{itemize}
-    \item Training data: Confident subset của $X\_{raw}$
-    \item Prediction: Chạy \texttt{predict\_proba()} trên \textbf{toàn bộ} $X\_{raw}$ (không chỉ training subset)
+    \item Training data: Confident subset của $X_{\text{raw}}$
+    \item Prediction: Chạy \texttt{predict\_proba()} trên \textbf{toàn bộ} $X_{\text{raw}}$ (không chỉ training subset)
     \item Output: Probability scores (0–1) cho tất cả tài khoản
     \item Lưu trữ: \texttt{xgb\_tuning\_results.csv} chứa chi tiết các lần tìm kiếm
 \end{itemize}
 
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Model_Diagram.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Model_Diagram}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Model\_Diagram}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Sơ đồ hệ thống Dual Ensemble (XGBoost + Isolation Forest)}
+    \label{fig:model_diagram}
+\end{figure}
+
 \section{Xây Dựng Ensemble}
+
 
 \subsection{Chiến Lược}
 Kết hợp hai mô hình để tận dụng điểm mạnh của từng mô hình:
@@ -98,6 +119,7 @@ Kết hợp hai mô hình để tận dụng điểm mạnh của từng mô hì
     \item Tính percentile rank của IF scores: $if\_pct = \text{percentileofscore}(if\_scores) \in [0, 100]$
     \item Tính percentile rank của XGBoost probabilities: $xgb\_pct = \text{percentileofscore}(xgb\_proba) \in [0, 100]$
 \end{itemize}
+
 
 \subsubsection{Bước 2: Composite Score}
 \begin{equation}
@@ -113,7 +135,25 @@ is\_anomaly = \text{composite} \geq 85
 
 Ngưỡng 85 là điểm cắt để phân loại tài khoản là bot hay normal.
 
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Weight_Sensitivity.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Weight_Sensitivity}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Weight\_Sensitivity}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Phân tích độ nhạy của trọng số Ensemble}
+    \label{fig:weight_sensitivity}
+\end{figure}
+
 \subsection{Tuning Trọng Số Ensemble (Optional)}
+
 Bước phân tích thêm để tối ưu trọng số:
 
 \begin{itemize}
@@ -124,7 +164,7 @@ Bước phân tích thêm để tối ưu trọng số:
         \item \textbf{PR-AUC}: Area under precision-recall curve
         \item \textbf{High\_Conflict\_Cases (HCC)}: Số tài khoản có mô hình không đồng ý
     \end{itemize}
-    \item Tìm "optimal sweet spot": argmax Precision@100 trong tập HCC ≥ median(HCC)
+    \item Tìm "optimal sweet spot": argmax Precision@100 trong tập HCC \geq median(HCC)
     \item Output: \texttt{ensemble\_weight\_metrics.csv}, \texttt{plots/ensemble\_weight\_tuning.png}
 \end{itemize}
 
