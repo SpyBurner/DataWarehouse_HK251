@@ -3,207 +3,109 @@
 \section{Tổng Quan}
 Hệ thống sử dụng hai mô hình machine learning chính: \textbf{XGBoost} và \textbf{IsolationForest}, được kết hợp trong một ensemble để tăng độ chính xác và độ tin cậy của phát hiện bot.
 
-\section{Xử Lý Dữ Liệu Trước Training}
-
-\subsection{Đường Dẫn A: IsolationForest}
-
-\subsubsection{Bước 1: Log Transform}
-Để tăng ổn định của đường dẫn trong IsolationForest, hệ thống áp dụng log-transform cho 9 đặc trưng có phân phối nặng về đuôi (heavy-tailed):
-
-\begin{equation}
-\text{feature\_transformed} = \log_{1p}(\text{clip}(x, \min=0))
-\end{equation}
-
-
-\textbf{Lý do}: Các đặc trưng như \texttt{max\_achievements\_per\_day}, \texttt{total\_achievements} có phạm vi 6+ bậc độ lớn. Random split không đều không đại diện đủ cho mật độ dữ liệu thực. Log transform cân bằng lại phạm vi.
-
-\subsubsection{Bước 2: Preprocessing}
+\section{Lựa chọn thuật toán}
+Dựa trên so sánh các thuật toán phổ biến:
 \begin{itemize}
-    \item \texttt{SimpleImputer(strategy='median')}: Điền giá trị thiếu bằng median
-    \item \texttt{StandardScaler}: Chuẩn hóa dữ liệu về trung bình = 0, độ lệch chuẩn = 1
-    \item Output: DataFrame $X_{IF}$ được lưu sạch
-    \item Lưu trữ: File \texttt{preprocessor.pkl} chứa pipeline preprocessing
-\end{itemize}
-
-
-\subsection{Đường Dẫn B: XGBoost}
-
-\textbf{Chiến lược}: Sử dụng $X_{\text{raw}}$ trực tiếp (không impute, không scale)
-
-\textbf{Lý do}:
-\begin{itemize}
-    \item XGBoost xử lý NaN natively thông qua sparsity-aware split finding
-    \item NaN trong review features (người dùng không viết đánh giá) là \textbf{tín hiệu thực sự}, không phải gap cần điền
-    \item XGBoost bất biến với monotonic transform → log-transform không có tác dụng
-\end{itemize}
-
-\section{Model A: IsolationForest}
-
-\subsection{Tuning}
-\begin{itemize}
-    \item Phương pháp: Grid search trên siêu tham số
-    \item Objective: Tối đa hóa ROC-AUC so với $y_{\text{heuristic}}$ (nhãn sử dụng heuristic rule)
-    \item Output: $best\_if\_params$ (best hyperparameters)
-\end{itemize}
-
-\subsection{Training}
-\begin{itemize}
-    \item Sử dụng $X_{\text{IF}}$ (log-transformed + scaled)
-    \item Áp dụng $best\_if\_params$
-    \item Output: Mô hình \texttt{best\_if.pkl}
-    \item Metric: ROC-AUC để đánh giá chất lượng
-\end{itemize}
-
-\section{Model B: XGBoost (Semi-Supervised)}
-
-\subsection{Chuẩn Bị Dữ Liệu}
-Training chỉ diễn ra trên \textbf{confident subset}:
-\begin{equation}
-\text{confident\_mask} = (y_{\text{heuristic}} == 1) \text{ OR } (y_{\text{normal}} == 1)
-\end{equation}
-
-
-Các tài khoản trong "grey area" (không bot, không chắc chắn normal) được loại bỏ để tăng chất lượng training signal.
-
-\subsection{Tuning}
-
-\subsubsection{Xử Lý Class Imbalance}
-\begin{equation}
-\text{scale\_pos\_weight} = \frac{\text{negative\_count}}{\text{positive\_count}}
-\end{equation}
-
-Tỷ lệ này giúp XGBoost cân bằng chi phí lỗi giữa class bot và normal.
-
-\subsubsection{Tìm Siêu Tham Số Tối Ưu}
-\begin{itemize}
-    \item Phương pháp: \texttt{RandomizedSearchCV}
-    \item Số lần tìm kiếm: $n\_iter = 50$
-    \item Cross-validation: 5-fold
-    \item Metric: \textbf{PR-AUC (Precision-Recall AUC)} — ưu tiên cho dữ liệu imbalanced
-    \item Output: $best\_xgb$ (best model), lưu vào \texttt{best\_xgb.pkl}
-\end{itemize}
-
-\subsection{Training \& Prediction}
-\begin{itemize}
-    \item Training data: Confident subset của $X_{\text{raw}}$
-    \item Prediction: Chạy \texttt{predict\_proba()} trên \textbf{toàn bộ} $X_{\text{raw}}$ (không chỉ training subset)
-    \item Output: Probability scores (0–1) cho tất cả tài khoản
-    \item Lưu trữ: \texttt{xgb\_tuning\_results.csv} chứa chi tiết các lần tìm kiếm
+    \item \textbf{XGBoost (Supervised)}: Phù hợp với dữ liệu mất cân bằng, dễ giải thích qua Feature Importance. Cần nhãn dữ liệu (Heuristic labeling).
+    \item \textbf{Isolation Forest (Unsupervised)}: Phát hiện các anomaly mới mà không phụ thuộc vào nhãn. Hiệu quả với dữ liệu lớn.
 \end{itemize}
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{Images/Slide/img141.jpg}{
-        \includegraphics[width=0.7\linewidth]{Images/Slide/img141}
+    \IfFileExists{Images/Slide/13.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/13}
     }{
         \fbox{\begin{minipage}{0.7\linewidth}
             \centering
             \vspace{2cm}
             [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Slide/img141.jpg}\\
+            \texttt{Images/Slide/13.jpg}\\
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Sơ đồ kiến trúc mô hình Dual Ensemble}
+    \caption{Sơ đồ kiến trúc mô hình Dual Ensemble (XGBoost + Isolation Forest)}
     \label{fig:model_diagram}
 \end{figure}
 
+\section{Quy trình huấn luyện và tối ưu}
+
+\subsection{Tạo nhãn bằng Heuristic (PU-Learning style)}
+Do dữ liệu gốc không có nhãn, hệ thống sử dụng các quy tắc (heuristic rules) để xác định các mẫu "chắc chắn là bot" và "chắc chắn là người dùng bình thường":
+\begin{itemize}
+    \item \textbf{Bot Rules}: Tốc độ mở khóa cực nhanh (< 10s) hoặc tỷ lệ thành tựu với 0 phút chơi cao (> 0.9).
+    \item \textbf{Normal Rules}: Thời gian chơi dài, tốc độ mở khóa tự nhiên (> 600s).
+\end{itemize}
+
+\subsection{Hyperparameter Tuning}
+\begin{itemize}
+    \item \textbf{Isolation Forest}: Sử dụng Grid Search để tối ưu hóa \texttt{contamination} và \texttt{n\_estimators}.
+    \item \textbf{XGBoost}: Huấn luyện trên tập dữ liệu đã gán nhãn heuristic, tối ưu hóa qua cross-validation.
+\end{itemize}
 
 \section{Xây Dựng Ensemble}
 
-
-\subsection{Chiến Lược}
-Kết hợp hai mô hình để tận dụng điểm mạnh của từng mô hình:
-
-\subsubsection{Bước 1: Rank Percentile}
-\begin{itemize}
-    \item Tính percentile rank của IF scores: $if\_pct = \text{percentileofscore}(if\_scores) \in [0, 100]$
-    \item Tính percentile rank của XGBoost probabilities: $xgb\_pct = \text{percentileofscore}(xgb\_proba) \in [0, 100]$
-\end{itemize}
-
-
-\subsubsection{Bước 2: Composite Score}
-\begin{equation}
-\text{composite} = 0.70 \times xgb\_pct + 0.30 \times if\_pct
-\end{equation}
-
-Trọng số 70:30 ưu tiên XGBoost (supervised signal mạnh hơn) nhưng vẫn giữ IsolationForest để bắt unsupervised anomalies.
-
-\subsubsection{Bước 3: Quyết Định Anomaly}
-\begin{equation}
-is\_anomaly = \text{composite} \geq 85
-\end{equation}
-
-Ngưỡng 85 là điểm cắt để phân loại tài khoản là bot hay normal.
+Kết quả từ hai mô hình được chuẩn hóa và kết hợp theo trọng số tối ưu.
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{Images/Slide/img146.jpg}{
-        \includegraphics[width=0.7\linewidth]{Images/Slide/img146}
+    \IfFileExists{Images/Slide/14.jpg}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/14}
     }{
         \fbox{\begin{minipage}{0.7\linewidth}
             \centering
             \vspace{2cm}
             [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Slide/img146.jpg}\\
+            \texttt{Images/Slide/14.jpg}\\
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Phân tích độ nhạy của trọng số Ensemble}
+    \caption{Phân tích độ nhạy của trọng số Ensemble để tìm điểm cắt tối ưu}
     \label{fig:weight_sensitivity}
 \end{figure}
 
-
-\subsection{Tuning Trọng Số Ensemble (Optional)}
-
-Bước phân tích thêm để tối ưu trọng số:
+\section{Các chỉ số đánh giá}
 
 \begin{itemize}
-    \item Sweep $xgb\_weight$ từ $0.0 \rightarrow 1.0$ (bước 0.05)
-
-    \item Tại mỗi điểm, tính 3 metrics:
-    \begin{itemize}
-        \item \textbf{Precision@100}: Độ chính xác trong top-100 flagged
-        \item \textbf{PR-AUC}: Area under precision-recall curve
-        \item \textbf{High\_Conflict\_Cases (HCC)}: Số tài khoản có mô hình không đồng ý
-    \end{itemize}
-    \item Tìm "optimal sweet spot": $\text{argmax Precision@100}$ trong tập $\text{HCC} \geq \text{median(HCC)}$
-
-    \item Output: \texttt{ensemble\_weight\_metrics.csv}, \texttt{plots/ensemble\_weight\_tuning.png}
+    \item \textbf{Recall}: Tỷ lệ bot được phát hiện trên tổng số bot thực tế.
+    \item \textbf{Precision}: Tỷ lệ chính xác trong số các tài khoản bị gắn thẻ là bot.
+    \item \textbf{Accuracy}: Tỷ lệ phát hiện đúng cho cả bot và người dùng bình thường.
+    \item \textbf{F1-score}: Cân bằng giữa Precision và Recall.
 \end{itemize}
 
-\section{Lưu Trữ Mô Hình \& Siêu Tham Số}
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/15.jpg}{
+        \includegraphics[width=0.3\linewidth]{Images/Slide/15}
+        \includegraphics[width=0.3\linewidth]{Images/Slide/16}
+        \includegraphics[width=0.3\linewidth]{Images/Slide/17}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/15, 16, 17.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Các chỉ số đánh giá mô hình: Recall, Precision và Accuracy}
+    \label{fig:eval_metrics}
+\end{figure}
 
-\subsection{File Lưu Trữ}
-\begin{table}[h]
-\centering
-\begin{tabular}{|l|l|}
-\hline
-\textbf{Tên File} & \textbf{Nội Dung} \\
-\hline
-\texttt{best\_if.pkl} & Mô hình IsolationForest đã train \\
-\texttt{best\_xgb.pkl} & Mô hình XGBoost đã train \\
-\texttt{preprocessor.pkl} & Pipeline preprocessing (SimpleImputer + StandardScaler) \\
-\texttt{xgb\_tuning\_results.csv} & Chi tiết 50 lần tìm kiếm XGBoost (siêu tham số + metric) \\
-\texttt{ensemble\_weight\_metrics.csv} & Kết quả tuning trọng số ensemble \\
-\hline
-\end{tabular}
-\end{table}
+\section{Kết quả đánh giá}
 
-\subsection{Thông Tin Siêu Tham Số}
-\begin{itemize}
-    \item \textbf{IsolationForest}: Stored in \texttt{best\_if.pkl}
-    \begin{itemize}
-        \item Các siêu tham số như \texttt{n\_estimators}, \texttt{contamination}, \texttt{random\_state}, v.v.
-    \end{itemize}
-    \item \textbf{XGBoost}: Stored in \texttt{best\_xgb.pkl}
-    \begin{itemize}
-        \item Các siêu tham số như \texttt{max\_depth}, \texttt{learning\_rate}, \texttt{subsample}, \texttt{scale\_pos\_weight}, v.v.
-        \item Chi tiết tuning process lưu trong \texttt{xgb\_tuning\_results.csv}
-    \end{itemize}
-    \item \textbf{Ensemble Weights}: Mặc định 70:30 (XGBoost:IsolationForest), có thể điều chỉnh dựa trên \texttt{ensemble\_weight\_metrics.csv}
-\end{itemize}
-
-\section{Tóm Tắt}
-Hệ thống training gồm 3 giai đoạn: (1) preprocessing riêng biệt cho IF vs XGBoost, (2) tuning siêu tham số cho từng mô hình độc lập, (3) kết hợp trong ensemble weighted. Tất cả mô hình, preprocessor, và kết quả tuning được lưu trữ cho tái sử dụng và truy vết.
-``
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/18.jpg}{
+        \includegraphics[width=0.8\linewidth]{Images/Slide/18}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/18.jpg}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{Bảng tổng hợp kết quả đánh giá các mô hình (XGBoost, Isolation Forest, Ensemble)}
+    \label{fig:eval_results}
+\end{figure}

@@ -1,16 +1,12 @@
 \chapter{Giới thiệu và Nguồn gốc dữ liệu}
 
-\section{Tổng Quan về Gian Lận trên Steam}
-Steam đối mặt với nhiều hình thức gian lận tinh vi, trong đó nổi bật là:
-\begin{itemize}
-    \item \textbf{Achievement farming:} Sử dụng các công cụ (như SAM - Steam Achievement Manager) để mở khóa hàng loạt thành tựu trong thời gian ngắn nhằm tăng uy tín tài khoản hoặc bán tài khoản.
-    \item \textbf{Review bombing:} Sử dụng mạng lưới tài khoản giả để spam đánh giá, thao túng điểm số của trò chơi.
-\end{itemize}
+\section{Bối cảnh và Động lực}
+Steam là nền tảng phân phối trò chơi kỹ thuật số lớn nhất thế giới, tạo ra một hệ sinh thái xã hội và kinh tế khổng lồ với hàng trăm triệu người dùng hoạt động. Tuy nhiên, sự phổ biến này cũng đi kèm với sự gia tăng của các hành vi gian lận và thao túng hệ thống. Việc phát hiện các hành vi bất thường không chỉ bảo vệ tính công bằng của cộng đồng mà còn giúp duy trì giá trị kinh tế của các vật phẩm ảo và uy tín của các trò chơi trên nền tảng.
 
 \begin{figure}[H]
     \centering
     \IfFileExists{Images/Slide/1.jpg}{
-        \includegraphics[width=0.7\linewidth]{Images/Slide/1}
+        \includegraphics[width=0.8\linewidth]{Images/Slide/1}
     }{
         \fbox{\begin{minipage}{0.7\linewidth}
             \centering
@@ -20,20 +16,42 @@ Steam đối mặt với nhiều hình thức gian lận tinh vi, trong đó n�
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Hình ảnh minh họa Steam}
+    \caption{Hình ảnh minh họa hệ sinh thái Steam và cộng đồng người chơi}
     \label{fig:steam_cover}
 \end{figure}
 
+\section{Các hình thức gian lận phổ biến}
 
-\section{Thách Thức}
-Việc phát hiện các hành vi này gặp nhiều khó khăn:
+Dự án tập trung vào hai hình thức hành vi bất thường phổ biến và có tác động tiêu cực nhất:
+
+\subsection{Cày thành tựu (Achievement Farming)}
+Đây là hành vi sử dụng các công cụ bên thứ ba (như Steam Achievement Manager - SAM) hoặc các đoạn script tự động để mở khóa hàng loạt thành tựu trong thời gian cực ngắn.
 \begin{itemize}
-    \item Dữ liệu không có nhãn (Unlabeled data).
-    \item Các công cụ gian lận liên tục được cập nhật để vượt qua sự kiểm soát.
+    \item \textbf{Mục đích:} Tăng cấp độ hồ sơ (Profile Level), thu thập các huy hiệu (badges) hiếm để tăng giá trị bán lại của tài khoản trên thị trường đen.
+    \item \textbf{Dấu hiệu:} Hàng trăm thành tựu được mở khóa trong cùng một giây, hoặc mở khóa thành tựu của các trò chơi có thời gian chơi bằng không (\textit{zero playtime}).
 \end{itemize}
 
-\section{Mục Tiêu Dự Án}
+\subsection{Thao túng đánh giá (Review Bombing \& Spamming)}
+Sử dụng các mạng lưới tài khoản bot (Botnets) để đăng tải hàng loạt đánh giá tích cực hoặc tiêu cực cho một trò chơi cụ thể.
 \begin{itemize}
-    \item Xây dựng hệ thống Học máy (Machine Learning) có khả năng phát hiện các thực thể bất thường dựa trên lịch sử hành vi của người chơi (dữ liệu thu thập qua Steam API).
-    \item Bổ trợ cho hệ thống VAC (Valve Anti Cheat) hiện tại của Steam trong việc phát hiện các hành vi phi kỹ thuật (behavioral anomalies).
+    \item \textbf{Mục đích:} Thao túng thuật toán đề xuất của Steam, gây thiệt hại về mặt kinh tế cho nhà phát triển hoặc quảng bá các dịch vụ trái phép.
+    \item \textbf{Dấu hiệu:} Các đánh giá có nội dung trùng lặp, độ dài cực ngắn, được đăng tải đồng loạt từ các tài khoản mới tạo hoặc không có hoạt động chơi game thực tế.
+\end{itemize}
+
+\section{Thách thức trong phát hiện bất thường}
+
+Việc xây dựng một hệ thống phát hiện tự động gặp phải các rào cản kỹ thuật đáng kể:
+\begin{itemize}
+    \item \textbf{Thiếu dữ liệu có nhãn (Unlabeled data):} Không có tập dữ liệu "chuẩn" phân loại đâu là bot, đâu là người dùng thật. Việc gán nhãn thủ công cho hàng triệu bản ghi là bất khả thi.
+    \item \textbf{Công cụ lách luật tinh vi:} Các công cụ gian lận liên tục được cập nhật để mô phỏng hành vi của con người (ví dụ: thêm khoảng trễ ngẫu nhiên giữa các lần mở khóa).
+    \item \textbf{Sự đa dạng của người dùng:} Hành vi của một "hardcore gamer" cày cuốc ngày đêm có thể bị nhầm lẫn với bot nếu chỉ nhìn vào tần suất hoạt động.
+\end{itemize}
+
+\section{Mục tiêu và Giải pháp đề xuất}
+
+Dự án hướng tới việc xây dựng một giải pháp dựa trên dữ liệu (\textit{Data-driven approach}) để giải quyết các vấn đề trên:
+\begin{itemize}
+    \item \textbf{Xây dựng Data Warehouse chuẩn hóa:} Tích hợp dữ liệu từ nhiều nguồn (Kaggle dataset, Steam Web API) để có cái nhìn đa chiều về một tài khoản (Lịch sử chơi game, Danh mục sở hữu, Hoạt động cộng đồng).
+    \item \textbf{Mô hình Học máy Hành vi:} Thay vì chỉ dựa trên các quy tắc tĩnh dễ bị vượt qua, hệ thống sử dụng các mô hình học máy (XGBoost, Isolation Forest) để tìm ra các mẫu hành vi bất thường trong không gian đa chiều.
+    \item \textbf{Bổ trợ cho VAC:} Hệ thống Valve Anti-Cheat (VAC) chủ yếu phát hiện các phần mềm can thiệp trực tiếp vào bộ nhớ game. Giải pháp của dự án đóng vai trò như một lớp bảo vệ thứ hai, tập trung vào tầng hành vi để phát hiện các botnet mà VAC có thể bỏ sót.
 \end{itemize}
