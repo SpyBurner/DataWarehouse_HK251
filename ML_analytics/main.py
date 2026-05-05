@@ -75,13 +75,14 @@ def _parse_list_fast(s: str) -> list:
 
 def load_data_from_db() -> tuple:
     log.info("Loading data directly from PostgreSQL DW …")
-    
+    import urllib.parse
     host = os.getenv("DB_HOST", "localhost")
     port = os.getenv("DB_PORT", "5432")
     user = os.getenv("DB_USER", "postgres")
     password = os.getenv("DB_PASSWORD", "31082004@Lmao")
+    encoded_password = urllib.parse.quote_plus(password)
     dbname = os.getenv("DB_NAME", "Warehouse")
-    conn_str = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
+    conn_str = f"postgresql+psycopg2://{user}:{encoded_password}@{host}:{port}/{dbname}"
     engine = create_engine(conn_str)
     
     # 1. History
@@ -92,6 +93,7 @@ def load_data_from_db() -> tuple:
         JOIN dw.dim_player p ON h.playerid = p.playerid
         WHERE p.is_private = FALSE
     """, engine)
+    history["playerid"] = history["playerid"].astype("int64")
     history["gameid"] = history["achievementid"].str.extract(r"^(\d+)_")[0].astype("Int32")
     history["date_acquired"] = pd.to_datetime(history["date_acquired"], errors="coerce")
     history = history.drop_duplicates(subset=["playerid", "achievementid", "date_acquired"], keep="last").reset_index(drop=True)
@@ -103,6 +105,7 @@ def load_data_from_db() -> tuple:
         FROM dw.dim_player
         WHERE is_private = FALSE
     """, engine)
+    players["playerid"] = players["playerid"].astype("int64")
     players["created"] = pd.to_datetime(players["created"], errors="coerce")
     players = players.drop_duplicates(subset=["playerid"], keep="last").reset_index(drop=True)
 
@@ -114,6 +117,7 @@ def load_data_from_db() -> tuple:
         JOIN dw.dim_player p ON r.playerid = p.playerid
         WHERE p.is_private = FALSE
     """, engine)
+    reviews["playerid"] = reviews["playerid"].astype("int64")
     reviews["posted"] = pd.to_datetime(reviews["posted"], errors="coerce")
     reviews = reviews.drop_duplicates(subset=["reviewid"], keep="last").reset_index(drop=True)
 
