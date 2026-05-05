@@ -77,6 +77,12 @@ services:
     container_name: ml-pipeline
     env_file:
       - ./ML_analytics/.env
+    environment:
+      - DB_HOST=postgres-warehouse
+      - DB_USER=postgres
+      - DB_PASSWORD=31082004@Lmao
+      - DB_NAME=Warehouse
+      - DB_PORT=5432
     depends_on:
       postgres-warehouse:
         condition: service_healthy
@@ -92,6 +98,12 @@ services:
     container_name: ml-dashboard
     env_file:
       - ./ML_analytics/.env
+    environment:
+      - DB_HOST=postgres-warehouse
+      - DB_USER=postgres
+      - DB_PASSWORD=31082004@Lmao
+      - DB_NAME=Warehouse
+      - DB_PORT=5432
     depends_on:
       postgres-warehouse:
         condition: service_healthy
