@@ -1,9 +1,9 @@
 \chapter{Datawarehouse}
 
 Hệ thống Datawarehouse được xây dựng trên PostgreSQL, lấy điểm nhấn từ mô hình sao (Star Schema). 
-Dựa vào các kịch bản 	exttt{SQL_Postgres_InitWarehouse.sql} và 	exttt{SQL_SQLServer_CreateStagingDB.sql}, hệ thống bao gồm:
+Dựa vào các kịch bản 	exttt{SQL\_Postgres\_InitWarehouse.sql} và 	exttt{SQL\_SQLServer\_CreateStagingDB.sql}, hệ thống bao gồm:
 \begin{itemize}
-    \item 	extbf{Staging Area}: SQL Server. Lưu trữ các bảng 	exttt{stg_players}, 	exttt{stg_history}, 	exttt{stg_reviews}, 	exttt{stg_library_raw}.
-    \item 	extbf{Data Warehouse}: PostgreSQL. Có các Dimension (	exttt{dim_player}, 	exttt{dim_game}, 	exttt{dim_date}) và Fact (	exttt{fact_game_play}, 	exttt{fact_player_review}).
-    \item 	extbf{Datamart}: Bản 	exttt{dm_steam_player_features_v1} lưu trữ toàn bộ feature phục vụ học máy.
+    \item 	extbf{Staging Area}: SQL Server. Lưu trữ các bảng 	exttt{stg\_players}, 	exttt{stg\_history}, 	exttt{stg\_reviews}, 	exttt{stg\_library\_raw}.
+    \item 	extbf{Data Warehouse}: PostgreSQL. Có các Dimension (	exttt{dim\_player}, 	exttt{dim\_game}, 	exttt{dim\_date}) và Fact (	exttt{fact\_game\_play}, 	exttt{fact\_player\_review}).
+    \item 	extbf{Datamart}: Bản 	exttt{dm\_steam\_player\_features\_v1} lưu trữ toàn bộ feature phục vụ học máy.
 \end{itemize}

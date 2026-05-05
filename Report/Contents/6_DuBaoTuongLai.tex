@@ -14,15 +14,15 @@ Sau khi training, mô hình ensemble được sử dụng để:
 \subsection{Quy Trình}
 \begin{enumerate}
     \item Load trained models: \texttt{best\_if.pkl}, \texttt{best\_xgb.pkl}, \texttt{preprocessor.pkl}
-    \item Xử lý feature matrix $X_{raw}$:
+    \item Xử lý feature matrix $X\_{raw}$:
     \begin{itemize}
         \item IF path: Log-transform → Preprocess (SimpleImputer + StandardScaler)
-        \item XGBoost path: Sử dụng $X_{raw}$ trực tiếp (không transform)
+        \item XGBoost path: Sử dụng $X\_{raw}$ trực tiếp (không transform)
     \end{itemize}
     \item Prediction:
     \begin{itemize}
-        \item $if\_scores = best\_if.decision\_function(X_{IF})$
-        \item $xgb\_proba = best\_xgb.predict\_proba(X_{raw})[:, 1]$ (probability of bot class)
+        \item $if\_scores = best\_if.decision\_function(X\_{IF})$
+        \item $xgb\_proba = best\_xgb.predict\_proba(X\_{raw})[:, 1]$ (probability of bot class)
     \end{itemize}
     \item Ensemble:
     \begin{itemize}
@@ -95,7 +95,7 @@ Module \texttt{features.py} - Function \texttt{integrate\_human\_labels()}:
     \item Đọc \texttt{data/reviewed.csv}
     \item Với mỗi row có hợp lệ human\_label (0 hoặc 1):
     \begin{itemize}
-        \item Override $y_{heuristic}[playerid]$ và/hoặc $y_{normal}[playerid]$ bằng human label
+        \item Override $y\_{heuristic}[playerid]$ và/hoặc $y\_{normal}[playerid]$ bằng human label
     \end{itemize}
     \item Bỏ qua rows với blank labels
     \item HITL (Human-in-the-Loop) loop từ pipeline phục vụ cải thiện liên tục
@@ -151,7 +151,7 @@ Function \texttt{\_shap\_plots()}:
 Giải thích độ đóng góp của từng đặc trưng đối với từng dự báo:
 
 \begin{enumerate}
-    \item Sampling: Chọn ngẫu nhiên 5000 rows từ $X_{raw}$ (unscaled — giữ axis values trên thang đo gốc)
+    \item Sampling: Chọn ngẫu nhiên 5000 rows từ $X\_{raw}$ (unscaled — giữ axis values trên thang đo gốc)
     \item SHAP Calculation: Tính SHAP values thông qua native XGBoost \texttt{booster.predict(pred\_contribs=True)}
     \begin{itemize}
         \item Bypass TreeExplainer parser (tránh complexity)

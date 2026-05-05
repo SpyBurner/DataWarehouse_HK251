@@ -1,1 +1,1 @@
-docker compose run --rm texlive pdflatex -output-directory=Build main.tex
+docker compose run --rm texlive pdflatex -interaction=nonstopmode -output-directory=Build main.tex
