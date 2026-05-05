@@ -24,27 +24,11 @@ import joblib
 import streamlit as st
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-from datamart import load_datamart_table
 from models import apply_log_transform
 
 st.set_page_config(page_title="Steam Anomaly Detection Dashboard", layout="wide")
 st.title("Steam Anomaly Detection Dashboard")
 st.caption("Search by Steam ID: Predict normal/anomaly status and analyze behavioral metrics.")
-
-
-def _resolve_project_root() -> Path:
-    app_dir = Path(__file__).resolve().parent
-    candidates = [Path.cwd(), app_dir, app_dir.parent]
-    for candidate in candidates:
-        if (candidate / "docker-compose.yml").exists() and (candidate / "Datasets").exists():
-            return candidate
-    return app_dir.parent
-
-
-PROJECT_ROOT = _resolve_project_root()
-DATASETS_ROOT = PROJECT_ROOT / "Datasets"
-LANDING_ROOT = DATASETS_ROOT / "landing"
-PENTAHO_MASTER_JOB = PROJECT_ROOT / "Pentaho" / "jobs" / "master.kjb"
 
 MODEL_RELATION_TOOLTIPS = {
     "xgb_flag": "1 = XGBoost indicates anomaly (xgb_pct >= 95), 0 = not.",
@@ -413,13 +397,13 @@ def build_profile_df(ensemble: pd.DataFrame, features: pd.DataFrame | None, play
     return base
 
 # Execute a subprocess command and return success flag plus combined logs.
-def run_cmd(cmd: list[str], title: str, cwd: str | None = None) -> tuple[bool, str]:
+def run_cmd(cmd: list[str], title: str) -> tuple[bool, str]:
     try:
         proc = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            cwd=cwd or str(PROJECT_ROOT),
+            cwd=os.getcwd(),
             check=False,
         )
         log_text = (proc.stdout or "") + "\n" + (proc.stderr or "")
@@ -613,44 +597,13 @@ def _parse_library_stats(cell) -> tuple[set[int], float, int]:
 
 # Collect crawled data files into a single lookup bundle for scoring.
 def load_crawled_data() -> dict[str, pd.DataFrame | None]:
-    latest_partition_dir: Path | None = None
-    if LANDING_ROOT.exists():
-        partitions = [p for p in LANDING_ROOT.glob("extract_dt=*") if p.is_dir()]
-        if partitions:
-            latest_partition_dir = max(partitions, key=lambda p: p.stat().st_mtime)
-
-    if latest_partition_dir is not None:
-        crawled = {
-            "players": load_csv(str(latest_partition_dir / "players.csv")),
-            "purchased": load_csv(str(latest_partition_dir / "purchased_games.csv")),
-            "history": load_csv(str(latest_partition_dir / "history.csv")),
-            "reviews": load_csv(str(latest_partition_dir / "reviews.csv")),
-        }
-        return crawled
-
     crawled = {
-        "players": load_csv(str(DATASETS_ROOT / "raw" / "players.csv")),
-        "purchased": load_csv(str(DATASETS_ROOT / "raw" / "purchased_games.csv")),
-        "history": load_csv(str(DATASETS_ROOT / "raw" / "history.csv")),
-        "reviews": load_csv(str(DATASETS_ROOT / "raw" / "reviews.csv")),
+        "players": load_csv("data/crawled/players.csv"),
+        "purchased": load_csv("data/crawled/purchased_games.csv"),
+        "history": load_csv("data/crawled/history.csv"),
+        "reviews": load_csv("data/crawled/reviews.csv"),
     }
     return crawled
-
-
-@st.cache_data(show_spinner=False)
-def load_datamart_feature_lookup() -> pd.DataFrame | None:
-    frame = load_datamart_table()
-    if frame is None or frame.empty or "playerid" not in frame.columns:
-        return None
-
-    frame = frame.copy()
-    frame["playerid"] = pd.to_numeric(frame["playerid"], errors="coerce")
-    frame = frame.dropna(subset=["playerid"]).copy()
-    frame["playerid"] = frame["playerid"].astype("int64")
-    frame = frame.set_index("playerid")
-    frame = frame.drop(columns=["country", "refreshed_at"], errors="ignore")
-    frame = frame.apply(pd.to_numeric, errors="coerce")
-    return frame
 
 # Extract normalized player IDs from a crawled table.
 def _extract_playerid_set(df: pd.DataFrame | None) -> set[int]:
@@ -781,12 +734,6 @@ def compute_temp_profile(
     crawled: dict[str, pd.DataFrame | None],
     model_memory: dict | None = None,
 ) -> dict:
-    dm_lookup = load_datamart_feature_lookup()
-    if dm_lookup is not None and pid in dm_lookup.index:
-        row = dm_lookup.loc[pid].to_dict()
-        row["playerid"] = int(pid)
-        return row
-
     # For IDs present in training feature matrix, use the exact same row as training.
     fm_lookup = load_feature_matrix_lookup(get_feature_matrix_cache_key())
     if fm_lookup is not None and pid in fm_lookup.index:
@@ -1033,12 +980,12 @@ def render_profile(
 
 ensemble = load_csv("outputs/ensemble_results.csv")
 features = load_csv("outputs/feature_matrix.csv")
-players = load_datamart_table("dw.dim_player")
+players = load_csv("data/raw/players.csv")
 top50 = load_csv("outputs/top50_flagged_profiles.csv")
 loading = load_csv("outputs/pca_loading_matrix.csv")
 
 if ensemble is None:
-    st.error("No outputs/ensemble_results.csv found. Please run python main.py first to generate the ensemble results.")
+    st.error("No outputs/ensemble_results.csv found. Please run python3 batch_analysis.py first to generate the ensemble results.")
     st.stop()
 
 ensemble["playerid"] = pd.to_numeric(ensemble["playerid"], errors="coerce")
@@ -1048,1123 +995,1064 @@ ensemble["playerid"] = ensemble["playerid"].astype("int64")
 profile_df = build_profile_df(ensemble, features, players)
 behavior_reference_df = build_behavior_reference_table(profile_df)
 
+st.header("1) Search by Steam ID")
+st.write("Enter a single ID, multiple IDs, or drag and drop a CSV/TXT file containing a list of playerids.")
 
-dashboard_tab_12, dashboard_tab_3, dashboard_tab_4, dashboard_tab_5 = st.tabs([
-    "1 + 2) Search & Online Crawl",
-    "3) Data Overview",
-    "4) Model Plots",
-    "5) Output Explorer",
-])
+mode = st.radio(
+    "Input Method",
+    ["Manual Entry", "Upload File"],
+    horizontal=True,
+)
 
-with dashboard_tab_12:
-    st.header("1) Search by Steam ID")
-    st.write("Enter a single ID, multiple IDs, or drag and drop a CSV/TXT file containing a list of playerids.")
-
-    mode = st.radio(
-        "Input Method",
-        ["Manual Entry", "Upload File"],
-        horizontal=True,
+target_ids: list[int] = []
+if mode == "Manual Entry":
+    one_id = st.text_input("Enter 1 Steam ID", placeholder="Example: 76561197960272169")
+    multi_text = st.text_area(
+        "Or enter multiple IDs (one per line, or separated by commas)",
+        placeholder="76561197960272169\n76561197962909864",
     )
+    target_ids = parse_ids_from_text(one_id) + parse_ids_from_text(multi_text)
+else:
+    uploaded = st.file_uploader("Upload CSV or TXT file", type=["csv", "txt"])
+    target_ids = parse_ids_from_uploaded(uploaded)
 
-    target_ids: list[int] = []
-    if mode == "Manual Entry":
-        one_id = st.text_input("Enter 1 Steam ID", placeholder="Example: 76561197960272169")
-        multi_text = st.text_area(
-            "Or enter multiple IDs (one per line, or separated by commas)",
-            placeholder="76561197960272169\n76561197962909864",
-        )
-        target_ids = parse_ids_from_text(one_id) + parse_ids_from_text(multi_text)
-    else:
-        uploaded = st.file_uploader("Upload CSV or TXT file", type=["csv", "txt"])
-        target_ids = parse_ids_from_uploaded(uploaded)
+target_ids = sorted(set(target_ids))
 
-    target_ids = sorted(set(target_ids))
+if target_ids:
+    found = profile_df[profile_df["playerid"].isin(target_ids)].copy()
+    missing = [x for x in target_ids if x not in set(found["playerid"].tolist())]
 
-    if target_ids:
-        found = profile_df[profile_df["playerid"].isin(target_ids)].copy()
-        missing = [x for x in target_ids if x not in set(found["playerid"].tolist())]
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Number of IDs entered", len(target_ids))
+    c2.metric("Found", len(found))
+    c3.metric("No data available", len(missing))
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Number of IDs entered", len(target_ids))
-        c2.metric("Found", len(found))
-        c3.metric("No data available", len(missing))
+    if missing:
+        st.warning("No data available for the following IDs: " + ", ".join(str(x) for x in missing[:20]))
 
-        if missing:
-            st.warning("No data available for the following IDs: " + ", ".join(str(x) for x in missing[:20]))
+    if not found.empty:
+        found = found.sort_values("anomaly_pct", ascending=False)
+        st.subheader("Summary of found profiles")
+        show_cols = [
+            "playerid",
+            "normal_pct",
+            "anomaly_pct",
+            "xgb_proba",
+            "xgb_flag",
+            "if_flag",
+            "is_anomaly",
+        ]
+        show_cols = [c for c in show_cols if c in found.columns]
+        st.dataframe(safe_dataframe(found[show_cols]), width="stretch")
 
-        if not found.empty:
-            found = found.sort_values("anomaly_pct", ascending=False)
-            st.subheader("Summary of found profiles")
-            show_cols = [
-                "playerid",
-                "normal_pct",
-                "anomaly_pct",
-                "xgb_proba",
-                "xgb_flag",
-                "if_flag",
-                "is_anomaly",
+        st.subheader("Detailed Analysis of Each Account")
+        for _, row in found.iterrows():
+            with st.expander(f"View Details for playerid {int(row['playerid'])}", expanded=(len(found) == 1)):
+                render_profile(
+                    row,
+                    base_size=len(profile_df),
+                    behavior_reference=behavior_reference_df,
+                    baseline_df=profile_df,
+                )
+
+# Section 2: Real-time Steam Crawling (Online Inference)
+st.divider()
+st.header("2) Real-time Steam Crawl (Online Inference)")
+st.write("")
+
+bundle = load_model_bundle(get_model_bundle_cache_key())
+if bundle is None:
+    st.error("Saved model memory not found. Please run python3 batch_analysis.py first to generate outputs/model_memory.pkl and associated model artifacts.")
+    st.stop()
+
+trained_at = bundle["memory"].get("trained_at")
+baseline_size = bundle["memory"].get("baseline_size", 0)
+st.caption(f"Baseline model: {trained_at} | Number of players in baseline: {baseline_size:,}")
+
+crawl_text = st.text_area(
+    "Steam ID to crawl",
+    placeholder="76561198405841744\n76561198354838543",
+    key="crawl_ids_text",
+)
+crawl_ids = sorted(set(parse_ids_from_text(crawl_text)))
+
+if "train_proc" not in st.session_state:
+    st.session_state["train_proc"] = None
+if "train_log_path" not in st.session_state:
+    st.session_state["train_log_path"] = ""
+if "train_last_rc" not in st.session_state:
+    st.session_state["train_last_rc"] = None
+
+train_proc = st.session_state.get("train_proc")
+is_running = False
+if train_proc is not None:
+    try:
+        is_running = train_proc.poll() is None
+    except Exception:
+        is_running = False
+
+if train_proc is not None and not is_running and st.session_state.get("train_last_rc") is None:
+    try:
+        rc = train_proc.poll()
+    except Exception:
+        rc = -1
+    st.session_state["train_last_rc"] = rc
+    st.session_state["train_proc"] = None
+    if rc == 0:
+        load_model_bundle.clear()
+        load_feature_matrix_lookup.clear()
+
+button_label = "Running..." if is_running else "Run Crawl Training"
+
+c1, c2, c3 = st.columns([1, 1, 0.5])
+with c1:
+    if st.button("Run Steam Crawl", width="stretch"):
+        if not crawl_ids:
+            st.warning("You need to enter at least 1 Steam ID.")
+        else:
+            python_exec = get_preferred_python_executable()
+            cmd = [
+                python_exec,
+                "-u",
+                "steam_crawling.py",
+                "--steam-ids",
+                *[str(x) for x in crawl_ids],
+                "--data",
+                "players,purchased_games,history,reviews",
             ]
-            show_cols = [c for c in show_cols if c in found.columns]
-            st.dataframe(safe_dataframe(found[show_cols]), width="stretch")
+            creation_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+            progress_slot = st.empty()
+            progress_slot.progress(35, text="Crawling Steam API...")
+            with st.spinner("Crawling Steam API..."):
+                proc = subprocess.run(
+                    cmd,
+                    cwd=os.getcwd(),
+                    capture_output=True,
+                    text=True,
+                    creationflags=creation_flags,
+                )
 
-            st.subheader("Detailed Analysis of Each Account")
-            for _, row in found.iterrows():
-                with st.expander(f"View Details for playerid {int(row['playerid'])}", expanded=(len(found) == 1)):
-                    render_profile(
-                        row,
-                        base_size=len(profile_df),
-                        behavior_reference=behavior_reference_df,
-                        baseline_df=profile_df,
-                    )
+            ok = proc.returncode == 0
+            progress_slot.progress(100, text="Crawl finished")
+            log_text = ((proc.stdout or "") + "\n" + (proc.stderr or "")).strip()
 
-    # Section 2: Real-time Steam Crawling (Online Inference)
-    st.divider()
-    st.header("2) Real-time Steam Crawl (Online Inference)")
-    st.write("")
-
-    bundle = load_model_bundle(get_model_bundle_cache_key())
-    if bundle is None:
-        st.error("Saved model memory not found. Please run python main.py first to generate outputs/model_memory.pkl and associated model artifacts.")
-        st.stop()
-
-    trained_at = bundle["memory"].get("trained_at")
-    baseline_size = bundle["memory"].get("baseline_size", 0)
-    st.caption(f"Baseline model: {trained_at} | Number of players in baseline: {baseline_size:,}")
-
-    crawl_text = st.text_area(
-        "Steam ID to crawl",
-        placeholder="76561198405841744\n76561198354838543",
-        key="crawl_ids_text",
-    )
-    crawl_ids = sorted(set(parse_ids_from_text(crawl_text)))
-
-    if "train_proc" not in st.session_state:
-        st.session_state["train_proc"] = None
-    if "train_log_path" not in st.session_state:
-        st.session_state["train_log_path"] = ""
-    if "train_last_rc" not in st.session_state:
-        st.session_state["train_last_rc"] = None
-
-    train_proc = st.session_state.get("train_proc")
-    is_running = False
-    if train_proc is not None:
-        try:
-            is_running = train_proc.poll() is None
-        except Exception:
-            is_running = False
-
-    if train_proc is not None and not is_running and st.session_state.get("train_last_rc") is None:
-        try:
-            rc = train_proc.poll()
-        except Exception:
-            rc = -1
-        st.session_state["train_last_rc"] = rc
-        st.session_state["train_proc"] = None
-        if rc == 0:
-            load_model_bundle.clear()
-            load_feature_matrix_lookup.clear()
-
-    button_label = "Running..." if is_running else "Run Crawl Training"
-
-    c1, c2, c3 = st.columns([1, 1, 0.5])
-    with c1:
-        if st.button("Run Steam Crawl", width="stretch"):
-            if not crawl_ids:
-                st.warning("You need to enter at least 1 Steam ID.")
+            if ok:
+                st.success("Crawl completed successfully. Click the scoring button to analyze with the trained model.")
             else:
-                cmd = [
-                    "docker",
-                    "compose",
-                    "run",
-                    "--rm",
-                    "steam-crawler",
-                    "--playerids",
-                    *[str(x) for x in crawl_ids],
-                ]
-                creation_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-                progress_slot = st.empty()
-                progress_slot.progress(35, text="Crawling Steam API...")
-                with st.spinner("Crawling Steam API..."):
-                    proc = subprocess.run(
-                        cmd,
-                        cwd=str(PROJECT_ROOT),
-                        capture_output=True,
-                        text=True,
-                        creationflags=creation_flags,
+                st.error("Crawl failed. Please check the log section below.")
+            with st.expander("Crawl Log (after run)", expanded=False):
+                st.text(log_text or "(empty log)")
+
+with c2:
+
+    if st.button("Score Profiles with Trained Model", width="stretch"):
+        if not crawl_ids:
+            st.warning("You need to enter Steam ID before comparing.")
+        else:
+            crawled = load_crawled_data()
+            missing_files = [name for name, df in crawled.items() if df is None]
+            if len(missing_files) == 4:
+                st.error("No crawled data found in data/crawled. Please run the crawl first.")
+            else:
+                if missing_files:
+                    st.info("Missing some crawl files: " + ", ".join(missing_files) + ". Analyzing with available data.")
+
+                rows = []
+
+                feature_profiles = []
+                valid_ids = []
+                id_index = build_crawled_id_index(crawled)
+                unknown_ids = []
+                low_data_ids = []
+                eligible_ids = []
+
+                for pid in crawl_ids:
+                    exists_in_crawled, has_behavior_rows, _ = classify_crawled_id_status(pid, id_index)
+                    if not exists_in_crawled:
+                        unknown_ids.append(pid)
+                        continue
+                    if not has_behavior_rows:
+                        low_data_ids.append(pid)
+                        continue
+                    eligible_ids.append(pid)
+
+                if unknown_ids:
+                    st.warning(
+                        "Unknown Steam IDs (not found in any crawled table): "
+                        + ", ".join(str(x) for x in unknown_ids[:20])
+                    )
+                if low_data_ids:
+                    st.info(
+                        "IDs found in crawled tables but without behavioral rows (history/purchased/reviews), skipped: "
+                        + ", ".join(str(x) for x in low_data_ids[:20])
                     )
 
-                ok = proc.returncode == 0
-                progress_slot.progress(100, text="Crawl finished")
-                log_text = ((proc.stdout or "") + "\n" + (proc.stderr or "")).strip()
+                data_quality_warnings = {}  # pid -> reason mapping
+                for pid in eligible_ids:
+                    try:
+                        profile = compute_temp_profile(pid, crawled, bundle.get("memory"))
+                        is_quality_ok, reason = online_data_quality_gate(profile)
+                        if not is_quality_ok:
+                            data_quality_warnings[str(pid)] = reason
+                        feature_profiles.append(profile)
+                        valid_ids.append(pid)
+                    except Exception as exc:
+                        st.error(f"Failed to compute features for player {pid}: {exc}")
 
-                if ok:
-                    st.success("Crawl completed successfully. Click the scoring button to analyze with the trained model.")
+                if data_quality_warnings:
+                    warning_text = "⚠️ The IDs below have missing behavior data (scores may be inaccurate):\n"
+                    for pid, reason in list(data_quality_warnings.items())[:10]:
+                        warning_text += f"  • {pid}: {reason}\n"
+                    if len(data_quality_warnings) > 10:
+                        warning_text += f"  ... and {len(data_quality_warnings) - 10} more IDs"
+                    st.warning(warning_text)
+
+                analyzed_batch = []
+                if not feature_profiles:
+                    st.warning("No eligible profiles available for inference.")
                 else:
-                    st.error("Crawl failed. Please check the log section below.")
-                with st.expander("Crawl Log (after run)", expanded=False):
-                    st.text(log_text or "(empty log)")
+                    try:
+                        online_metric_path, online_metric_df, online_feature_cols = export_online_metrics_csv(
+                            feature_profiles,
+                            bundle,
+                        )
+                        st.caption(
+                            f"Saved online metrics export: {online_metric_path} "
+                            f"({len(online_metric_df):,} IDs x {len(online_feature_cols)} metrics)"
+                        )
+                        st.download_button(
+                            "Download online 27 metrics (CSV)",
+                            data=online_metric_df.to_csv(index=False).encode("utf-8-sig"),
+                            file_name=online_metric_path.name,
+                            mime="text/csv",
+                        )
+                    except Exception as exc:
+                        st.warning(f"Could not export online 27-metric files: {exc}")
 
-        if st.button("Run Crawl + Load Datamart (Pentaho Master)", width="stretch"):
-            if not crawl_ids:
-                st.warning("You need to enter at least 1 Steam ID.")
-            else:
-                with st.spinner("Running crawler then Pentaho master job..."):
-                    crawl_ok, crawl_log = run_cmd(
-                        [
-                            "docker",
-                            "compose",
-                            "run",
-                            "--rm",
-                            "steam-crawler",
-                            "--playerids",
-                            *[str(x) for x in crawl_ids],
-                        ],
-                        "Steam crawler",
-                        cwd=str(PROJECT_ROOT),
+                    try:
+                        analyzed_batch = infer_online_profiles_batch(feature_profiles, bundle)
+                    except Exception as exc:
+                        st.error(f"Batch inference failed: {exc}")
+
+                for pid, analyzed in zip(valid_ids, analyzed_batch):
+                    proxy_anomaly = analyzed.get("composite_score", np.nan)
+                    label = online_assessment_label(
+                        proxy_anomaly,
+                        analyzed.get("is_anomaly", np.nan),
                     )
 
-                    pentaho_ok = False
-                    pentaho_log = "[Pentaho master] skipped"
-                    if crawl_ok:
-                        if PENTAHO_MASTER_JOB.exists():
-                            pentaho_ok, pentaho_log = run_cmd(
-                                [
-                                    "kitchen.bat",
-                                    f"/file:{PENTAHO_MASTER_JOB}",
-                                    "/level:Basic",
-                                ],
-                                "Pentaho master",
-                                cwd=str(PROJECT_ROOT),
-                            )
-                        else:
-                            pentaho_log = f"[Pentaho master] Job file not found: {PENTAHO_MASTER_JOB}"
+                    data_quality_note = data_quality_warnings.get(str(pid), "Sufficient data")
+                    confidence = confidence_from_votes(
+                        analyzed.get("is_anomaly", np.nan),
+                        analyzed.get("xgb_flag", np.nan),
+                        analyzed.get("if_flag", np.nan),
+                        analyzed.get("composite_score", np.nan),
+                    )
+                    confidence = adjust_confidence_by_data_quality(confidence, data_quality_note)
+                    rows.append(
+                        {
+                            "playerid": pid,
+                            "normal_pct": analyzed.get("normal_pct", np.nan),
+                            "anomaly_pct": analyzed.get("composite_score", np.nan),
+                            "xgb_pct": analyzed.get("xgb_pct", np.nan),
+                            "if_pct": analyzed.get("if_pct", np.nan),
+                            "xgb_flag": analyzed.get("xgb_flag", np.nan),
+                            "if_flag": analyzed.get("if_flag", np.nan),
+                            "is_anomaly": analyzed.get("is_anomaly", np.nan),
+                            "assessment": label,
+                            "baseline_players": analyzed.get("baseline_size", np.nan),
+                            "trained_at": analyzed.get("trained_at", np.nan),
+                            "risk_bucket": risk_bucket_from_score(analyzed.get("composite_score", np.nan)),
+                            "confidence": confidence,
+                            "data_quality": data_quality_note,
+                        }
+                    )
 
-                    if crawl_ok and pentaho_ok:
-                        load_feature_matrix_lookup.clear()
-                        load_datamart_feature_lookup.clear()
-                        st.success("Crawler and Pentaho master completed. Datamart features are now available for immediate scoring.")
-                    else:
-                        st.error("Crawler/Pentaho pipeline failed. Check logs below.")
+                if rows:
+                    result_df = pd.DataFrame(rows).sort_values(["is_anomaly", "anomaly_pct"], ascending=[False, False])
+                    if "playerid" in result_df.columns:
+                        result_df["playerid"] = result_df["playerid"].astype(str)
+                    st.subheader("Online Inference Results")
 
-                    with st.expander("Crawler + Pentaho Logs", expanded=False):
-                        st.text((crawl_log + "\n\n" + pentaho_log).strip())
+                    quick_cols = [
+                        "playerid",
+                        "assessment",
+                        "risk_bucket",
+                        "confidence",
+                        "anomaly_pct",
+                        "normal_pct",
+                        "xgb_pct",
+                        "if_pct",
+                        "is_anomaly",
+                    ]
+                    quick_cols = [c for c in quick_cols if c in result_df.columns]
+                    quick_view = result_df[quick_cols].rename(
+                        columns={
+                            "assessment": "Assessment",
+                            "risk_bucket": "Risk Bucket",
+                            "confidence": "Confidence",
+                            "anomaly_pct": "Anomaly Score",
+                            "normal_pct": "Normal Score",
+                            "xgb_pct": "XGB Percentile",
+                            "if_pct": "IF Percentile",
+                        }
+                    )
+                    if "playerid" in quick_view.columns:
+                        quick_view["playerid"] = quick_view["playerid"].astype(str)
+                    st.dataframe(safe_dataframe(quick_view), width="stretch", hide_index=True)
 
-    with c2:
+                    detail_df = pd.DataFrame(analyzed_batch)
+                    if not detail_df.empty:
+                        detail_df = detail_df.copy()
+                        detail_df["playerid"] = [str(pid) for pid in valid_ids[: len(detail_df)]]
+                        feature_cols = [str(c) for c in bundle["memory"].get("feature_columns", [])]
+                        if not feature_cols:
+                            feature_cols = [m for m in METRIC_EN_LABELS.keys() if m in detail_df.columns]
 
-        if st.button("Score Profiles with Trained Model", width="stretch"):
-            if not crawl_ids:
-                st.warning("You need to enter Steam ID before comparing.")
-            else:
-                crawled = load_crawled_data()
-                missing_files = [name for name, df in crawled.items() if df is None]
-                if len(missing_files) == 4:
-                    st.error("No crawled data found in Datasets/landing or Datasets/raw. Please run the crawl first.")
-                else:
-                    if missing_files:
-                        st.info("Missing some crawl files: " + ", ".join(missing_files) + ". Analyzing with available data.")
+                        for metric in feature_cols:
+                            if metric not in detail_df.columns:
+                                detail_df[metric] = np.nan
 
-                    rows = []
+                        cohen_map = {}
+                        if behavior_reference_df is not None and not behavior_reference_df.empty:
+                            cohen_map = behavior_reference_df.set_index("metric")["cohen_d_flagged_vs_normal"].to_dict()
 
-                    feature_profiles = []
-                    valid_ids = []
-                    id_index = build_crawled_id_index(crawled)
-                    unknown_ids = []
-                    low_data_ids = []
-                    eligible_ids = []
-
-                    for pid in crawl_ids:
-                        exists_in_crawled, has_behavior_rows, _ = classify_crawled_id_status(pid, id_index)
-                        if not exists_in_crawled:
-                            unknown_ids.append(pid)
-                            continue
-                        if not has_behavior_rows:
-                            low_data_ids.append(pid)
-                            continue
-                        eligible_ids.append(pid)
-
-                    if unknown_ids:
-                        st.warning(
-                            "Unknown Steam IDs (not found in any crawled table): "
-                            + ", ".join(str(x) for x in unknown_ids[:20])
-                        )
-                    if low_data_ids:
-                        st.info(
-                            "IDs found in crawled tables but without behavioral rows (history/purchased/reviews), skipped: "
-                            + ", ".join(str(x) for x in low_data_ids[:20])
-                        )
-
-                    data_quality_warnings = {}  # pid -> reason mapping
-                    for pid in eligible_ids:
-                        try:
-                            profile = compute_temp_profile(pid, crawled, bundle.get("memory"))
-                            is_quality_ok, reason = online_data_quality_gate(profile)
-                            if not is_quality_ok:
-                                data_quality_warnings[str(pid)] = reason
-                            feature_profiles.append(profile)
-                            valid_ids.append(pid)
-                        except Exception as exc:
-                            st.error(f"Failed to compute features for player {pid}: {exc}")
-
-                    if data_quality_warnings:
-                        warning_text = "WARNING: The IDs below have missing behavior data (scores may be inaccurate):\n"
-                        for pid, reason in list(data_quality_warnings.items())[:10]:
-                            warning_text += f"  - {pid}: {reason}\n"
-                        if len(data_quality_warnings) > 10:
-                            warning_text += f"  ... and {len(data_quality_warnings) - 10} more IDs"
-                        st.warning(warning_text)
-
-                    analyzed_batch = []
-                    if not feature_profiles:
-                        st.warning("No eligible profiles available for inference.")
-                    else:
-                        try:
-                            online_metric_path, online_metric_df, online_feature_cols = export_online_metrics_csv(
-                                feature_profiles,
-                                bundle,
-                            )
-                            st.caption(
-                                f"Saved online metrics export: {online_metric_path} "
-                                f"({len(online_metric_df):,} IDs x {len(online_feature_cols)} metrics)"
-                            )
-                            st.download_button(
-                                "Download online 27 metrics (CSV)",
-                                data=online_metric_df.to_csv(index=False).encode("utf-8-sig"),
-                                file_name=online_metric_path.name,
-                                mime="text/csv",
-                            )
-                        except Exception as exc:
-                            st.warning(f"Could not export online 27-metric files: {exc}")
-
-                        try:
-                            analyzed_batch = infer_online_profiles_batch(feature_profiles, bundle)
-                        except Exception as exc:
-                            st.error(f"Batch inference failed: {exc}")
-
-                    for pid, analyzed in zip(valid_ids, analyzed_batch):
-                        proxy_anomaly = analyzed.get("composite_score", np.nan)
-                        label = online_assessment_label(
-                            proxy_anomaly,
-                            analyzed.get("is_anomaly", np.nan),
-                        )
-
-                        data_quality_note = data_quality_warnings.get(str(pid), "Sufficient data")
-                        confidence = confidence_from_votes(
-                            analyzed.get("is_anomaly", np.nan),
-                            analyzed.get("xgb_flag", np.nan),
-                            analyzed.get("if_flag", np.nan),
-                            analyzed.get("composite_score", np.nan),
-                        )
-                        confidence = adjust_confidence_by_data_quality(confidence, data_quality_note)
-                        rows.append(
-                            {
-                                "playerid": pid,
-                                "normal_pct": analyzed.get("normal_pct", np.nan),
-                                "anomaly_pct": analyzed.get("composite_score", np.nan),
-                                "xgb_pct": analyzed.get("xgb_pct", np.nan),
-                                "if_pct": analyzed.get("if_pct", np.nan),
-                                "xgb_flag": analyzed.get("xgb_flag", np.nan),
-                                "if_flag": analyzed.get("if_flag", np.nan),
-                                "is_anomaly": analyzed.get("is_anomaly", np.nan),
-                                "assessment": label,
-                                "baseline_players": analyzed.get("baseline_size", np.nan),
-                                "trained_at": analyzed.get("trained_at", np.nan),
-                                "risk_bucket": risk_bucket_from_score(analyzed.get("composite_score", np.nan)),
-                                "confidence": confidence,
-                                "data_quality": data_quality_note,
-                            }
-                        )
-
-                    if rows:
-                        result_df = pd.DataFrame(rows).sort_values(["is_anomaly", "anomaly_pct"], ascending=[False, False])
-                        if "playerid" in result_df.columns:
-                            result_df["playerid"] = result_df["playerid"].astype(str)
-                        st.subheader("Online Inference Results")
-
-                        quick_cols = [
-                            "playerid",
-                            "assessment",
-                            "risk_bucket",
-                            "confidence",
-                            "anomaly_pct",
-                            "normal_pct",
-                            "xgb_pct",
-                            "if_pct",
-                            "is_anomaly",
-                        ]
-                        quick_cols = [c for c in quick_cols if c in result_df.columns]
-                        quick_view = result_df[quick_cols].rename(
-                            columns={
-                                "assessment": "Assessment",
-                                "risk_bucket": "Risk Bucket",
-                                "confidence": "Confidence",
-                                "anomaly_pct": "Anomaly Score",
-                                "normal_pct": "Normal Score",
-                                "xgb_pct": "XGB Percentile",
-                                "if_pct": "IF Percentile",
-                            }
-                        )
-                        if "playerid" in quick_view.columns:
-                            quick_view["playerid"] = quick_view["playerid"].astype(str)
-                        st.dataframe(safe_dataframe(quick_view), width="stretch", hide_index=True)
-
-                        detail_df = pd.DataFrame(analyzed_batch)
-                        if not detail_df.empty:
-                            detail_df = detail_df.copy()
-                            detail_df["playerid"] = [str(pid) for pid in valid_ids[: len(detail_df)]]
-                            feature_cols = [str(c) for c in bundle["memory"].get("feature_columns", [])]
-                            if not feature_cols:
-                                feature_cols = [m for m in METRIC_EN_LABELS.keys() if m in detail_df.columns]
+                        st.write("Comparison with Baseline (Showing Top 12 Most Deviant Metrics per Player)")
+                        rendered_count = 0
+                        for _, prow in detail_df.iterrows():
+                            pid = str(prow.get("playerid", "")) or "Unknown"
+                            comp_rows = []
 
                             for metric in feature_cols:
-                                if metric not in detail_df.columns:
-                                    detail_df[metric] = np.nan
-
-                            cohen_map = {}
-                            if behavior_reference_df is not None and not behavior_reference_df.empty:
-                                cohen_map = behavior_reference_df.set_index("metric")["cohen_d_flagged_vs_normal"].to_dict()
-
-                            st.write("Comparison with Baseline (Showing Top 12 Most Deviant Metrics per Player)")
-                            rendered_count = 0
-                            for _, prow in detail_df.iterrows():
-                                pid = str(prow.get("playerid", "")) or "Unknown"
-                                comp_rows = []
-
-                                for metric in feature_cols:
-                                    if metric not in profile_df.columns:
-                                        continue
-
-                                    player_value = pd.to_numeric(pd.Series([prow.get(metric, np.nan)]), errors="coerce").iloc[0]
-                                    baseline_series = pd.to_numeric(profile_df[metric], errors="coerce").dropna()
-                                    if baseline_series.empty or pd.isna(player_value):
-                                        continue
-
-                                    cohen_val = cohen_map.get(metric, np.nan)
-                                    susp_pct = suspicious_percentile_by_cohen(
-                                        float(player_value),
-                                        baseline_series,
-                                        cohen_val,
-                                    )
-
-                                    comp_rows.append(
-                                        {
-                                            "Metric": metric_display_name(metric),
-                                            "Value": float(player_value),
-                                            "Baseline Median": float(baseline_series.median()),
-                                            "Baseline IQR": float(
-                                                baseline_series.quantile(0.75) - baseline_series.quantile(0.25)
-                                            ),
-                                            "Suspicious Percentile": susp_pct,
-                                        }
-                                    )
-
-                                if not comp_rows:
+                                if metric not in profile_df.columns:
                                     continue
 
-                                rendered_count += 1
-                                cmp_df = pd.DataFrame(comp_rows).sort_values("Suspicious Percentile", ascending=False)
-                                top_df = cmp_df.head(12)
-                                with st.expander(f"Player {pid} - top deviant metrics", expanded=(len(detail_df) == 1)):
-                                    prow_score = pd.to_numeric(prow.get("composite_score", np.nan), errors="coerce")
-                                    base_conf = confidence_from_votes(
-                                        prow.get("is_anomaly", np.nan),
-                                        prow.get("xgb_flag", np.nan),
-                                        prow.get("if_flag", np.nan),
-                                        prow_score,
+                                player_value = pd.to_numeric(pd.Series([prow.get(metric, np.nan)]), errors="coerce").iloc[0]
+                                baseline_series = pd.to_numeric(profile_df[metric], errors="coerce").dropna()
+                                if baseline_series.empty or pd.isna(player_value):
+                                    continue
+
+                                cohen_val = cohen_map.get(metric, np.nan)
+                                susp_pct = suspicious_percentile_by_cohen(
+                                    float(player_value),
+                                    baseline_series,
+                                    cohen_val,
+                                )
+
+                                comp_rows.append(
+                                    {
+                                        "Metric": metric_display_name(metric),
+                                        "Value": float(player_value),
+                                        "Baseline Median": float(baseline_series.median()),
+                                        "Baseline IQR": float(
+                                            baseline_series.quantile(0.75) - baseline_series.quantile(0.25)
+                                        ),
+                                        "Suspicious Percentile": susp_pct,
+                                    }
+                                )
+
+                            if not comp_rows:
+                                continue
+
+                            rendered_count += 1
+                            cmp_df = pd.DataFrame(comp_rows).sort_values("Suspicious Percentile", ascending=False)
+                            top_df = cmp_df.head(12)
+                            with st.expander(f"Player {pid} - top deviant metrics", expanded=(len(detail_df) == 1)):
+                                prow_score = pd.to_numeric(prow.get("composite_score", np.nan), errors="coerce")
+                                base_conf = confidence_from_votes(
+                                    prow.get("is_anomaly", np.nan),
+                                    prow.get("xgb_flag", np.nan),
+                                    prow.get("if_flag", np.nan),
+                                    prow_score,
+                                )
+                                conf = adjust_confidence_by_data_quality(
+                                    base_conf,
+                                    data_quality_warnings.get(str(pid), "Sufficient data"),
+                                )
+                                st.write(
+                                    f"Assessment: {online_assessment_label(prow_score, prow.get('is_anomaly', np.nan))} | "
+                                    f"Risk Level: {risk_bucket_from_score(prow_score)} | "
+                                    f"Confidence: {conf}"
+                                )
+                                reason_text = ", ".join(top_df["Metric"].head(3).tolist())
+                                if reason_text:
+                                    st.caption(f"Main Reasons: {reason_text}")
+
+                                forensic_chart = (
+                                    alt.Chart(top_df)
+                                    .mark_bar()
+                                    .encode(
+                                        x=alt.X("Suspicious Percentile:Q", title="Suspicious Percentile"),
+                                        y=alt.Y("Metric:N", sort="-x", title="Metric"),
+                                        tooltip=[
+                                            alt.Tooltip("Metric:N"),
+                                            alt.Tooltip("Suspicious Percentile:Q", format=".2f"),
+                                            alt.Tooltip("Value:Q", format=".4f"),
+                                            alt.Tooltip("Baseline Median:Q", format=".4f"),
+                                        ],
                                     )
-                                    conf = adjust_confidence_by_data_quality(
-                                        base_conf,
-                                        data_quality_warnings.get(str(pid), "Sufficient data"),
-                                    )
-                                    st.write(
-                                        f"Assessment: {online_assessment_label(prow_score, prow.get('is_anomaly', np.nan))} | "
-                                        f"Risk Level: {risk_bucket_from_score(prow_score)} | "
-                                        f"Confidence: {conf}"
-                                    )
-                                    reason_text = ", ".join(top_df["Metric"].head(3).tolist())
-                                    if reason_text:
-                                        st.caption(f"Main Reasons: {reason_text}")
+                                    .properties(height=320)
+                                )
+                                st.altair_chart(forensic_chart, width="stretch")
+                                st.dataframe(safe_dataframe(top_df), width="stretch", hide_index=True)
 
-                                    forensic_chart = (
-                                        alt.Chart(top_df)
-                                        .mark_bar()
-                                        .encode(
-                                            x=alt.X("Suspicious Percentile:Q", title="Suspicious Percentile"),
-                                            y=alt.Y("Metric:N", sort="-x", title="Metric"),
-                                            tooltip=[
-                                                alt.Tooltip("Metric:N"),
-                                                alt.Tooltip("Suspicious Percentile:Q", format=".2f"),
-                                                alt.Tooltip("Value:Q", format=".4f"),
-                                                alt.Tooltip("Baseline Median:Q", format=".4f"),
-                                            ],
-                                        )
-                                        .properties(height=320)
-                                    )
-                                    st.altair_chart(forensic_chart, width="stretch")
-                                    st.dataframe(safe_dataframe(top_df), width="stretch", hide_index=True)
+                        if rendered_count == 0:
+                            st.info("No deviant metrics found.")
 
-                            if rendered_count == 0:
-                                st.info("No deviant metrics found.")
+with c3:
+    start_clicked = st.button(button_label, width="content", disabled=is_running, key="train_bg_btn")
 
-    with c3:
-        start_clicked = st.button(button_label, width="content", disabled=is_running, key="train_bg_btn")
+if start_clicked:
+    python_exec = get_preferred_python_executable()
+    train_cmd = [python_exec, "batch_analysis.py", "--force-run"]
 
-    if start_clicked:
-        python_exec = get_preferred_python_executable()
-        train_cmd = [python_exec, "main.py"]
+    os.makedirs("outputs/logs", exist_ok=True)
+    stamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+    log_path = os.path.join("outputs", "logs", f"batch_train_{stamp}.log")
 
-        os.makedirs("outputs/logs", exist_ok=True)
-        stamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-        log_path = os.path.join("outputs", "logs", f"batch_train_{stamp}.log")
+    creation_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    with open(log_path, "w", encoding="utf-8") as log_file:
+        proc = subprocess.Popen(
+            train_cmd,
+            cwd=os.getcwd(),
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            text=True,
+            creationflags=creation_flags,
+        )
 
-        creation_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        with open(log_path, "w", encoding="utf-8") as log_file:
-            proc = subprocess.Popen(
-                train_cmd,
-                cwd=os.getcwd(),
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                text=True,
-                creationflags=creation_flags,
+    st.session_state["train_proc"] = proc
+    st.session_state["train_log_path"] = log_path
+    st.session_state["train_last_rc"] = None
+    st.rerun()
+
+# Section 3: Data Overview and Insights
+st.divider()
+st.header("3) Data Overview and Insights")
+summary_c1, summary_c2, summary_c3, summary_c4, summary_c5 = st.columns(5)
+summary_c1.metric("Total Accounts in Baseline", f"{len(profile_df):,}")
+summary_c2.metric("Accounts Flagged", f"{int((profile_df['is_anomaly'] == 1).sum()):,}")
+summary_c3.metric("Normal", f"{int((profile_df['is_anomaly'] == 0).sum()):,}")
+summary_c4.metric(
+    "Flag Rate",
+    f"{((profile_df['is_anomaly'] == 1).mean() * 100):.2f}%" if len(profile_df) else "N/A",
+)
+summary_c5.metric("Average Anomaly Score", f"{profile_df['anomaly_pct'].mean():.2f}")
+
+tab_overview_1, tab_overview_2, tab_overview_3, tab_overview_4, tab_overview_5 = st.tabs(
+    ["Score Distribution", "Country", "Model Relationships", "Notable Behaviors", "Other"]
+)
+
+with tab_overview_1:
+    col_a, col_b = st.columns([6, 4]) # Adjust the ratio so the chart is wider
+    
+    with col_a:
+        # --- 1. Composite Score Histogram ---
+        st.subheader("Composite Score Distribution (Relative Percentile)")
+        st.caption("The Composite Score is a weighted percentile rank (0-100), not a raw probability.")
+        
+        score_bins = np.arange(0, 105, 5)
+        binned = pd.cut(
+            profile_df["anomaly_pct"],
+            bins=score_bins,
+            include_lowest=True,
+            right=True,
+        )
+        hist = (
+            binned.value_counts(sort=False)
+            .rename_axis("bin")
+            .reset_index(name="count")
+        )
+        hist["bin"] = hist["bin"].astype(str)
+        hist["pct"] = hist["count"] / max(len(profile_df), 1) * 100
+
+        st.bar_chart(hist.set_index("bin")["count"])
+
+        binned_counts = binned.value_counts(sort=False)
+        low_0_5 = int(binned_counts.iloc[0]) if len(binned_counts) > 0 else 0
+        st.caption(
+            f"Note: This reflects a uniform percentile distribution. Bin (0,5] contains {low_0_5} accounts."
+        )
+
+        with st.expander("View Detailed Histogram Bin Counts"):
+            st.dataframe(
+                safe_dataframe(hist.rename(columns={"bin": "Score Range", "count": "Frequency", "pct": "Percentage (%)"})), 
+                use_container_width=True
             )
 
-        st.session_state["train_proc"] = proc
-        st.session_state["train_log_path"] = log_path
-        st.session_state["train_last_rc"] = None
-        st.rerun()
+        st.divider()
 
-
-with dashboard_tab_3:
-    # Section 3: Data Overview and Insights
-    st.divider()
-    st.header("3) Data Overview and Insights")
-    summary_c1, summary_c2, summary_c3, summary_c4, summary_c5 = st.columns(5)
-    summary_c1.metric("Total Accounts in Baseline", f"{len(profile_df):,}")
-    summary_c2.metric("Accounts Flagged", f"{int((profile_df['is_anomaly'] == 1).sum()):,}")
-    summary_c3.metric("Normal", f"{int((profile_df['is_anomaly'] == 0).sum()):,}")
-    summary_c4.metric(
-        "Flag Rate",
-        f"{((profile_df['is_anomaly'] == 1).mean() * 100):.2f}%" if len(profile_df) else "N/A",
-    )
-    summary_c5.metric("Average Anomaly Score", f"{profile_df['anomaly_pct'].mean():.2f}")
-
-    tab_overview_1, tab_overview_2, tab_overview_3, tab_overview_4, tab_overview_5 = st.tabs(
-        ["Score Distribution", "Country", "Model Relationships", "Notable Behaviors", "Other"]
-    )
-
-    with tab_overview_1:
-        col_a, col_b = st.columns([6, 4]) # Adjust the ratio so the chart is wider
-        
-        with col_a:
-            # --- 1. Composite Score Histogram ---
-            st.subheader("Composite Score Distribution (Relative Percentile)")
-            st.caption("The Composite Score is a weighted percentile rank (0-100), not a raw probability.")
-            
-            score_bins = np.arange(0, 105, 5)
-            binned = pd.cut(
-                profile_df["anomaly_pct"],
-                bins=score_bins,
+        # --- 2. XGBoost Probability Histogram ---
+        st.subheader("XGBoost Probability Distribution (xgb_proba)")
+        if "xgb_proba" in profile_df.columns:
+            proba = pd.to_numeric(profile_df["xgb_proba"], errors="coerce").dropna().clip(0, 1)
+            proba_bins = np.linspace(0.0, 1.0, 21)
+            proba_binned = pd.cut(
+                proba,
+                bins=proba_bins,
                 include_lowest=True,
                 right=True,
             )
-            hist = (
-                binned.value_counts(sort=False)
+            proba_hist = (
+                proba_binned.value_counts(sort=False)
                 .rename_axis("bin")
                 .reset_index(name="count")
             )
-            hist["bin"] = hist["bin"].astype(str)
-            hist["pct"] = hist["count"] / max(len(profile_df), 1) * 100
+            proba_hist["bin"] = proba_hist["bin"].astype(str)
+            proba_hist["pct"] = proba_hist["count"] / max(len(proba), 1) * 100
 
-            st.bar_chart(hist.set_index("bin")["count"])
+            st.bar_chart(proba_hist.set_index("bin")["count"])
 
-            binned_counts = binned.value_counts(sort=False)
-            low_0_5 = int(binned_counts.iloc[0]) if len(binned_counts) > 0 else 0
+            proba_counts = proba_binned.value_counts(sort=False)
+            bin_0_05 = int(proba_counts.iloc[0]) if len(proba_counts) > 0 else 0
             st.caption(
-                f"Note: This reflects a uniform percentile distribution. Bin (0,5] contains {low_0_5} accounts."
+                f"Interpretation: XGBoost probabilities often skew heavily towards 0 for healthy datasets. "
+                f"The [0.0, 0.05] bin currently holds {bin_0_05} accounts."
             )
 
-            with st.expander("View Detailed Histogram Bin Counts"):
+            with st.expander("View Detailed XGBoost Probability Table"):
                 st.dataframe(
-                    safe_dataframe(hist.rename(columns={"bin": "Score Range", "count": "Frequency", "pct": "Percentage (%)"})), 
+                    safe_dataframe(proba_hist.rename(columns={"bin": "Proba Range", "count": "Frequency", "pct": "Percentage (%)"})),
                     use_container_width=True
                 )
-
-            st.divider()
-
-            # --- 2. XGBoost Probability Histogram ---
-            st.subheader("XGBoost Probability Distribution (xgb_proba)")
-            if "xgb_proba" in profile_df.columns:
-                proba = pd.to_numeric(profile_df["xgb_proba"], errors="coerce").dropna().clip(0, 1)
-                proba_bins = np.linspace(0.0, 1.0, 21)
-                proba_binned = pd.cut(
-                    proba,
-                    bins=proba_bins,
-                    include_lowest=True,
-                    right=True,
-                )
-                proba_hist = (
-                    proba_binned.value_counts(sort=False)
-                    .rename_axis("bin")
-                    .reset_index(name="count")
-                )
-                proba_hist["bin"] = proba_hist["bin"].astype(str)
-                proba_hist["pct"] = proba_hist["count"] / max(len(proba), 1) * 100
-
-                st.bar_chart(proba_hist.set_index("bin")["count"])
-
-                proba_counts = proba_binned.value_counts(sort=False)
-                bin_0_05 = int(proba_counts.iloc[0]) if len(proba_counts) > 0 else 0
-                st.caption(
-                    f"Interpretation: XGBoost probabilities often skew heavily towards 0 for healthy datasets. "
-                    f"The [0.0, 0.05] bin currently holds {bin_0_05} accounts."
-                )
-
-                with st.expander("View Detailed XGBoost Probability Table"):
-                    st.dataframe(
-                        safe_dataframe(proba_hist.rename(columns={"bin": "Proba Range", "count": "Frequency", "pct": "Percentage (%)"})),
-                        use_container_width=True
-                    )
-            else:
-                st.info("XGBoost probability data (xgb_proba) is not available in current session.")
-
-        with col_b:
-            # --- 3. Top Suspects Table ---
-            st.subheader("Most Suspicious Accounts")
-            st.write("Top 30 accounts ranked by Anomaly Score.")
-            
-            top_cols = ["playerid", "anomaly_pct", "xgb_proba", "is_anomaly", "xgb_flag", "if_flag"]
-            top_cols = [c for c in top_cols if c in profile_df.columns]
-            
-            # Mapping to user-friendly names for the table
-            display_map = {
-                "playerid": "Steam ID",
-                "anomaly_pct": "Risk Score (%)",
-                "xgb_proba": "XGB Proba",
-                "is_anomaly": "Is Anomaly",
-                "xgb_flag": "XGB Flag",
-                "if_flag": "IF Flag"
-            }
-            
-            sorted_top = profile_df.sort_values("anomaly_pct", ascending=False)[top_cols].head(30)
-
-            if "playerid" in sorted_top.columns:
-                sorted_top["playerid"] = sorted_top["playerid"].astype(str)
-
-            st.dataframe(
-                safe_dataframe(sorted_top.rename(columns=display_map)),
-                use_container_width=True,
-                hide_index=True
-            )
-
-    with tab_overview_2:
-        st.subheader("Geographic Anomaly Distribution")
-        country_df = profile_df.copy()
-        
-        if "country" in country_df.columns:
-            country_df["country"] = country_df["country"].fillna("Unknown")
-            
-            # Aggregate statistics by country
-            country_stats = (
-                country_df.groupby("country", as_index=False)
-                .agg(
-                    total_accounts=("playerid", "count"),
-                    flagged_accounts=("is_anomaly", "sum"),
-                    mean_anomaly_pct=("anomaly_pct", "mean"),
-                )
-            )
-            country_stats["flag_rate_pct"] = (
-                country_stats["flagged_accounts"] / country_stats["total_accounts"] * 100
-            )
-
-            # Overview Metrics
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Unique Countries", f"{country_df['country'].nunique(dropna=True):,}")
-            m2.metric("Unknown Location Rate", f"{(country_df['country'].eq('Unknown').mean() * 100):.2f}%")
-            
-            top_country_name = country_stats.sort_values("flagged_accounts", ascending=False).iloc[0]["country"]
-            m3.metric("Highest Anomaly Count", top_country_name)
-
-            # Prepare top 15 charts
-            top_flagged_count = country_stats.sort_values("flagged_accounts", ascending=False).head(15)
-            # Filter countries with at least 10 accounts to avoid 100% rate bias on single-account countries
-            top_flagged_rate = (
-                country_stats[country_stats["total_accounts"] >= 10]
-                .sort_values("flag_rate_pct", ascending=False)
-                .head(15)
-            )
-
-            c_left, c_right = st.columns(2)
-            
-            with c_left:
-                st.write("### Top 15 Countries by Anomaly Volume")
-                # Rename columns for automatic UI labels
-                count_chart = top_flagged_count.rename(columns={"country": "Country", "flagged_accounts": "Anomaly Count"})
-                st.bar_chart(count_chart.set_index("Country")["Anomaly Count"])
-                
-            with c_right:
-                st.write("### Top 15 Countries by Anomaly Rate")
-                st.caption("Minimum 10 accounts per country for statistical significance.")
-                if not top_flagged_rate.empty:
-                    rate_chart = top_flagged_rate.rename(columns={"country": "Country", "flag_rate_pct": "Anomaly Rate (%)"})
-                    st.bar_chart(rate_chart.set_index("Country")["Anomaly Rate (%)"])
-                else:
-                    st.info("Insufficient data for rate-based ranking (min. 10 accounts threshold).")
-
-            with st.expander("Detailed Geographic Statistics Table"):
-                # Rename for display
-                display_stats = country_stats.sort_values("flagged_accounts", ascending=False).rename(columns={
-                    "country": "Country",
-                    "total_accounts": "Total Users",
-                    "flagged_accounts": "Flagged Users",
-                    "flag_rate_pct": "Flag Rate (%)",
-                    "mean_anomaly_pct": "Avg Anomaly Pct"
-                })
-                st.dataframe(
-                    safe_dataframe(display_stats),
-                    use_container_width=True,
-                    hide_index=True
-                )
         else:
-            st.info("Country data is not available in the current dataset.")
+            st.info("XGBoost probability data (xgb_proba) is not available in current session.")
 
-    with tab_overview_3:
-        st.subheader("Model Correlation & Ensemble Consensus")
-        st.caption(
-            "This tab analyzes the relationship between XGBoost/Isolation Forest suspicions "
-            "and the final Ensemble anomaly decision."
-        )
+    with col_b:
+        # --- 3. Top Suspects Table ---
+        st.subheader("Most Suspicious Accounts")
+        st.write("Top 30 accounts ranked by Anomaly Score.")
         
-        with st.expander("Tooltip: Metric Definitions"):
-            st.dataframe(
-                safe_dataframe(build_tooltip_df(MODEL_RELATION_TOOLTIPS)),
-                use_container_width=True,
-                hide_index=True,
+        top_cols = ["playerid", "anomaly_pct", "xgb_proba", "is_anomaly", "xgb_flag", "if_flag"]
+        top_cols = [c for c in top_cols if c in profile_df.columns]
+        
+        # Mapping to user-friendly names for the table
+        display_map = {
+            "playerid": "Steam ID",
+            "anomaly_pct": "Risk Score (%)",
+            "xgb_proba": "XGB Proba",
+            "is_anomaly": "Is Anomaly",
+            "xgb_flag": "XGB Flag",
+            "if_flag": "IF Flag"
+        }
+        
+        sorted_top = profile_df.sort_values("anomaly_pct", ascending=False)[top_cols].head(30)
+
+        if "playerid" in sorted_top.columns:
+            sorted_top["playerid"] = sorted_top["playerid"].astype(str)
+
+        st.dataframe(
+            safe_dataframe(sorted_top.rename(columns=display_map)),
+            use_container_width=True,
+            hide_index=True
+        )
+
+with tab_overview_2:
+    st.subheader("Geographic Anomaly Distribution")
+    country_df = profile_df.copy()
+    
+    if "country" in country_df.columns:
+        country_df["country"] = country_df["country"].fillna("Unknown")
+        
+        # Aggregate statistics by country
+        country_stats = (
+            country_df.groupby("country", as_index=False)
+            .agg(
+                total_accounts=("playerid", "count"),
+                flagged_accounts=("is_anomaly", "sum"),
+                mean_anomaly_pct=("anomaly_pct", "mean"),
             )
-            
+        )
+        country_stats["flag_rate_pct"] = (
+            country_stats["flagged_accounts"] / country_stats["total_accounts"] * 100
+        )
+
+        # Overview Metrics
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Unique Countries", f"{country_df['country'].nunique(dropna=True):,}")
+        m2.metric("Unknown Location Rate", f"{(country_df['country'].eq('Unknown').mean() * 100):.2f}%")
+        
+        top_country_name = country_stats.sort_values("flagged_accounts", ascending=False).iloc[0]["country"]
+        m3.metric("Highest Anomaly Count", top_country_name)
+
+        # Prepare top 15 charts
+        top_flagged_count = country_stats.sort_values("flagged_accounts", ascending=False).head(15)
+        # Filter countries with at least 10 accounts to avoid 100% rate bias on single-account countries
+        top_flagged_rate = (
+            country_stats[country_stats["total_accounts"] >= 10]
+            .sort_values("flag_rate_pct", ascending=False)
+            .head(15)
+        )
+
         c_left, c_right = st.columns(2)
         
         with c_left:
-            st.subheader("Individual Model Flag Distribution")
-            for flag_col, label in [("xgb_flag", "XGBoost"), ("if_flag", "Isolation Forest")]:
-                if flag_col in profile_df.columns:
-                    flag_counts = (
-                        profile_df[flag_col]
-                        .value_counts()
-                        .sort_index()
-                        .rename_axis(flag_col)
-                        .reset_index(name="count")
-                    )
-                    flag_counts[flag_col] = flag_counts[flag_col].astype(str)
-                    
-                    # Rename for UI
-                    chart_data = flag_counts.rename(columns={flag_col: f"{label} Flag", "count": "Account Count"})
-                    st.write(f"**{label} Raw Flags**")
-                    st.bar_chart(chart_data.set_index(f"{label} Flag")["Account Count"])
-                    st.caption(f"{label}: 1 = Suspicious, 0 = Normal.")
-
+            st.write("### Top 15 Countries by Anomaly Volume")
+            # Rename columns for automatic UI labels
+            count_chart = top_flagged_count.rename(columns={"country": "Country", "flagged_accounts": "Anomaly Count"})
+            st.bar_chart(count_chart.set_index("Country")["Anomaly Count"])
+            
         with c_right:
-            st.subheader("Ensemble Consensus Rate")
-            for flag_col, label in [("xgb_flag", "XGBoost"), ("if_flag", "Isolation Forest")]:
-                if flag_col in profile_df.columns:
-                    flag_by_model = (
-                        profile_df.groupby(flag_col, as_index=False)
-                        .agg(total=("playerid", "count"), flagged=("is_anomaly", "sum"))
-                    )
-                    flag_by_model["flag_rate_pct"] = (
-                        flag_by_model["flagged"] / flag_by_model["total"] * 100
-                    )
-                    flag_by_model[flag_col] = flag_by_model[flag_col].astype(str)
-                    
-                    # Rename for UI
-                    chart_data = flag_by_model.rename(columns={flag_col: f"{label} Status", "flag_rate_pct": "Ensemble Flag Rate (%)"})
-                    st.write(f"**Final Flag Rate by {label} Status**")
-                    st.bar_chart(chart_data.set_index(f"{label} Status")["Ensemble Flag Rate (%)"])
-                    st.caption(f"Percentage of accounts confirmed as anomaly by Ensemble when {label} flag is 0 vs 1.")
-
-        if {"xgb_flag", "if_flag", "is_anomaly"}.issubset(profile_df.columns):
-            st.divider()
-            st.subheader("Consensus Matrix: XGBoost vs. Isolation Forest")
-
-            combo_df = profile_df[["xgb_flag", "if_flag", "is_anomaly"]].copy()
-            combo_df["combo"] = (
-                combo_df["xgb_flag"].astype(int).astype(str)
-                + "-"
-                + combo_df["if_flag"].astype(int).astype(str)
-            )
-
-            combo_stats = (
-                combo_df.groupby("combo", as_index=False)
-                .agg(
-                    total_accounts=("is_anomaly", "count"),
-                    ensemble_flagged=("is_anomaly", "sum"),
-                )
-            )
-            combo_stats["ensemble_flag_rate_pct"] = (
-                combo_stats["ensemble_flagged"] / combo_stats["total_accounts"] * 100
-            )
-
-            combo_order = ["0-0", "0-1", "1-0", "1-1"]
-            combo_stats["combo"] = pd.Categorical(
-                combo_stats["combo"], categories=combo_order, ordered=True
-            )
-            combo_stats = combo_stats.sort_values("combo")
-
-            cm1, cm2 = st.columns(2)
-            with cm1:
-                st.write("### Account Counts by Combination")
-                st.bar_chart(combo_stats.set_index("combo")["total_accounts"])
-            with cm2:
-                st.write("### Ensemble Flag Rate by Combination")
-                st.bar_chart(combo_stats.set_index("combo")["ensemble_flag_rate_pct"])
-
-            st.info(
-                "**How to read combinations (XGB-IF):**\n"
-                "* **1-1**: Both models agree (Highest confidence).\n"
-                "* **1-0**: Only XGBoost suspects.\n"
-                "* **0-1**: Only Isolation Forest suspects.\n"
-                "* **0-0**: Both models agree the user is Normal."
-            )
-
-            with st.expander("View Consensus Matrix Detail Table"):
-                st.dataframe(
-                    safe_dataframe(combo_stats.rename(columns={
-                        "combo": "Combination (XGB-IF)",
-                        "total_accounts": "Total Accounts",
-                        "ensemble_flagged": "Ensemble Flagged",
-                        "ensemble_flag_rate_pct": "Flag Rate (%)"
-                    })), 
-                    use_container_width=True, 
-                    hide_index=True
-                )
-
-    with tab_overview_4:
-        st.subheader("Behavioral Insights & Differentiation")
-        st.caption("Direct comparison between Flagged accounts (Anomaly) and Normal accounts.")
-
-        flagged_all = profile_df[profile_df["is_anomaly"] == 1].copy()
-        normal_true = profile_df[profile_df["is_anomaly"] == 0].copy()
-
-        # Compute interquartile range for robust spread comparison.
-        def _iqr(series: pd.Series) -> float:
-            clean = pd.to_numeric(series, errors="coerce").dropna()
-            if clean.empty:
-                return np.nan
-            q1, q3 = np.nanpercentile(clean, [25, 75])
-            return float(q3 - q1)
-
-        # Compute Cohen's d to quantify separation between flagged and normal groups.
-        def _cohen_d(group_a: pd.Series, group_b: pd.Series) -> float:
-            a = pd.to_numeric(group_a, errors="coerce").dropna().to_numpy(dtype=float)
-            b = pd.to_numeric(group_b, errors="coerce").dropna().to_numpy(dtype=float)
-            if len(a) < 2 or len(b) < 2:
-                return np.nan
-            var_a = np.var(a, ddof=1)
-            var_b = np.var(b, ddof=1)
-            pooled_denom = (len(a) - 1) + (len(b) - 1)
-            if pooled_denom <= 0:
-                return np.nan
-            pooled_std = np.sqrt(((len(a) - 1) * var_a + (len(b) - 1) * var_b) / pooled_denom)
-            if pooled_std == 0 or np.isnan(pooled_std):
-                return np.nan
-            return float((np.mean(a) - np.mean(b)) / pooled_std)
-
-        # Metrics to exclude from behavioral analysis
-        exclude_metrics = {
-            "playerid", "is_anomaly", "xgb_flag", "if_flag", 
-            "heuristic_bot", "heuristic_normal", "xgb_proba", 
-            "xgb_pct", "if_pct", "composite_score", "anomaly_pct", 
-            "normal_pct", "created_year",
-        }
-
-        numeric_cols = [
-            col for col in profile_df.columns
-            if col not in exclude_metrics and pd.api.types.is_numeric_dtype(profile_df[col])
-        ]
-        focus_metrics = sorted(numeric_cols)
-        rows = []
-        
-        for m in focus_metrics:
-            if m in profile_df.columns:
-                flagged_col = pd.to_numeric(flagged_all[m], errors="coerce")
-                normal_col = pd.to_numeric(normal_true[m], errors="coerce")
-                rows.append({
-                    "metric": m,
-                    "flagged_mean": flagged_col.mean(),
-                    "normal_mean": normal_col.mean(),
-                    "flagged_median": flagged_col.median(),
-                    "normal_median": normal_col.median(),
-                    "flagged_iqr": _iqr(flagged_col),
-                    "normal_iqr": _iqr(normal_col),
-                    "cohen_d_flagged_vs_normal": _cohen_d(flagged_col, normal_col),
-                })
-                
-        behavior_df = pd.DataFrame(rows)
-        
-        if not behavior_df.empty:
-            # Calculate ratio and sort by absolute effect size (Cohen's d)
-            behavior_df["ratio_flagged_vs_normal"] = behavior_df["flagged_mean"] / behavior_df["normal_mean"].replace(0, np.nan)
-            
-            sorted_df = behavior_df.sort_values(
-                "cohen_d_flagged_vs_normal", key=lambda s: s.abs(), ascending=False
-            )[[
-                "metric",
-                "ratio_flagged_vs_normal",
-                "cohen_d_flagged_vs_normal",
-            ]]
-            
-            # Map to display names
-            sorted_df["metric_display"] = sorted_df["metric"].map(METRIC_EN_LABELS).fillna(sorted_df["metric"])
-
-            behavior_view_mode = st.radio(
-                "View Mode",
-                ["Top 10 Metrics", "All Metrics"],
-                horizontal=True,
-            )
-
-            st.caption(f"Ranking based on {len(sorted_df)} valid numerical metrics.")
-
-            if behavior_view_mode == "Top 10 Metrics":
-                st.write("### Top 10 Features by Separation Strength (|Cohen's d|)")
-                display_df = sorted_df.head(10).drop(columns=["metric"]).rename(columns={
-                    "metric_display": "Feature",
-                    "ratio_flagged_vs_normal": "Ratio (Bot/Normal)",
-                    "cohen_d_flagged_vs_normal": "Effect Size (Cohen's d)"
-                })
-                st.dataframe(safe_dataframe(display_df), use_container_width=True, hide_index=True)
+            st.write("### Top 15 Countries by Anomaly Rate")
+            st.caption("Minimum 10 accounts per country for statistical significance.")
+            if not top_flagged_rate.empty:
+                rate_chart = top_flagged_rate.rename(columns={"country": "Country", "flag_rate_pct": "Anomaly Rate (%)"})
+                st.bar_chart(rate_chart.set_index("Country")["Anomaly Rate (%)"])
             else:
-                st.write("### All Behavioral Metrics (Sorted by Impact)")
-                display_df = sorted_df.drop(columns=["metric"]).rename(columns={
-                    "metric_display": "Feature",
-                    "ratio_flagged_vs_normal": "Ratio (Bot/Normal)",
-                    "cohen_d_flagged_vs_normal": "Effect Size (Cohen's d)"
-                })
-                st.dataframe(safe_dataframe(display_df), use_container_width=True, hide_index=True)
+                st.info("Insufficient data for rate-based ranking (min. 10 accounts threshold).")
 
-            # Visualization 1: Ratio Chart
-            chart_df = behavior_df[["metric", "ratio_flagged_vs_normal"]].dropna(how="all").copy()
-            chart_df["metric"] = chart_df["metric"].map(METRIC_EN_LABELS).fillna(chart_df["metric"])
-            
-            st.write("### Mean Ratio (Flagged vs. Normal)")
-            st.caption("Ratio > 1 means the metric is higher in flagged accounts.")
-            st.bar_chart(chart_df.set_index("metric")["ratio_flagged_vs_normal"])
-
-            # Visualization 2: Cohen's d Chart
-            d_chart = behavior_df[["metric", "cohen_d_flagged_vs_normal"]].dropna(how="all").copy()
-            d_chart["metric"] = d_chart["metric"].map(METRIC_EN_LABELS).fillna(d_chart["metric"])
-            
-            st.write("### Statistical Effect Size (Cohen's d)")
-            st.caption("Measures how many standard deviations separate the two groups.")
-            st.bar_chart(d_chart.set_index("metric")["cohen_d_flagged_vs_normal"])
-
-            st.info(
-                "**Quick Guide:** |Cohen's d| ~= 0.2 (Small), ~= 0.5 (Medium), >= 0.8 (Large effect). "
-                "High Effect Size indicates a strong predictor for the anomaly model."
+        with st.expander("Detailed Geographic Statistics Table"):
+            # Rename for display
+            display_stats = country_stats.sort_values("flagged_accounts", ascending=False).rename(columns={
+                "country": "Country",
+                "total_accounts": "Total Users",
+                "flagged_accounts": "Flagged Users",
+                "flag_rate_pct": "Flag Rate (%)",
+                "mean_anomaly_pct": "Avg Anomaly Pct"
+            })
+            st.dataframe(
+                safe_dataframe(display_stats),
+                use_container_width=True,
+                hide_index=True
             )
-        else:
-            st.warning("Insufficient behavioral data to display comparison charts.")
+    else:
+        st.info("Country data is not available in the current dataset.")
 
-    with tab_overview_5:
-        st.subheader("Demographic & Behavioral Correlation")
-
-        raw_profile = profile_df.copy()
-        if "created" in raw_profile.columns:
-            raw_profile["created_dt"] = pd.to_datetime(raw_profile["created"], errors="coerce")
-            raw_profile["created_year"] = raw_profile["created_dt"].dt.year
-
-        c1, c2 = st.columns(2)
+with tab_overview_3:
+    st.subheader("Model Correlation & Ensemble Consensus")
+    st.caption(
+        "This tab analyzes the relationship between XGBoost/Isolation Forest suspicions "
+        "and the final Ensemble anomaly decision."
+    )
+    
+    with st.expander("Tooltip: Metric Definitions"):
+        st.dataframe(
+            safe_dataframe(build_tooltip_df(MODEL_RELATION_TOOLTIPS)),
+            use_container_width=True,
+            hide_index=True,
+        )
         
-        with c1:
-            # --- 1. Account Age ---
-            if "account_age_days" in raw_profile.columns:
-                age_bins = [0, 365, 730, 1460, 2190, 3650, np.inf]
-                age_labels = ["< 1yr", "1-2yrs", "2-4yrs", "4-6yrs", "6-10yrs", "> 10yrs"]
-                age_stats = build_binned_rate_table(raw_profile, "account_age_days", age_bins, age_labels)
+    c_left, c_right = st.columns(2)
+    
+    with c_left:
+        st.subheader("Individual Model Flag Distribution")
+        for flag_col, label in [("xgb_flag", "XGBoost"), ("if_flag", "Isolation Forest")]:
+            if flag_col in profile_df.columns:
+                flag_counts = (
+                    profile_df[flag_col]
+                    .value_counts()
+                    .sort_index()
+                    .rename_axis(flag_col)
+                    .reset_index(name="count")
+                )
+                flag_counts[flag_col] = flag_counts[flag_col].astype(str)
                 
-                # Rename for professional UI
-                age_stats_en = age_stats.rename(columns={"bin": "Age Group", "flag_rate_pct": "Anomaly Rate (%)"})
+                # Rename for UI
+                chart_data = flag_counts.rename(columns={flag_col: f"{label} Flag", "count": "Account Count"})
+                st.write(f"**{label} Raw Flags**")
+                st.bar_chart(chart_data.set_index(f"{label} Flag")["Account Count"])
+                st.caption(f"{label}: 1 = Suspicious, 0 = Normal.")
+
+    with c_right:
+        st.subheader("Ensemble Consensus Rate")
+        for flag_col, label in [("xgb_flag", "XGBoost"), ("if_flag", "Isolation Forest")]:
+            if flag_col in profile_df.columns:
+                flag_by_model = (
+                    profile_df.groupby(flag_col, as_index=False)
+                    .agg(total=("playerid", "count"), flagged=("is_anomaly", "sum"))
+                )
+                flag_by_model["flag_rate_pct"] = (
+                    flag_by_model["flagged"] / flag_by_model["total"] * 100
+                )
+                flag_by_model[flag_col] = flag_by_model[flag_col].astype(str)
                 
-                st.write("### Anomaly Rate by Account Age")
-                st.bar_chart(age_stats_en.set_index("Age Group")["Anomaly Rate (%)"])
-                
-                with st.expander("View Detailed Age Statistics"):
-                    st.dataframe(safe_dataframe(age_stats_en), use_container_width=True)
+                # Rename for UI
+                chart_data = flag_by_model.rename(columns={flag_col: f"{label} Status", "flag_rate_pct": "Ensemble Flag Rate (%)"})
+                st.write(f"**Final Flag Rate by {label} Status**")
+                st.bar_chart(chart_data.set_index(f"{label} Status")["Ensemble Flag Rate (%)"])
+                st.caption(f"Percentage of accounts confirmed as anomaly by Ensemble when {label} flag is 0 vs 1.")
 
-            # --- 2. Library Size ---
-            if "library_size" in raw_profile.columns:
-                lib_bins = [0, 10, 25, 50, 100, 250, 500, np.inf]
-                lib_labels = ["0-10", "11-25", "26-50", "51-100", "101-250", "251-500", "> 500"]
-                lib_stats = build_binned_rate_table(raw_profile, "library_size", lib_bins, lib_labels)
-                
-                lib_stats_en = lib_stats.rename(columns={"bin": "Library Size", "flag_rate_pct": "Anomaly Rate (%)"})
-                
-                st.write("### Anomaly Rate by Library Size")
-                st.bar_chart(lib_stats_en.set_index("Library Size")["Anomaly Rate (%)"])
-                
-                with st.expander("View Detailed Library Size Statistics"):
-                    st.dataframe(safe_dataframe(lib_stats_en), use_container_width=True)
+    if {"xgb_flag", "if_flag", "is_anomaly"}.issubset(profile_df.columns):
+        st.divider()
+        st.subheader("Consensus Matrix: XGBoost vs. Isolation Forest")
 
-        with c2:
-            # --- 3. Total Reviews ---
-            if "total_reviews" in raw_profile.columns:
-                review_bins = [-0.1, 0, 1, 3, 5, 10, 20, np.inf]
-                review_labels = ["0", "1", "2-3", "4-5", "6-10", "11-20", "> 20"]
-                review_stats = build_binned_rate_table(raw_profile, "total_reviews", review_bins, review_labels)
-                
-                review_stats_en = review_stats.rename(columns={"bin": "Total Reviews", "flag_rate_pct": "Anomaly Rate (%)"})
-                
-                st.write("### Anomaly Rate by Total Reviews")
-                st.bar_chart(review_stats_en.set_index("Total Reviews")["Anomaly Rate (%)"])
-                
-                with st.expander("View Detailed Review Statistics"):
-                    st.dataframe(safe_dataframe(review_stats_en), use_container_width=True)
+        combo_df = profile_df[["xgb_flag", "if_flag", "is_anomaly"]].copy()
+        combo_df["combo"] = (
+            combo_df["xgb_flag"].astype(int).astype(str)
+            + "-"
+            + combo_df["if_flag"].astype(int).astype(str)
+        )
 
-            # --- 4. Playtime per Achievement ---
-            if "playtime_per_achievement" in raw_profile.columns:
-                play_bins = [0, 1, 5, 10, 25, 50, 100, np.inf]
-                play_labels = ["0-1", "1-5", "5-10", "10-25", "25-50", "50-100", "> 100"]
-                play_stats = build_binned_rate_table(raw_profile, "playtime_per_achievement", play_bins, play_labels)
-                
-                play_stats_en = play_stats.rename(columns={"bin": "Playtime/Achiev (min)", "flag_rate_pct": "Anomaly Rate (%)"})
-                
-                st.write("### Anomaly Rate by Playtime/Achievement")
-                st.bar_chart(play_stats_en.set_index("Playtime/Achiev (min)")["Anomaly Rate (%)"])
-                
-                with st.expander("View Detailed Playtime Statistics"):
-                    st.dataframe(safe_dataframe(play_stats_en), use_container_width=True)
+        combo_stats = (
+            combo_df.groupby("combo", as_index=False)
+            .agg(
+                total_accounts=("is_anomaly", "count"),
+                ensemble_flagged=("is_anomaly", "sum"),
+            )
+        )
+        combo_stats["ensemble_flag_rate_pct"] = (
+            combo_stats["ensemble_flagged"] / combo_stats["total_accounts"] * 100
+        )
 
-        # --- 5. Created Year ---
-        if "created_year" in raw_profile.columns:
-            year_stats = build_categorical_rate_table(raw_profile.dropna(subset=["created_year"]), "created_year")
-            year_stats["created_year"] = pd.to_numeric(year_stats["created_year"], errors="coerce").astype("Int64")
-            year_stats = year_stats.sort_values("created_year")
-            
-            year_stats_en = year_stats.rename(columns={"created_year": "Year Created", "flag_rate_pct": "Anomaly Rate (%)"})
-            
-            st.write("### Anomaly Rate by Account Creation Year")
-            st.line_chart(year_stats_en.set_index("Year Created")["Anomaly Rate (%)"])
-            
-            with st.expander("View Detailed Yearly Statistics"):
-                st.dataframe(safe_dataframe(year_stats_en), use_container_width=True)
+        combo_order = ["0-0", "0-1", "1-0", "1-1"]
+        combo_stats["combo"] = pd.Categorical(
+            combo_stats["combo"], categories=combo_order, ordered=True
+        )
+        combo_stats = combo_stats.sort_values("combo")
 
+        cm1, cm2 = st.columns(2)
+        with cm1:
+            st.write("### Account Counts by Combination")
+            st.bar_chart(combo_stats.set_index("combo")["total_accounts"])
+        with cm2:
+            st.write("### Ensemble Flag Rate by Combination")
+            st.bar_chart(combo_stats.set_index("combo")["ensemble_flag_rate_pct"])
 
-with dashboard_tab_4:
-    # Section 4: Model Plots and Evaluation
-    st.divider()
-    st.header("4) Model Plots and Evaluation")
+        st.info(
+            "**How to read combinations (XGB-IF):**\n"
+            "* **1-1**: Both models agree (Highest confidence).\n"
+            "* **1-0**: Only XGBoost suspects.\n"
+            "* **0-1**: Only Isolation Forest suspects.\n"
+            "* **0-0**: Both models agree the user is Normal."
+        )
 
-    plot_tab_1, plot_tab_2, plot_tab_3 = st.tabs(["SHAP Summary", "SHAP Scatter", "Model Evaluation"])
-
-    with plot_tab_1:
-        c1, c2 = st.columns(2)
-        with c1:
-            show_plot_if_exists("outputs/plots/shap_summary.png", "SHAP summary")
-        with c2:
-            show_plot_if_exists("outputs/plots/shap_waterfall.png", "SHAP waterfall")
-
-    with plot_tab_2:
-        scatter_paths = sorted(glob("outputs/plots/shap_scatter_*.png"))
-        if scatter_paths:
-            cols = st.columns(2)
-            for idx, p in enumerate(scatter_paths):
-                with cols[idx % 2]:
-                    # Show SHAP PC scatter plots at a more readable size.
-                    st.image(p, caption=os.path.basename(p), width=680)
-        else:
-            st.info("No found file shap_scatter_*.png in outputs/plots")
-
-    with plot_tab_3:
-        c1, c2 = st.columns(2)
-        with c1:
-            show_plot_if_exists("outputs/plots/xgb_pr_curve.png", "XGBoost PR curve")
-        with c2:
-            fi_candidates = sorted(glob("outputs/plots/xgb_feature_importance*.png"))
-            if fi_candidates:
-                show_plot_if_exists(fi_candidates[0], "XGBoost feature importance")
-
-
-with dashboard_tab_5:
-    # Section 5: Output Explorer
-    st.divider()
-    st.header("5) Output Explorer")
-    st.caption("View quick output CSV and log files from the training/pipeline.")
-
-    all_output_files = list_output_files("outputs")
-    csv_files = [p for p in all_output_files if p.lower().endswith(".csv")]
-    log_files = [p for p in all_output_files if p.lower().endswith(".log") or "/logs/" in p.lower()]
-
-    exp_tab_csv, exp_tab_log = st.tabs(["CSV", "LOG"])
-
-    with exp_tab_csv:
-        if not csv_files:
-            st.info("No CSV files found in outputs.")
-        else:
-            selected_csv = st.selectbox(
-                "Select CSV to view",
-                options=csv_files,
-                index=csv_files.index("outputs/ensemble_results.csv") if "outputs/ensemble_results.csv" in csv_files else 0,
+        with st.expander("View Consensus Matrix Detail Table"):
+            st.dataframe(
+                safe_dataframe(combo_stats.rename(columns={
+                    "combo": "Combination (XGB-IF)",
+                    "total_accounts": "Total Accounts",
+                    "ensemble_flagged": "Ensemble Flagged",
+                    "ensemble_flag_rate_pct": "Flag Rate (%)"
+                })), 
+                use_container_width=True, 
+                hide_index=True
             )
 
-            meta = get_file_meta(selected_csv)
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Size", meta["size_human"])
-            c2.metric("Last Modified", meta["mtime"])
-            c3.metric("Path", selected_csv)
+with tab_overview_4:
+    st.subheader("Behavioral Insights & Differentiation")
+    st.caption("Direct comparison between Flagged accounts (Anomaly) and Normal accounts.")
 
-            try:
-                csv_df = pd.read_csv(selected_csv)
-                st.write(f"Rows: {len(csv_df):,} | Cols: {csv_df.shape[1]}")
-                preview_rows = st.slider("Preview Rows", min_value=10, max_value=300, value=80, step=10, key="output_csv_preview")
-                st.dataframe(safe_dataframe(csv_df.head(preview_rows)), width="stretch")
-            except Exception as exc:
-                st.error(f"Failed to read CSV: {exc}")
+    flagged_all = profile_df[profile_df["is_anomaly"] == 1].copy()
+    normal_true = profile_df[profile_df["is_anomaly"] == 0].copy()
 
-            try:
-                with open(selected_csv, "rb") as f:
-                    file_bytes = f.read()
-                st.download_button(
-                    "Download CSV",
-                    data=file_bytes,
-                    file_name=os.path.basename(selected_csv),
-                    mime="text/csv",
-                    key=f"download_{selected_csv}",
-                )
-            except Exception as exc:
-                st.warning(f"Failed to create CSV download button: {exc}")
+    # Compute interquartile range for robust spread comparison.
+    def _iqr(series: pd.Series) -> float:
+        clean = pd.to_numeric(series, errors="coerce").dropna()
+        if clean.empty:
+            return np.nan
+        q1, q3 = np.nanpercentile(clean, [25, 75])
+        return float(q3 - q1)
 
-    with exp_tab_log:
-        if not log_files:
-            st.info("No log files found in outputs.")
+    # Compute Cohen's d to quantify separation between flagged and normal groups.
+    def _cohen_d(group_a: pd.Series, group_b: pd.Series) -> float:
+        a = pd.to_numeric(group_a, errors="coerce").dropna().to_numpy(dtype=float)
+        b = pd.to_numeric(group_b, errors="coerce").dropna().to_numpy(dtype=float)
+        if len(a) < 2 or len(b) < 2:
+            return np.nan
+        var_a = np.var(a, ddof=1)
+        var_b = np.var(b, ddof=1)
+        pooled_denom = (len(a) - 1) + (len(b) - 1)
+        if pooled_denom <= 0:
+            return np.nan
+        pooled_std = np.sqrt(((len(a) - 1) * var_a + (len(b) - 1) * var_b) / pooled_denom)
+        if pooled_std == 0 or np.isnan(pooled_std):
+            return np.nan
+        return float((np.mean(a) - np.mean(b)) / pooled_std)
+
+    # Metrics to exclude from behavioral analysis
+    exclude_metrics = {
+        "playerid", "is_anomaly", "xgb_flag", "if_flag", 
+        "heuristic_bot", "heuristic_normal", "xgb_proba", 
+        "xgb_pct", "if_pct", "composite_score", "anomaly_pct", 
+        "normal_pct", "created_year",
+    }
+
+    numeric_cols = [
+        col for col in profile_df.columns
+        if col not in exclude_metrics and pd.api.types.is_numeric_dtype(profile_df[col])
+    ]
+    focus_metrics = sorted(numeric_cols)
+    rows = []
+    
+    for m in focus_metrics:
+        if m in profile_df.columns:
+            flagged_col = pd.to_numeric(flagged_all[m], errors="coerce")
+            normal_col = pd.to_numeric(normal_true[m], errors="coerce")
+            rows.append({
+                "metric": m,
+                "flagged_mean": flagged_col.mean(),
+                "normal_mean": normal_col.mean(),
+                "flagged_median": flagged_col.median(),
+                "normal_median": normal_col.median(),
+                "flagged_iqr": _iqr(flagged_col),
+                "normal_iqr": _iqr(normal_col),
+                "cohen_d_flagged_vs_normal": _cohen_d(flagged_col, normal_col),
+            })
+            
+    behavior_df = pd.DataFrame(rows)
+    
+    if not behavior_df.empty:
+        # Calculate ratio and sort by absolute effect size (Cohen's d)
+        behavior_df["ratio_flagged_vs_normal"] = behavior_df["flagged_mean"] / behavior_df["normal_mean"].replace(0, np.nan)
+        
+        sorted_df = behavior_df.sort_values(
+            "cohen_d_flagged_vs_normal", key=lambda s: s.abs(), ascending=False
+        )[[
+            "metric",
+            "ratio_flagged_vs_normal",
+            "cohen_d_flagged_vs_normal",
+        ]]
+        
+        # Map to display names
+        sorted_df["metric_display"] = sorted_df["metric"].map(METRIC_EN_LABELS).fillna(sorted_df["metric"])
+
+        behavior_view_mode = st.radio(
+            "View Mode",
+            ["Top 10 Metrics", "All Metrics"],
+            horizontal=True,
+        )
+
+        st.caption(f"Ranking based on {len(sorted_df)} valid numerical metrics.")
+
+        if behavior_view_mode == "Top 10 Metrics":
+            st.write("### Top 10 Features by Separation Strength (|Cohen's d|)")
+            display_df = sorted_df.head(10).drop(columns=["metric"]).rename(columns={
+                "metric_display": "Feature",
+                "ratio_flagged_vs_normal": "Ratio (Bot/Normal)",
+                "cohen_d_flagged_vs_normal": "Effect Size (Cohen's d)"
+            })
+            st.dataframe(safe_dataframe(display_df), use_container_width=True, hide_index=True)
         else:
-            latest_log = max(log_files, key=lambda p: os.path.getmtime(p))
-            selected_log = st.selectbox(
-                "Select log to view",
-                options=log_files,
-                index=log_files.index(latest_log),
+            st.write("### All Behavioral Metrics (Sorted by Impact)")
+            display_df = sorted_df.drop(columns=["metric"]).rename(columns={
+                "metric_display": "Feature",
+                "ratio_flagged_vs_normal": "Ratio (Bot/Normal)",
+                "cohen_d_flagged_vs_normal": "Effect Size (Cohen's d)"
+            })
+            st.dataframe(safe_dataframe(display_df), use_container_width=True, hide_index=True)
+
+        # Visualization 1: Ratio Chart
+        chart_df = behavior_df[["metric", "ratio_flagged_vs_normal"]].dropna(how="all").copy()
+        chart_df["metric"] = chart_df["metric"].map(METRIC_EN_LABELS).fillna(chart_df["metric"])
+        
+        st.write("### Mean Ratio (Flagged vs. Normal)")
+        st.caption("Ratio > 1 means the metric is higher in flagged accounts.")
+        st.bar_chart(chart_df.set_index("metric")["ratio_flagged_vs_normal"])
+
+        # Visualization 2: Cohen's d Chart
+        d_chart = behavior_df[["metric", "cohen_d_flagged_vs_normal"]].dropna(how="all").copy()
+        d_chart["metric"] = d_chart["metric"].map(METRIC_EN_LABELS).fillna(d_chart["metric"])
+        
+        st.write("### Statistical Effect Size (Cohen's d)")
+        st.caption("Measures how many standard deviations separate the two groups.")
+        st.bar_chart(d_chart.set_index("metric")["cohen_d_flagged_vs_normal"])
+
+        st.info(
+            "**Quick Guide:** |Cohen's d| ≈ 0.2 (Small), ≈ 0.5 (Medium), ≥ 0.8 (Large effect). "
+            "High Effect Size indicates a strong predictor for the anomaly model."
+        )
+    else:
+        st.warning("Insufficient behavioral data to display comparison charts.")
+
+with tab_overview_5:
+    st.subheader("Demographic & Behavioral Correlation")
+
+    raw_profile = profile_df.copy()
+    if "created" in raw_profile.columns:
+        raw_profile["created_dt"] = pd.to_datetime(raw_profile["created"], errors="coerce")
+        raw_profile["created_year"] = raw_profile["created_dt"].dt.year
+
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        # --- 1. Account Age ---
+        if "account_age_days" in raw_profile.columns:
+            age_bins = [0, 365, 730, 1460, 2190, 3650, np.inf]
+            age_labels = ["< 1yr", "1-2yrs", "2-4yrs", "4-6yrs", "6-10yrs", "> 10yrs"]
+            age_stats = build_binned_rate_table(raw_profile, "account_age_days", age_bins, age_labels)
+            
+            # Rename for professional UI
+            age_stats_en = age_stats.rename(columns={"bin": "Age Group", "flag_rate_pct": "Anomaly Rate (%)"})
+            
+            st.write("### Anomaly Rate by Account Age")
+            st.bar_chart(age_stats_en.set_index("Age Group")["Anomaly Rate (%)"])
+            
+            with st.expander("View Detailed Age Statistics"):
+                st.dataframe(safe_dataframe(age_stats_en), use_container_width=True)
+
+        # --- 2. Library Size ---
+        if "library_size" in raw_profile.columns:
+            lib_bins = [0, 10, 25, 50, 100, 250, 500, np.inf]
+            lib_labels = ["0-10", "11-25", "26-50", "51-100", "101-250", "251-500", "> 500"]
+            lib_stats = build_binned_rate_table(raw_profile, "library_size", lib_bins, lib_labels)
+            
+            lib_stats_en = lib_stats.rename(columns={"bin": "Library Size", "flag_rate_pct": "Anomaly Rate (%)"})
+            
+            st.write("### Anomaly Rate by Library Size")
+            st.bar_chart(lib_stats_en.set_index("Library Size")["Anomaly Rate (%)"])
+            
+            with st.expander("View Detailed Library Size Statistics"):
+                st.dataframe(safe_dataframe(lib_stats_en), use_container_width=True)
+
+    with c2:
+        # --- 3. Total Reviews ---
+        if "total_reviews" in raw_profile.columns:
+            review_bins = [-0.1, 0, 1, 3, 5, 10, 20, np.inf]
+            review_labels = ["0", "1", "2-3", "4-5", "6-10", "11-20", "> 20"]
+            review_stats = build_binned_rate_table(raw_profile, "total_reviews", review_bins, review_labels)
+            
+            review_stats_en = review_stats.rename(columns={"bin": "Total Reviews", "flag_rate_pct": "Anomaly Rate (%)"})
+            
+            st.write("### Anomaly Rate by Total Reviews")
+            st.bar_chart(review_stats_en.set_index("Total Reviews")["Anomaly Rate (%)"])
+            
+            with st.expander("View Detailed Review Statistics"):
+                st.dataframe(safe_dataframe(review_stats_en), use_container_width=True)
+
+        # --- 4. Playtime per Achievement ---
+        if "playtime_per_achievement" in raw_profile.columns:
+            play_bins = [0, 1, 5, 10, 25, 50, 100, np.inf]
+            play_labels = ["0-1", "1-5", "5-10", "10-25", "25-50", "50-100", "> 100"]
+            play_stats = build_binned_rate_table(raw_profile, "playtime_per_achievement", play_bins, play_labels)
+            
+            play_stats_en = play_stats.rename(columns={"bin": "Playtime/Achiev (min)", "flag_rate_pct": "Anomaly Rate (%)"})
+            
+            st.write("### Anomaly Rate by Playtime/Achievement")
+            st.bar_chart(play_stats_en.set_index("Playtime/Achiev (min)")["Anomaly Rate (%)"])
+            
+            with st.expander("View Detailed Playtime Statistics"):
+                st.dataframe(safe_dataframe(play_stats_en), use_container_width=True)
+
+    # --- 5. Created Year ---
+    if "created_year" in raw_profile.columns:
+        year_stats = build_categorical_rate_table(raw_profile.dropna(subset=["created_year"]), "created_year")
+        year_stats["created_year"] = pd.to_numeric(year_stats["created_year"], errors="coerce").astype("Int64")
+        year_stats = year_stats.sort_values("created_year")
+        
+        year_stats_en = year_stats.rename(columns={"created_year": "Year Created", "flag_rate_pct": "Anomaly Rate (%)"})
+        
+        st.write("### Anomaly Rate by Account Creation Year")
+        st.line_chart(year_stats_en.set_index("Year Created")["Anomaly Rate (%)"])
+        
+        with st.expander("View Detailed Yearly Statistics"):
+            st.dataframe(safe_dataframe(year_stats_en), use_container_width=True)
+
+# Section 4: Model Plots and Evaluation
+st.divider()
+st.header("4) Model Plots and Evaluation")
+
+plot_tab_1, plot_tab_2, plot_tab_3 = st.tabs(["SHAP Summary", "SHAP Scatter", "Model Evaluation"])
+
+with plot_tab_1:
+    c1, c2 = st.columns(2)
+    with c1:
+        show_plot_if_exists("outputs/plots/shap_summary.png", "SHAP summary")
+    with c2:
+        show_plot_if_exists("outputs/plots/shap_waterfall.png", "SHAP waterfall")
+
+with plot_tab_2:
+    scatter_paths = sorted(glob("outputs/plots/shap_scatter_*.png"))
+    if scatter_paths:
+        cols = st.columns(2)
+        for idx, p in enumerate(scatter_paths):
+            with cols[idx % 2]:
+                # Show SHAP PC scatter plots at a more readable size.
+                st.image(p, caption=os.path.basename(p), width=680)
+    else:
+        st.info("No found file shap_scatter_*.png in outputs/plots")
+
+with plot_tab_3:
+    c1, c2 = st.columns(2)
+    with c1:
+        show_plot_if_exists("outputs/plots/xgb_pr_curve.png", "XGBoost PR curve")
+    with c2:
+        fi_candidates = sorted(glob("outputs/plots/xgb_feature_importance*.png"))
+        if fi_candidates:
+            show_plot_if_exists(fi_candidates[0], "XGBoost feature importance")
+
+# Section 5: Output Explorer
+st.divider()
+st.header("5) Output Explorer")
+st.caption("View quick output CSV and log files from the training/pipeline.")
+
+all_output_files = list_output_files("outputs")
+csv_files = [p for p in all_output_files if p.lower().endswith(".csv")]
+log_files = [p for p in all_output_files if p.lower().endswith(".log") or "/logs/" in p.lower()]
+
+exp_tab_csv, exp_tab_log = st.tabs(["CSV", "LOG"])
+
+with exp_tab_csv:
+    if not csv_files:
+        st.info("No CSV files found in outputs.")
+    else:
+        selected_csv = st.selectbox(
+            "Select CSV to view",
+            options=csv_files,
+            index=csv_files.index("outputs/ensemble_results.csv") if "outputs/ensemble_results.csv" in csv_files else 0,
+        )
+
+        meta = get_file_meta(selected_csv)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Size", meta["size_human"])
+        c2.metric("Last Modified", meta["mtime"])
+        c3.metric("Path", selected_csv)
+
+        try:
+            csv_df = pd.read_csv(selected_csv)
+            st.write(f"Rows: {len(csv_df):,} | Cols: {csv_df.shape[1]}")
+            preview_rows = st.slider("Preview Rows", min_value=10, max_value=300, value=80, step=10, key="output_csv_preview")
+            st.dataframe(safe_dataframe(csv_df.head(preview_rows)), width="stretch")
+        except Exception as exc:
+            st.error(f"Failed to read CSV: {exc}")
+
+        try:
+            with open(selected_csv, "rb") as f:
+                file_bytes = f.read()
+            st.download_button(
+                "Download CSV",
+                data=file_bytes,
+                file_name=os.path.basename(selected_csv),
+                mime="text/csv",
+                key=f"download_{selected_csv}",
             )
+        except Exception as exc:
+            st.warning(f"Failed to create CSV download button: {exc}")
 
-            meta = get_file_meta(selected_log)
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Size", meta["size_human"])
-            c2.metric("Last Modified", meta["mtime"])
-            c3.metric("Path", selected_log)
+with exp_tab_log:
+    if not log_files:
+        st.info("No log files found in outputs.")
+    else:
+        latest_log = max(log_files, key=lambda p: os.path.getmtime(p))
+        selected_log = st.selectbox(
+            "Select log to view",
+            options=log_files,
+            index=log_files.index(latest_log),
+        )
 
-            try:
-                with open(selected_log, "r", encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-                st.code(content[-15000:])
-            except Exception as exc:
-                st.error(f"Failed to read log file: {exc}")
+        meta = get_file_meta(selected_log)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Size", meta["size_human"])
+        c2.metric("Last Modified", meta["mtime"])
+        c3.metric("Path", selected_log)
 
-            try:
-                with open(selected_log, "rb") as f:
-                    file_bytes = f.read()
-                st.download_button(
-                    "Download Log",
-                    data=file_bytes,
-                    file_name=os.path.basename(selected_log),
-                    mime="text/plain",
-                    key=f"download_{selected_log}",
-                )
-            except Exception as exc:
-                st.warning(f"Failed to create log download button: {exc}")
+        try:
+            with open(selected_log, "r", encoding="utf-8", errors="ignore") as f:
+                content = f.read()
+            st.code(content[-15000:])
+        except Exception as exc:
+            st.error(f"Failed to read log file: {exc}")
 
-    st.caption("(c) 2026 - Data 4 Life")
+        try:
+            with open(selected_log, "rb") as f:
+                file_bytes = f.read()
+            st.download_button(
+                "Download Log",
+                data=file_bytes,
+                file_name=os.path.basename(selected_log),
+                mime="text/plain",
+                key=f"download_{selected_log}",
+            )
+        except Exception as exc:
+            st.warning(f"Failed to create log download button: {exc}")
+
+st.caption("© 2026 - Data 4 Life")

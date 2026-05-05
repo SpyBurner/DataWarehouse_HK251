@@ -1,0 +1,15 @@
+data/
+outputs/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.build/
+dist/
+*.egg-info/
+.git/
+.vscode/
+.DS_Store

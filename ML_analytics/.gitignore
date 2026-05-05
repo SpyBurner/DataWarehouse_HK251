@@ -1,0 +1,6 @@
+data/
+__pycache__/
+.env
+outputs/
+steam_anomaly_implementation.md
+.claude/
