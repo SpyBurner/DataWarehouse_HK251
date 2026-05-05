@@ -1,8 +1,8 @@
-﻿\chapter{Tiền xử lý dữ liệu}
+\chapter{Tiền xử lý dữ liệu}
 
-Dựa vào Pentaho Data Integration, 파ipeline (\texttt{Plans/pentaho\_pipeline\_guide.md}) thực thi tự động:
-\begin{itemize}
-    \item \textbf{Landing Validation}: \texttt{00\_validate\_landing.kjb} kiểm tra sự hiện diện của thư mục và \texttt{\_SUCCESS}.
-    \item \textbf{Ingestion}: Các Transform (10, 20, 30) tải dữ liệu từ CSV sang Staging, sau đó chuyển sang Data Warehouse qua các kịch bản ánh xạ 1-1, trước khi biến đổi đặc trưng ở Datamart.
+Dựa vào Pentaho Data Integration, pipeline (	exttt{Plans/pentaho_pipeline_guide.md}) thực thi tự động:
+egin{itemize}
+    \item 	extbf{Landing Validation}: 	exttt{00_validate_landing.kjb} kiểm tra sự hiện diện của thư mục và 	exttt{_SUCCESS}.
+    \item 	extbf{Ingestion}: Các Transform (10, 20, 30) tải dữ liệu từ CSV sang Staging, sau đó chuyển sang Data Warehouse qua các kịch bản ánh xạ 1-1, trước khi biến đổi đặc trưng ở Datamart.
 \end{itemize}
 Hệ thống Pentaho gồm 14 job files (.kjb) và 30 transform files (.ktr).
