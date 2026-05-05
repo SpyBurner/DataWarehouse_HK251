@@ -1,6 +1,6 @@
 \chapter{Data Warehouse}
 
-Hệ thống Data Warehouse được xây dựng trên PostgreSQL, lấy điểm nhấn từ mô hình sao (Star Schema). 
+Hệ thống Data Warehouse được xây dựng trên PostgreSQL, lấy điểm nhấn từ mô hình bông tuyết (Snowflake Schema). 
 Dựa vào các kịch bản \texttt{SQL\_Postgres\_InitWarehouse.sql} và \texttt{SQL\_SQLServer\_CreateStagingDB.sql}, hệ thống bao gồm:
 \begin{itemize}
     \item \textbf{Staging Area}: SQL Server. Lưu trữ các bảng \texttt{stg\_players}, \texttt{stg\_history}, \texttt{stg\_reviews}, \texttt{stg\_library}.
@@ -91,14 +91,31 @@ Dữ liệu được thu thập từ nhiều nguồn khác nhau, do đó độ p
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{Images/Slide/2.jpg}{
+    \IfFileExists{Images/Slide/DW_Schema.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/DW_Schema}
+    }{
+        \fbox{\begin{minipage}{0.7\linewidth}
+            \centering
+            \vspace{2cm}
+            [IMAGE PLACEHOLDER]\\
+            \texttt{Images/Slide/DW_Schema.png}\\
+            \vspace{2cm}
+        \end{minipage}}
+    }
+    \caption{ERD của Data Warehouse với mô hình bông tuyết (Snowflake Schema)}
+    \label{fig:pipeline_diagram}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{Images/Slide/2.png}{
         \includegraphics[width=0.7\linewidth]{Images/Slide/2}
     }{
         \fbox{\begin{minipage}{0.7\linewidth}
             \centering
             \vspace{2cm}
             [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Slide/2.jpg}\\
+            \texttt{Images/Slide/2.png}\\
             \vspace{2cm}
         \end{minipage}}
     }
