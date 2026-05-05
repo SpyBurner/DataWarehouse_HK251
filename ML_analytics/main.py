@@ -24,6 +24,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from active_learning import generate_review_sample, integrate_human_labels
+from data_prep import get_engine, load_history, load_players, load_purchased, load_reviews
 from features import (
     add_time_components,
     build_feature_matrix,
@@ -56,12 +57,14 @@ REVIEWED_CSV = os.path.join(os.path.dirname(__file__), "data", "reviewed.csv")
 # Data loading
 # ---------------------------------------------------------------------------
 
-def load_parquets() -> tuple:
-    log.info("Loading processed parquet files from %s …", PROCESSED_DIR)
-    history   = pd.read_parquet(os.path.join(PROCESSED_DIR, "history.parquet"))
-    players   = pd.read_parquet(os.path.join(PROCESSED_DIR, "players.parquet"))
-    reviews   = pd.read_parquet(os.path.join(PROCESSED_DIR, "reviews.parquet"))
-    purchased = pd.read_parquet(os.path.join(PROCESSED_DIR, "purchased.parquet"))
+def load_data_from_db() -> tuple:
+    log.info("Loading data directly from PostgreSQL DW …")
+    engine = get_engine()
+    history = load_history(engine)
+    players = load_players(engine)
+    reviews = load_reviews(engine)
+    purchased = load_purchased(engine)
+    
     log.info("  history:   %d rows  |  columns: %s", len(history),   history.columns.tolist())
     log.info("  players:   %d rows  |  columns: %s", len(players),   players.columns.tolist())
     log.info("  reviews:   %d rows  |  columns: %s", len(reviews),   reviews.columns.tolist())
@@ -78,7 +81,7 @@ def main() -> None:
     os.makedirs(os.path.join(OUTPUTS_DIR, "plots"), exist_ok=True)
 
     # ── Load ──────────────────────────────────────────────────────────────────
-    history, players, reviews, purchased = load_parquets()
+    history, players, reviews, purchased = load_data_from_db()
     history = add_time_components(history)
     feature_reference_time = pd.to_datetime(history["date_acquired"], errors="coerce").max()
     log.info("Feature reference timestamp (last achievement record): %s", feature_reference_time)
