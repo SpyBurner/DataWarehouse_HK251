@@ -7,5 +7,6 @@ test_zone
 **/.venv
 **/.pyenv
 **/__pycache__/**
-
 scratch_scripts/
+Báo cáo DACN_HK251
+Report/Build/**

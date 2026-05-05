@@ -643,7 +643,7 @@ TRUNCATE TABLE dw.stg_library_temp;</sql>
       <draw>Y</draw>
       <nr>0</nr>
       <xloc>528</xloc>
-      <yloc>420</yloc>
+      <yloc>416</yloc>
       <attributes_kjc/>
     </entry>
   </entries>
