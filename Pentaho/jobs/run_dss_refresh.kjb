@@ -367,8 +367,8 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>368</xloc>
-      <yloc>688</yloc>
+      <xloc>16</xloc>
+      <yloc>544</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -404,8 +404,8 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>528</xloc>
-      <yloc>688</yloc>
+      <xloc>176</xloc>
+      <yloc>544</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -443,8 +443,8 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>688</xloc>
-      <yloc>144</yloc>
+      <xloc>336</xloc>
+      <yloc>80</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -482,8 +482,8 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>688</xloc>
-      <yloc>224</yloc>
+      <xloc>336</xloc>
+      <yloc>160</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -521,8 +521,8 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>688</xloc>
-      <yloc>304</yloc>
+      <xloc>336</xloc>
+      <yloc>240</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -560,8 +560,8 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>688</xloc>
-      <yloc>384</yloc>
+      <xloc>336</xloc>
+      <yloc>320</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -599,8 +599,8 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>688</xloc>
-      <yloc>464</yloc>
+      <xloc>336</xloc>
+      <yloc>400</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -618,8 +618,8 @@ VALUES (TRY_CAST('${LATEST_PARTITION}' AS DATETIME2), 'success')</sql>
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>832</xloc>
-      <yloc>80</yloc>
+      <xloc>480</xloc>
+      <yloc>16</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -637,8 +637,8 @@ VALUES ('${LATEST_PARTITION}', 'failed', 'Pipeline failed — check Pentaho logs
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>832</xloc>
-      <yloc>688</yloc>
+      <xloc>480</xloc>
+      <yloc>544</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -659,8 +659,8 @@ VALUES ('${LATEST_PARTITION}', 'failed', 'Pipeline failed — check Pentaho logs
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>528</xloc>
-      <yloc>80</yloc>
+      <xloc>176</xloc>
+      <yloc>16</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -672,8 +672,8 @@ VALUES ('${LATEST_PARTITION}', 'failed', 'Pipeline failed — check Pentaho logs
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>992</xloc>
-      <yloc>688</yloc>
+      <xloc>640</xloc>
+      <yloc>544</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -696,8 +696,8 @@ VALUES ('${LATEST_PARTITION}', 'failed', 'Pipeline failed — check Pentaho logs
       <parallel>Y</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>528</xloc>
-      <yloc>304</yloc>
+      <xloc>176</xloc>
+      <yloc>240</yloc>
       <attributes_kjc/>
     </entry>
     <entry>
@@ -735,8 +735,8 @@ VALUES ('${LATEST_PARTITION}', 'failed', 'Pipeline failed — check Pentaho logs
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>688</xloc>
-      <yloc>544</yloc>
+      <xloc>336</xloc>
+      <yloc>480</yloc>
       <attributes_kjc/>
     </entry>
   </entries>

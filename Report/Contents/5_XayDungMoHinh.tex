@@ -157,14 +157,16 @@ Ngưỡng 85 là điểm cắt để phân loại tài khoản là bot hay norma
 Bước phân tích thêm để tối ưu trọng số:
 
 \begin{itemize}
-    \item Sweep $xgb\_weight$ từ 0.0 → 1.0 (bước 0.05)
+    \item Sweep $xgb\_weight$ từ $0.0 \rightarrow 1.0$ (bước 0.05)
+
     \item Tại mỗi điểm, tính 3 metrics:
     \begin{itemize}
         \item \textbf{Precision@100}: Độ chính xác trong top-100 flagged
         \item \textbf{PR-AUC}: Area under precision-recall curve
         \item \textbf{High\_Conflict\_Cases (HCC)}: Số tài khoản có mô hình không đồng ý
     \end{itemize}
-    \item Tìm "optimal sweet spot": argmax Precision@100 trong tập HCC \geq median(HCC)
+    \item Tìm "optimal sweet spot": $\text{argmax Precision@100}$ trong tập $\text{HCC} \geq \text{median(HCC)}$
+
     \item Output: \texttt{ensemble\_weight\_metrics.csv}, \texttt{plots/ensemble\_weight\_tuning.png}
 \end{itemize}
 

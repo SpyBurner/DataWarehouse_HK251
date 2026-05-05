@@ -1,2 +1,3 @@
-powershell -Command "Remove-Item -Path 'Report\Build\*' -Recurse -Force -ErrorAction SilentlyContinue"
-docker compose run --rm texlive pdflatex -interaction=nonstopmode -output-directory=Build main.tex
+@echo off
+docker compose run --rm texlive bash -c "chmod +x build.sh && ./build.sh"
+

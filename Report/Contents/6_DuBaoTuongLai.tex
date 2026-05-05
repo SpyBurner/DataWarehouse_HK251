@@ -26,7 +26,8 @@ Sau khi training, mô hình ensemble được sử dụng để:
     \end{itemize}
     \item Ensemble:
     \begin{itemize}
-        \item Convert sang percentile ranks: $if\_pct$, $xgb\_pct$ ∈ [0, 100]
+        \item Convert sang percentile ranks: $if\_pct$, $xgb\_pct \in [0, 100]$
+
         \item Composite: $\text{composite} = 0.70 \times xgb\_pct + 0.30 \times if\_pct$
         \item Prediction: $is\_anomaly = \text{composite} \geq 85$
     \end{itemize}
@@ -52,7 +53,8 @@ Sau khi training, mô hình ensemble được sử dụng để:
 
 Những tài khoản này là:
 \begin{itemize}
-    \item Mô hình học máy dự báo là BOT (composite ≥ 85)
+    \item Mô hình học máy dự báo là BOT ($\text{composite} \geq 85$)
+
     \item Nhưng heuristic rule không phát hiện là bot
     \item Có thể là false positive hoặc heuristic bỏ sót
 \end{itemize}
@@ -105,7 +107,7 @@ Module \texttt{features.py} - Function \texttt{integrate\_human\_labels()}:
 
 Module \texttt{evaluate.py}:
 
-\subsection{1. So Sánh Các Mô Hình}
+\subsection{So Sánh Các Mô Hình}
 
 Function \texttt{\_model\_comparison()}:
 
@@ -120,7 +122,7 @@ Tính các metrics cho 3 mô hình: XGBoost, IsolationForest, Ensemble
 
 Output: \texttt{model\_comparison.csv}
 
-\subsection{2. Đánh Giá Chi Tiết XGBoost}
+\subsection{Đánh Giá Chi Tiết XGBoost}
 
 \begin{figure}[H]
     \centering
@@ -154,7 +156,7 @@ Function \texttt{\_evaluate\_xgboost()}:
 \end{itemize}
 
 
-\subsection{3. Phân Tích So Sánh Đặc Trưng}
+\subsection{Phân Tích So Sánh Đặc Trưng}
 
 \begin{itemize}
     \item So sánh: Top-50 flagged accounts vs Normal accounts
@@ -163,7 +165,7 @@ Function \texttt{\_evaluate\_xgboost()}:
     \item Giúp hiểu thành phần nào của feature matrix là discriminative nhất
 \end{itemize}
 
-\subsection{4. Phân Tích Khả Năng Giải Thích SHAP}
+\subsection{Phân Tích Khả Năng Giải Thích SHAP}
 
 Giải thích độ đóng góp của từng đặc trưng đối với từng dự báo:
 
