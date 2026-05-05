@@ -8,5 +8,6 @@ python-dotenv
 scikit-learn
 scipy
 shap
+SQLAlchemy
 streamlit
 xgboost
