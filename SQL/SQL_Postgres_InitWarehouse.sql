@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS dw.dim_player (
  
 CREATE TABLE IF NOT EXISTS dw.fact_achievement_unlock (
     playerid        VARCHAR(30) NOT NULL,
-    achievementid   VARCHAR(200) NOT NULL,
+    achievementid   TEXT NOT NULL,
     date_acquired   TIMESTAMP,
     PRIMARY KEY (playerid, achievementid)
 );
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS dw.dim_game (
 );
 
 CREATE TABLE IF NOT EXISTS dw.fact_achievement (
-    achievementid   VARCHAR(200) PRIMARY KEY,
+    achievementid   TEXT PRIMARY KEY,
     gameid          VARCHAR(30)
 );
 
