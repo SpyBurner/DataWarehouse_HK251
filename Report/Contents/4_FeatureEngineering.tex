@@ -1,3 +1,92 @@
-\chapter{Feature Engineering}
+﻿\chapter{Ká»¹ Thuáº­t TrÃ­ch Xuáº¥t Äáº·c TrÆ°ng (Feature Engineering)}
 
-% TODO: Feature Engineering
+\section{Tá»•ng Quan}
+Quy trÃ¬nh trÃ­ch xuáº¥t Ä‘áº·c trÆ°ng Ä‘Æ°á»£c thá»±c hiá»‡n trong module \texttt{features.py}, táº¡o ra má»™t ma tráº­n Ä‘áº·c trÆ°ng gá»“m 25 cá»™t tá»« dá»¯ liá»‡u lá»‹ch sá»­ thÃ nh tá»±u, Ä‘Ã¡nh giÃ¡, thÃ´ng tin tÃ i khoáº£n vÃ  thÃ´ng tin game Ä‘Ã£ mua.
+
+\section{BÆ°á»›c Loáº¡i Bá» (Trimming)}
+TrÆ°á»›c khi tÃ­nh toÃ¡n báº¥t ká»³ Ä‘áº·c trÆ°ng nÃ o, há»‡ thá»‘ng Ã¡p dá»¥ng tiÃªu chÃ­ loáº¡i bá» Ä‘á»ƒ táº­p trung vÃ o cÃ¡c tÃ i khoáº£n cÃ³ hoáº¡t Ä‘á»™ng Ä‘Ã¡ng ká»ƒ:
+
+\begin{itemize}
+    \item Äiá»u kiá»‡n: \textbf{(â‰¥10 achievements HOáº¶C â‰¥3 reviews) VÃ€ library\_size â‰¥ 1}
+    \item TÃ¡c dá»¥ng: Giáº£m táº­p dá»¯ liá»‡u tá»« ~196K xuá»‘ng ~3K tÃ i khoáº£n (98\%), loáº¡i bá» ghost accounts vÃ  tÃ i khoáº£n khÃ´ng hoáº¡t Ä‘á»™ng
+    \item Lá»£i Ã­ch: TÄƒng tá»‘c Ä‘á»™ tÃ­nh toÃ¡n groupby/merge, loáº¡i bá» feature rows chá»‰ toÃ n NaN
+    \item LÆ°u Ã½: Logic OR giá»¯ láº¡i cÃ¡c bot candidates cÃ³ 0 achievements nhÆ°ng spam reviews
+\end{itemize}
+
+\section{NhÃ³m A: Äáº·c TrÆ°ng Tá»‘c Äá»™ (Speed Features)}
+
+NhÃ³m nÃ y pháº£n Ã¡nh tá»‘c Ä‘á»™ má»Ÿ khÃ³a thÃ nh tá»±u:
+
+\begin{itemize}
+    \item \texttt{median\_unlock\_interval\_sec}: Khoáº£ng thá»i gian trung bÃ¬nh giá»¯a cÃ¡c láº§n má»Ÿ khÃ³a (tÃ­nh báº±ng giÃ¢y)
+    \item \texttt{std\_unlock\_interval\_sec}: Äá»™ lá»‡ch chuáº©n cá»§a cÃ¡c khoáº£ng thá»i gian má»Ÿ khÃ³a
+    \item \texttt{cv\_unlock\_interval}: Há»‡ sá»‘ biáº¿n thiÃªn (standard deviation / mean) cá»§a khoáº£ng thá»i gian
+    \item \texttt{max\_achievements\_per\_minute}: Sá»‘ lÆ°á»£ng thÃ nh tá»±u tá»‘i Ä‘a má»Ÿ khÃ³a trong 1 phÃºt
+    \item \texttt{max\_achievements\_per\_day}: Sá»‘ lÆ°á»£ng thÃ nh tá»±u tá»‘i Ä‘a má»Ÿ khÃ³a trong 1 ngÃ y
+\end{itemize}
+
+\section{NhÃ³m B: Äáº·c TrÆ°ng Thá»i Gian (Temporal Features)}
+
+NhÃ³m nÃ y Ä‘áº·c trÆ°ng hÃ³a mÃ´ hÃ¬nh hoáº¡t Ä‘á»™ng theo thá»i gian:
+
+\begin{itemize}
+    \item \texttt{night\_activity\_ratio}: Tá»· lá»‡ thÃ nh tá»±u má»Ÿ khÃ³a trong giá» ban Ä‘Ãªm (giá» Ä‘á»‹a phÆ°Æ¡ng < 6 sÃ¡ng), cÃ³ Ä‘Æ°a vÃ o tÃ­nh toÃ¡n mÃºi giá»
+    \item \texttt{hour\_entropy}: Entropy Shannon cá»§a phÃ¢n phá»‘i thÃ nh tá»±u theo 24 giá» (tÃ­nh theo giá» Ä‘á»‹a phÆ°Æ¡ng), pháº£n Ã¡nh tÃ­nh ngáº«u nhiÃªn cá»§a hoáº¡t Ä‘á»™ng
+    \item \texttt{activity\_density}: Máº­t Ä‘á»™ hoáº¡t Ä‘á»™ng = sá»‘ ngÃ y cÃ³ hoáº¡t Ä‘á»™ng / khoáº£ng thá»i gian tá»« ngÃ y Ä‘áº§u Ä‘áº¿n ngÃ y cuá»‘i
+\end{itemize}
+
+\section{NhÃ³m C: Äáº·c TrÆ°ng Äa Dáº¡ng (Diversity Features)}
+
+NhÃ³m nÃ y Ä‘Ã¡nh giÃ¡ pháº¡m vi vÃ  sá»± phÃ¢n bá»• cá»§a hoáº¡t Ä‘á»™ng:
+
+\begin{itemize}
+    \item \texttt{total\_achievements}: Tá»•ng sá»‘ thÃ nh tá»±u Ä‘Ã£ má»Ÿ khÃ³a
+    \item \texttt{library\_size}: Sá»‘ lÆ°á»£ng game Ä‘Ã£ mua
+    \item \texttt{achievement\_game\_ratio}: Tá»· lá»‡ = sá»‘ game cÃ³ achievements / tá»•ng sá»‘ game
+    \item \texttt{top1\_game\_concentration}: Pháº§n trÄƒm thÃ nh tá»±u tá»« game cÃ³ nhiá»u achievements nháº¥t
+    \item \texttt{top3\_game\_concentration}: Pháº§n trÄƒm thÃ nh tá»±u tá»« 3 game cÃ³ nhiá»u achievements nháº¥t
+    \item \texttt{game\_hhi}: Chá»‰ sá»‘ Herfindahl = $\sum (game\_proportion)^2$, Ä‘o má»©c Ä‘á»™ táº­p trung
+    \item \texttt{avg\_achievements\_per\_game}: Trung bÃ¬nh = tá»•ng achievements / sá»‘ game cÃ³ achievements
+\end{itemize}
+
+\section{NhÃ³m D: Äáº·c TrÆ°ng ÄÃ¡nh GiÃ¡ (Review Features)}
+
+NhÃ³m nÃ y phÃ¢n tÃ­ch mÃ´ hÃ¬nh Ä‘Ã¡nh giÃ¡ cá»§a ngÆ°á»i dÃ¹ng:
+
+\begin{itemize}
+    \item \texttt{total\_reviews}: Tá»•ng sá»‘ Ä‘Ã¡nh giÃ¡ Ä‘Ã£ viáº¿t
+    \item \texttt{review\_unplayed\_ratio}: Tá»· lá»‡ Ä‘Ã¡nh giÃ¡ cho game chÆ°a chÆ¡i (playtime == 0)
+    \item \texttt{review\_duplication\_rate}: Tá»· lá»‡ = $1 - \frac{\text{unique\_texts}}{\text{total\_reviews}}$, pháº£n Ã¡nh má»©c Ä‘á»™ spam
+    \item \texttt{avg\_review\_length}: Äá»™ dÃ i trung bÃ¬nh cá»§a Ä‘Ã¡nh giÃ¡
+    \item \texttt{min\_review\_length}: Äá»™ dÃ i tá»‘i thiá»ƒu cá»§a Ä‘Ã¡nh giÃ¡
+\end{itemize}
+
+\section{NhÃ³m E: Äáº·c TrÆ°ng Tuá»•i TÃ i Khoáº£n (Account Age Features)}
+
+NhÃ³m nÃ y liÃªn quan Ä‘áº¿n lá»‹ch sá»­ tÃ i khoáº£n:
+
+\begin{itemize}
+    \item \texttt{days\_before\_first\_achievement}: Sá»‘ ngÃ y tá»« khi táº¡o tÃ i khoáº£n Ä‘áº¿n láº§n má»Ÿ khÃ³a thÃ nh tá»±u Ä‘áº§u tiÃªn
+    \item \texttt{account\_age\_days}: Sá»‘ ngÃ y tá»« khi táº¡o tÃ i khoáº£n Ä‘áº¿n thá»i Ä‘iá»ƒm tham chiáº¿u (má»‘c thá»i gian cá»‘ Ä‘á»‹nh)
+\end{itemize}
+
+\section{NhÃ³m F: Äáº·c TrÆ°ng Thá»i Gian ChÆ¡i (Playtime Features)}
+
+NhÃ³m nÃ y phÃ¢n tÃ­ch má»‘i quan há»‡ giá»¯a thÃ nh tá»±u vÃ  thá»i gian chÆ¡i thá»±c táº¿:
+
+QuÃ¡ trÃ¬nh káº¿t há»£p dá»¯ liá»‡u:
+\begin{itemize}
+    \item \textbf{Äiá»u kiá»‡n A}: Game cÃ³ trong lá»‹ch sá»­ nhÆ°ng khÃ´ng trong library â†’ bá» qua (API delay)
+    \item \textbf{Äiá»u kiá»‡n B}: Game trong library vá»›i playtime > 0 â†’ hoáº¡t Ä‘á»™ng bÃ¬nh thÆ°á»ng
+    \item \textbf{Äiá»u kiá»‡n C}: Game trong library vá»›i playtime == 0 â†’ tÃ­n hiá»‡u bot (SAM/unlocker)
+\end{itemize}
+
+CÃ¡c Ä‘áº·c trÆ°ng:
+\begin{itemize}
+    \item \texttt{zero\_playtime\_achievements\_ratio}: Tá»· lá»‡ = $\frac{\text{achievements tá»« C}}{\text{B + C}}$
+    \item \texttt{total\_playtime\_mins}: Tá»•ng thá»i gian chÆ¡i (game riÃªng biá»‡t, trÃ¡nh inflate)
+    \item \texttt{playtime\_per\_achievement}: Thá»i gian chÆ¡i trung bÃ¬nh trÃªn má»—i thÃ nh tá»±u = $\frac{\text{total\_playtime\_mins}}{\text{B + C}}$
+\end{itemize}
+
+\section{TÃ³m Táº¯t}
+Tá»•ng cá»™ng \textbf{25 Ä‘áº·c trÆ°ng} Ä‘Æ°á»£c trÃ­ch xuáº¥t, cung cáº¥p cÃ¡i nhÃ¬n toÃ n diá»‡n vá» hÃ nh vi ngÆ°á»i dÃ¹ng tá»« nhiá»u khÃ­a cáº¡nh: tá»‘c Ä‘á»™, thá»i gian, Ä‘a dáº¡ng, hoáº¡t Ä‘á»™ng Ä‘Ã¡nh giÃ¡, tuá»•i tÃ i khoáº£n vÃ  má»‘i quan há»‡ giá»¯a achievements vÃ  gameplay thá»±c táº¿.

@@ -1,3 +1,164 @@
-\chapter{Xây dựng mô hình}
+﻿\chapter{XÃ¢y Dá»±ng MÃ´ HÃ¬nh (Model Selection, Training \& Tuning)}
 
-% TODO: Chọn mô hình, Nạp dữ liệu, Lưu trữ
+\section{Tá»•ng Quan}
+Há»‡ thá»‘ng sá»­ dá»¥ng hai mÃ´ hÃ¬nh machine learning chÃ­nh: \textbf{XGBoost} vÃ  \textbf{IsolationForest}, Ä‘Æ°á»£c káº¿t há»£p trong má»™t ensemble Ä‘á»ƒ tÄƒng Ä‘á»™ chÃ­nh xÃ¡c vÃ  Ä‘á»™ tin cáº­y cá»§a phÃ¡t hiá»‡n bot.
+
+\section{Xá»­ LÃ½ Dá»¯ Liá»‡u TrÆ°á»›c Training}
+
+\subsection{ÄÆ°á»ng Dáº«n A: IsolationForest}
+
+\subsubsection{BÆ°á»›c 1: Log Transform}
+Äá»ƒ tÄƒng á»•n Ä‘á»‹nh cá»§a Ä‘Æ°á»ng dáº«n trong IsolationForest, há»‡ thá»‘ng Ã¡p dá»¥ng log-transform cho 9 Ä‘áº·c trÆ°ng cÃ³ phÃ¢n phá»‘i náº·ng vá» Ä‘uÃ´i (heavy-tailed):
+
+\begin{equation}
+\text{feature\_transformed} = \log_1p(\text{clip}(x, \min=0))
+\end{equation}
+
+\textbf{LÃ½ do}: CÃ¡c Ä‘áº·c trÆ°ng nhÆ° \texttt{max\_achievements\_per\_day}, \texttt{total\_achievements} cÃ³ pháº¡m vi 6+ báº­c Ä‘á»™ lá»›n. Random split khÃ´ng Ä‘á»u khÃ´ng Ä‘áº¡i diá»‡n Ä‘á»§ cho máº­t Ä‘á»™ dá»¯ liá»‡u thá»±c. Log transform cÃ¢n báº±ng láº¡i pháº¡m vi.
+
+\subsubsection{BÆ°á»›c 2: Preprocessing}
+\begin{itemize}
+    \item \texttt{SimpleImputer(strategy='median')}: Äiá»n giÃ¡ trá»‹ thiáº¿u báº±ng median
+    \item \texttt{StandardScaler}: Chuáº©n hÃ³a dá»¯ liá»‡u vá» trung bÃ¬nh = 0, Ä‘á»™ lá»‡ch chuáº©n = 1
+    \item Output: DataFrame $X_{IF}$ Ä‘Æ°á»£c lÆ°u sáº¡ch
+    \item LÆ°u trá»¯: File \texttt{preprocessor.pkl} chá»©a pipeline preprocessing
+\end{itemize}
+
+\subsection{ÄÆ°á»ng Dáº«n B: XGBoost}
+
+\textbf{Chiáº¿n lÆ°á»£c}: Sá»­ dá»¥ng $X_{raw}$ trá»±c tiáº¿p (khÃ´ng impute, khÃ´ng scale)
+
+\textbf{LÃ½ do}:
+\begin{itemize}
+    \item XGBoost xá»­ lÃ½ NaN natively thÃ´ng qua sparsity-aware split finding
+    \item NaN trong review features (ngÆ°á»i dÃ¹ng khÃ´ng viáº¿t Ä‘Ã¡nh giÃ¡) lÃ  \textbf{tÃ­n hiá»‡u thá»±c sá»±}, khÃ´ng pháº£i gap cáº§n Ä‘iá»n
+    \item XGBoost báº¥t biáº¿n vá»›i monotonic transform â†’ log-transform khÃ´ng cÃ³ tÃ¡c dá»¥ng
+\end{itemize}
+
+\section{Model A: IsolationForest}
+
+\subsection{Tuning}
+\begin{itemize}
+    \item PhÆ°Æ¡ng phÃ¡p: Grid search trÃªn siÃªu tham sá»‘
+    \item Objective: Tá»‘i Ä‘a hÃ³a ROC-AUC so vá»›i $y_{heuristic}$ (nhÃ£n sá»­ dá»¥ng heuristic rule)
+    \item Output: $best\_if\_params$ (best hyperparameters)
+\end{itemize}
+
+\subsection{Training}
+\begin{itemize}
+    \item Sá»­ dá»¥ng $X_{IF}$ (log-transformed + scaled)
+    \item Ãp dá»¥ng $best\_if\_params$
+    \item Output: MÃ´ hÃ¬nh \texttt{best\_if.pkl}
+    \item Metric: ROC-AUC Ä‘á»ƒ Ä‘Ã¡nh giÃ¡ cháº¥t lÆ°á»£ng
+\end{itemize}
+
+\section{Model B: XGBoost (Semi-Supervised)}
+
+\subsection{Chuáº©n Bá»‹ Dá»¯ Liá»‡u}
+Training chá»‰ diá»…n ra trÃªn \textbf{confident subset}:
+\begin{equation}
+\text{confident\_mask} = (y_{heuristic} == 1) \text{ OR } (y_{normal} == 1)
+\end{equation}
+
+CÃ¡c tÃ i khoáº£n trong "grey area" (khÃ´ng bot, khÃ´ng cháº¯c cháº¯n normal) Ä‘Æ°á»£c loáº¡i bá» Ä‘á»ƒ tÄƒng cháº¥t lÆ°á»£ng training signal.
+
+\subsection{Tuning}
+
+\subsubsection{Xá»­ LÃ½ Class Imbalance}
+\begin{equation}
+\text{scale\_pos\_weight} = \frac{\text{negative\_count}}{\text{positive\_count}}
+\end{equation}
+
+Tá»· lá»‡ nÃ y giÃºp XGBoost cÃ¢n báº±ng chi phÃ­ lá»—i giá»¯a class bot vÃ  normal.
+
+\subsubsection{TÃ¬m SiÃªu Tham Sá»‘ Tá»‘i Æ¯u}
+\begin{itemize}
+    \item PhÆ°Æ¡ng phÃ¡p: \texttt{RandomizedSearchCV}
+    \item Sá»‘ láº§n tÃ¬m kiáº¿m: $n\_iter = 50$
+    \item Cross-validation: 5-fold
+    \item Metric: \textbf{PR-AUC (Precision-Recall AUC)} â€” Æ°u tiÃªn cho dá»¯ liá»‡u imbalanced
+    \item Output: $best\_xgb$ (best model), lÆ°u vÃ o \texttt{best\_xgb.pkl}
+\end{itemize}
+
+\subsection{Training \& Prediction}
+\begin{itemize}
+    \item Training data: Confident subset cá»§a $X_{raw}$
+    \item Prediction: Cháº¡y \texttt{predict\_proba()} trÃªn \textbf{toÃ n bá»™} $X_{raw}$ (khÃ´ng chá»‰ training subset)
+    \item Output: Probability scores (0â€“1) cho táº¥t cáº£ tÃ i khoáº£n
+    \item LÆ°u trá»¯: \texttt{xgb\_tuning\_results.csv} chá»©a chi tiáº¿t cÃ¡c láº§n tÃ¬m kiáº¿m
+\end{itemize}
+
+\section{XÃ¢y Dá»±ng Ensemble}
+
+\subsection{Chiáº¿n LÆ°á»£c}
+Káº¿t há»£p hai mÃ´ hÃ¬nh Ä‘á»ƒ táº­n dá»¥ng Ä‘iá»ƒm máº¡nh cá»§a tá»«ng mÃ´ hÃ¬nh:
+
+\subsubsection{BÆ°á»›c 1: Rank Percentile}
+\begin{itemize}
+    \item TÃ­nh percentile rank cá»§a IF scores: $if\_pct = \text{percentileofscore}(if\_scores) \in [0, 100]$
+    \item TÃ­nh percentile rank cá»§a XGBoost probabilities: $xgb\_pct = \text{percentileofscore}(xgb\_proba) \in [0, 100]$
+\end{itemize}
+
+\subsubsection{BÆ°á»›c 2: Composite Score}
+\begin{equation}
+\text{composite} = 0.70 \times xgb\_pct + 0.30 \times if\_pct
+\end{equation}
+
+Trá»ng sá»‘ 70:30 Æ°u tiÃªn XGBoost (supervised signal máº¡nh hÆ¡n) nhÆ°ng váº«n giá»¯ IsolationForest Ä‘á»ƒ báº¯t unsupervised anomalies.
+
+\subsubsection{BÆ°á»›c 3: Quyáº¿t Äá»‹nh Anomaly}
+\begin{equation}
+is\_anomaly = \text{composite} \geq 85
+\end{equation}
+
+NgÆ°á»¡ng 85 lÃ  Ä‘iá»ƒm cáº¯t Ä‘á»ƒ phÃ¢n loáº¡i tÃ i khoáº£n lÃ  bot hay normal.
+
+\subsection{Tuning Trá»ng Sá»‘ Ensemble (Optional)}
+BÆ°á»›c phÃ¢n tÃ­ch thÃªm Ä‘á»ƒ tá»‘i Æ°u trá»ng sá»‘:
+
+\begin{itemize}
+    \item Sweep $xgb\_weight$ tá»« 0.0 â†’ 1.0 (bÆ°á»›c 0.05)
+    \item Táº¡i má»—i Ä‘iá»ƒm, tÃ­nh 3 metrics:
+    \begin{itemize}
+        \item \textbf{Precision@100}: Äá»™ chÃ­nh xÃ¡c trong top-100 flagged
+        \item \textbf{PR-AUC}: Area under precision-recall curve
+        \item \textbf{High\_Conflict\_Cases (HCC)}: Sá»‘ tÃ i khoáº£n cÃ³ mÃ´ hÃ¬nh khÃ´ng Ä‘á»“ng Ã½
+    \end{itemize}
+    \item TÃ¬m "optimal sweet spot": argmax Precision@100 trong táº­p HCC â‰¥ median(HCC)
+    \item Output: \texttt{ensemble\_weight\_metrics.csv}, \texttt{plots/ensemble\_weight\_tuning.png}
+\end{itemize}
+
+\section{LÆ°u Trá»¯ MÃ´ HÃ¬nh \& SiÃªu Tham Sá»‘}
+
+\subsection{File LÆ°u Trá»¯}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{TÃªn File} & \textbf{Ná»™i Dung} \\
+\hline
+\texttt{best\_if.pkl} & MÃ´ hÃ¬nh IsolationForest Ä‘Ã£ train \\
+\texttt{best\_xgb.pkl} & MÃ´ hÃ¬nh XGBoost Ä‘Ã£ train \\
+\texttt{preprocessor.pkl} & Pipeline preprocessing (SimpleImputer + StandardScaler) \\
+\texttt{xgb\_tuning\_results.csv} & Chi tiáº¿t 50 láº§n tÃ¬m kiáº¿m XGBoost (siÃªu tham sá»‘ + metric) \\
+\texttt{ensemble\_weight\_metrics.csv} & Káº¿t quáº£ tuning trá»ng sá»‘ ensemble \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{ThÃ´ng Tin SiÃªu Tham Sá»‘}
+\begin{itemize}
+    \item \textbf{IsolationForest}: Stored in \texttt{best\_if.pkl}
+    \begin{itemize}
+        \item CÃ¡c siÃªu tham sá»‘ nhÆ° \texttt{n\_estimators}, \texttt{contamination}, \texttt{random\_state}, v.v.
+    \end{itemize}
+    \item \textbf{XGBoost}: Stored in \texttt{best\_xgb.pkl}
+    \begin{itemize}
+        \item CÃ¡c siÃªu tham sá»‘ nhÆ° \texttt{max\_depth}, \texttt{learning\_rate}, \texttt{subsample}, \texttt{scale\_pos\_weight}, v.v.
+        \item Chi tiáº¿t tuning process lÆ°u trong \texttt{xgb\_tuning\_results.csv}
+    \end{itemize}
+    \item \textbf{Ensemble Weights}: Máº·c Ä‘á»‹nh 70:30 (XGBoost:IsolationForest), cÃ³ thá»ƒ Ä‘iá»u chá»‰nh dá»±a trÃªn \texttt{ensemble\_weight\_metrics.csv}
+\end{itemize}
+
+\section{TÃ³m Táº¯t}
+Há»‡ thá»‘ng training gá»“m 3 giai Ä‘oáº¡n: (1) preprocessing riÃªng biá»‡t cho IF vs XGBoost, (2) tuning siÃªu tham sá»‘ cho tá»«ng mÃ´ hÃ¬nh Ä‘á»™c láº­p, (3) káº¿t há»£p trong ensemble weighted. Táº¥t cáº£ mÃ´ hÃ¬nh, preprocessor, vÃ  káº¿t quáº£ tuning Ä‘Æ°á»£c lÆ°u trá»¯ cho tÃ¡i sá»­ dá»¥ng vÃ  truy váº¿t.
