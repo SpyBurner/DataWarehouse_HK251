@@ -122,3 +122,12 @@ volumes:
   mssql_data:
   postgres_data:
   ml_outputs:
+  # -----------------------------------
+  # 5. REPORT BUILDER (LaTeX)
+  # -----------------------------------
+  texlive:
+    image: aergus/latex
+    container_name: texlive
+    volumes:
+      - ./Report:/workspace
+    working_dir: /workspace
