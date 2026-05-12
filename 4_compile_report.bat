@@ -1,3 +1,3 @@
 @echo off
-docker compose run --rm texlive bash -c "chmod +x build.sh && ./build.sh"
+docker run --rm -v "%cd%\Report:/workspace" -w /workspace aergus/latex bash -c "chmod +x build.sh && ./build.sh"
 

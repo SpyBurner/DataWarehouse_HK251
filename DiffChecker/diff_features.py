@@ -50,6 +50,9 @@ def check_diffs():
     diff_results = []
     
     for col in common_cols:
+        avg_diff = np.nan
+        max_diff = np.nan
+        median_diff = np.nan
         # Check for numeric differences with a small tolerance for floating point noise
         if pd.api.types.is_numeric_dtype(df_btl_c[col]) and pd.api.types.is_numeric_dtype(df_orig_c[col]):
             # Fill NaNs with a unique value to treat NaN vs NaN as match and NaN vs value as diff
@@ -57,6 +60,12 @@ def check_diffs():
             v2 = df_orig_c[col].fillna(-999999)
             # Use np.isclose for floats, otherwise !=
             is_diff = ~np.isclose(v1, v2, rtol=1e-05, atol=1e-08)
+            
+            # Calculate mean and max absolute difference
+            abs_diff = (df_btl_c[col] - df_orig_c[col]).abs()
+            avg_diff = abs_diff.mean()
+            max_diff = abs_diff.max()
+            median_diff = abs_diff.median()
         else:
             is_diff = (df_btl_c[col].fillna('NAN') != df_orig_c[col].fillna('NAN'))
         
@@ -64,7 +73,10 @@ def check_diffs():
         diff_results.append({
             'Feature': col,
             'Diff Count': diff_count,
-            'Diff %': (diff_count / len(common_ids)) * 100
+            'Diff %': (diff_count / len(common_ids)) * 100,
+            'Avg Diff (Abs)': avg_diff,
+            'Median Diff (Abs)': median_diff,
+            'Max Diff (Abs)': max_diff
         })
 
     # 6. Sort and display

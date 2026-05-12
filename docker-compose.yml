@@ -117,22 +117,13 @@ services:
       - ./ML_analytics:/app
       - ./steam_crawler:/app/steam_crawler
       - ./Datasets:/app/Datasets
-      - ml_outputs:/app/outputs
+      - ./ML_analytics/outputs:/app/outputs
 
-  # -----------------------------------
-  # 5. REPORT BUILDER (LaTeX)
-  # -----------------------------------
-  texlive:
-    image: aergus/latex
-    container_name: texlive
-    volumes:
-      - ./Report:/workspace
-    working_dir: /workspace
+
 
 # Define named volumes
 volumes:
   mssql_data:
   postgres_data:
-  ml_outputs:
 
 # 76561198287996067

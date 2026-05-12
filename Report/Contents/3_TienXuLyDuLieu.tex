@@ -143,17 +143,78 @@ Dữ liệu thô từ file CSV được đọc và đẩy vào các bảng đệ
     \label{fig:pentaho_build_dw}
 \end{figure}
 
-Trong bước Build DW, hệ thống thực hiện các công việc sau:
-\begin{itemize}
-    \item Đọc dữ liệu tạm thời từ vùng Staging (MSSQL).
-    \item Loại bỏ dữ liệu trùng lặp (Deduplicate) do tính chất thu thập liên tục của hệ thống.
-    \item Ép kiểu dữ liệu (Data type casting) để đảm bảo dữ liệu phù hợp với chuẩn định dạng của Data Warehouse.
-    \item Ánh xạ và đẩy dữ liệu vào đúng các bảng tương ứng trong PostgreSQL.
-\end{itemize}
+Trong bước Build DW, hệ thống thực hiện hàng loạt các quy tắc làm sạch và chuẩn hóa dữ liệu phức tạp. Dưới đây là 5 cơ chế tiền xử lý cốt lõi được áp dụng:
 
-Để đảm bảo tính toàn vẹn cấu trúc và thỏa mãn các ràng buộc khóa ngoại (key constraints) cũng như sự phụ thuộc giữa các bảng, quá trình Build DW bắt buộc phải được thực hiện qua 3 giai đoạn tuần tự:
 \begin{enumerate}
-    \item \textbf{Phase 1}: Xây dựng các bảng Dimension.
-    \item \textbf{Phase 2}: Xây dựng các bảng Fact / Bridge ưu tiên thứ nhất (các bảng có ít ràng buộc phụ thuộc phức tạp hơn).
-    \item \textbf{Phase 3}: Xây dựng các bảng Fact / Bridge cấp hai (phụ thuộc vào dữ liệu của các bảng đã được nạp ở giai đoạn trước).
+    \item \textbf{Khử trùng lặp dữ liệu (Deduplication)}: Dữ liệu crawl về thường xuyên có sự trùng lặp. Ở tầng Staging, các truy vấn SQL sử dụng hàm cửa sổ \texttt{ROW\_NUMBER() OVER(PARTITION BY <pk> ORDER BY loaded\_at DESC)} để chỉ trích xuất phiên bản mới nhất của mỗi bản ghi (dựa trên thời điểm nạp) trước khi chuyển vào DW.
+    \item \textbf{Ép kiểu và chuẩn hóa định dạng (Type Casting)}: Tất cả dữ liệu ở vùng Staging đều được lưu dưới dạng chuỗi \texttt{NVARCHAR(MAX)} để đảm bảo không bị mất dữ liệu trong quá trình nạp thô. Tại bước này, hệ thống sẽ thực hiện ép kiểu:
+    \begin{itemize}
+        \item \textbf{Ngày tháng}: Chuyển đổi chuỗi thành \texttt{Date} và \texttt{Timestamp} (ví dụ: ép kiểu \texttt{date\_acquired} sang định dạng \texttt{DD/MM/YYYY HH:mm} chuẩn UTC).
+        \item \textbf{Số học}: Ép kiểu các trường tương tác của review (\texttt{helpful, funny, awards}) sang dạng số nguyên.
+        \item \textbf{Văn bản}: Giữ nguyên định dạng chuỗi dài để bảo toàn các ký tự UTF-8 phức tạp (như review tiếng Trung, Nga, Emoji).
+    \end{itemize}
+    \item \textbf{Bóc tách và định hình lại cấu trúc (Data Reshaping)}: Cột \texttt{library} của mỗi người dùng ban đầu được lưu dưới dạng một mảng JSON nguyên khối (VD: \texttt{[\{"appid":730,"playtime\_mins":500\}]}). Dữ liệu này được đẩy vào bảng trung gian \texttt{stg\_library\_temp}, sau đó sử dụng các hàm xử lý JSON của PostgreSQL để giải nén (unnest) và trải phẳng thành nhiều bản ghi riêng biệt \texttt{(playerid, appid, playtime\_mins)} trong bảng \texttt{fact\_library}.
+    \item \textbf{Xử lý giá trị rỗng (Null Handling)}: Xử lý các trường hợp dữ liệu khuyết thiếu, ví dụ như tự động gán giá trị 0 cho \texttt{playtime\_mins} nếu trường này bị null trong mảng JSON.
+    \item \textbf{Bảo đảm toàn vẹn tham chiếu qua Trigger (Referential Integrity Fallback)}: Do tính chất không đồng bộ của quá trình thu thập, đôi khi một bản ghi Fact có thể trỏ tới một chiều (Dimension) chưa tồn tại. Hệ thống PostgreSQL DW sử dụng các trigger \texttt{BEFORE INSERT} để kiểm soát luồng dữ liệu:
+    \begin{itemize}
+        \item \textbf{Xóa bỏ bản ghi lỗi (Hard-reject)}: Nếu Fact trỏ tới một \texttt{playerid} hoàn toàn không tồn tại, dòng dữ liệu đó bị xóa bỏ vì là dữ liệu rác.
+        \item \textbf{Tự động sinh dữ liệu ảo (Auto-stubbing)}: Nếu một game hoặc một achievement chưa tồn tại trong dimension nhưng lại xuất hiện trong lịch sử của người chơi, trigger sẽ tự động tạo một dòng dữ liệu tạm (stub) với thông tin \texttt{"Unknown"} trong bảng Dimension để giữ lại sự kiện của người chơi, tránh việc làm sai lệch bộ đặc trưng (feature matrix) phục vụ Machine Learning sau này.
+        \item \textbf{Giá trị mặc định (Sentinel Fallback)}: Ánh xạ khóa ngoại về \texttt{'-1'} nếu không thể xác định được đối tượng tham chiếu gốc (ví dụ trong bảng review).
+    \end{itemize}
 \end{enumerate}
+
+Để đảm bảo tính toàn vẹn cấu trúc và thỏa mãn các ràng buộc khóa ngoại (key constraints), quá trình Build DW bắt buộc phải được thực hiện qua 3 giai đoạn tuần tự:
+\begin{enumerate}
+    \item \textbf{Phase 1}: Xây dựng các bảng Dimension (Dim Game, Dim Player).
+    \item \textbf{Phase 2}: Xây dựng các bảng Fact cấp một (Fact Achievement, Private SteamID).
+    \item \textbf{Phase 3}: Xây dựng các bảng Fact cấp hai (phụ thuộc vào dữ liệu của các bảng đã được nạp ở giai đoạn trước, bao gồm: Fact Achievement Unlock, Fact Library, Fact Review).
+\end{enumerate}
+
+\subsection{Tổng Hợp Quy Tắc Làm Sạch Theo Từng Bảng (Per-Table Cleaning Inventory)}
+
+Dưới đây là chi tiết các cơ chế tiền xử lý được áp dụng cụ thể cho từng bảng dữ liệu khi chuyển từ Staging sang Data Warehouse:
+
+\begin{itemize}
+    \item \textbf{Tất cả các bảng (All Tables)}:
+    \begin{itemize}
+        \item \textbf{Theo dõi thời gian (Temporal tracking)}: Gắn nhãn thời gian nạp \texttt{loaded\_at DEFAULT SYSUTCDATETIME()} tại tầng Staging.
+        \item \textbf{Khử trùng lặp (Deduplication)}: Sử dụng \texttt{ROW\_NUMBER() OVER(PARTITION BY <pk> ORDER BY loaded\_at DESC) WHERE rn=1} trong câu truy vấn SQL lấy dữ liệu, kết hợp với các Trigger \texttt{BEFORE INSERT} kiểm tra khóa chính (PK) ở tầng Database để ngăn chặn chèn trùng lặp.
+    \end{itemize}
+
+    \item \textbf{Bảng Người Chơi (Dim Player)}:
+    \begin{itemize}
+        \item \textbf{Ép kiểu (Type casting)}: Chuyển chuỗi \texttt{created} sang định dạng \texttt{Timestamp}.
+        \item \textbf{Đánh dấu quyền riêng tư (Privacy flagging)}: Cập nhật cờ \texttt{is\_private = TRUE} dựa trên danh sách từ bảng Private SteamIDs.
+    \end{itemize}
+
+    \item \textbf{Bảng Lịch Sử Thành Tựu (Fact Achievement Unlock)}:
+    \begin{itemize}
+        \item \textbf{Ép kiểu (Type casting)}: Chuyển \texttt{date\_acquired} sang định dạng \texttt{Timestamp} (UTC).
+        \item \textbf{Xử lý tham chiếu vắng mặt (FK stub creation)}: Nếu một thành tựu (\texttt{achievementid}) chưa được ghi nhận trong bảng \texttt{Fact Achievement}, trigger sẽ tự động trích xuất \texttt{gameid} từ tiền tố của \texttt{achievementid} (VD: từ "730\_WINS\_1" lấy ra "730"), sau đó tự động tạo dòng dữ liệu tạm (stub) cho cả \texttt{Dim Game} và \texttt{Fact Achievement} trước khi nạp lịch sử này.
+        \item \textbf{Lọc giá trị Null (Null rejection)}: Loại bỏ hoàn toàn các bản ghi có \texttt{playerid} hoặc \texttt{achievementid} bị rỗng (NULL).
+    \end{itemize}
+
+    \item \textbf{Bảng Đánh Giá (Fact Review)}:
+    \begin{itemize}
+        \item \textbf{Ép kiểu (Type casting)}: Chuyển \texttt{helpful, funny, awards} sang \texttt{Integer}; chuyển \texttt{posted} sang \texttt{Date}.
+        \item \textbf{Tham chiếu mặc định (FK fallback)}: Nếu \texttt{gameid} không tồn tại trong \texttt{Dim Game}, tự động gán về giá trị mặc định \texttt{'-1'}.
+        \item \textbf{Lọc dữ liệu rác (Player validation)}: Xóa bỏ bản ghi nếu \texttt{playerid} không tồn tại trong \texttt{Dim Player}.
+    \end{itemize}
+
+    \item \textbf{Bảng Thư Viện Trò Chơi (Fact Library)}:
+    \begin{itemize}
+        \item \textbf{Giải nén JSON (JSON explosion)}: Biến đổi cột \texttt{library} từ mảng JSON thành nhiều hàng \texttt{(playerid, appid, playtime\_mins)} thông qua các hàm SQL của PostgreSQL.
+        \item \textbf{Xử lý Null (Null handling)}: Nếu \texttt{playtime\_mins} không có giá trị, tự động gán bằng \texttt{0}.
+        \item \textbf{Xử lý tham chiếu vắng mặt (FK stub creation)}: Nếu \texttt{appid} chưa có trong \texttt{Dim Game}, trigger tự động tạo một bản ghi stub với tiêu đề \texttt{'Unknown (auto-stub)'}.
+    \end{itemize}
+
+    \item \textbf{Bảng Trò Chơi (Dim Game)}:
+    \begin{itemize}
+        \item \textbf{Ép kiểu (Type casting)}: Chuyển \texttt{release\_date} sang định dạng \texttt{Date}.
+    \end{itemize}
+
+    \item \textbf{Bảng Thành Tựu (Fact Achievement)}:
+    \begin{itemize}
+        \item \textbf{Tham chiếu mặc định (FK fallback)}: Tự động gán \texttt{gameid = '-1'} nếu trò chơi tương ứng chưa được ghi nhận.
+    \end{itemize}
+\end{itemize}
