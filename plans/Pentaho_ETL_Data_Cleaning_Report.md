@@ -266,7 +266,7 @@ WHERE rn = 1
 | Pentaho Table Output | Staging | Writes `(playerid, library_json_string)` to `dw.stg_library_temp` (truncate-and-reload strategy) |
 | Postgres SQL (post-load) | JSON explosion | A separate SQL step parses the JSON library string and inserts individual `(playerid, appid, playtime_mins)` rows into `dw.fact_library` |
 | Postgres trigger (`trg_library_fk`) | FK enforcement | If `playerid NOT IN dim_player` → row dropped. If `appid NOT IN dim_game` → auto-creates stub game record (after recent fix) |
-| Postgres trigger | Null handling | `playtime_mins` → `COALESCE(playtime_mins, 0)` (defaults NULL to 0) |
+| Postgres SQL (CTE) | Null handling | Drops rows where `playtime_mins` is missing or 'NaN' before insertion to prevent false SAM bot triggers |
 | Postgres trigger | De-duplication | Prevents duplicate inserts on PK `(playerid, appid)` |
 
 **Library JSON explosion process:**
@@ -342,8 +342,8 @@ The DW has **4 `BEFORE INSERT OR UPDATE` triggers** that act as a final data qua
 | **Reviews** | Type casting | Pentaho Select Values | `helpful/funny/awards`: NVARCHAR → Integer; `posted`: NVARCHAR → Date |
 | **Reviews** | FK fallback | Postgres trigger | Missing `gameid` → replaced with sentinel `'-1'` |
 | **Reviews** | Player validation | Postgres trigger | Missing `playerid` → row dropped |
-| **Library** | JSON explosion | Postgres SQL | Single row with JSON array → multiple `(playerid, appid, playtime)` rows |
-| **Library** | Null handling | Postgres trigger | `playtime_mins` NULL → 0 |
+| **Library** | JSON explosion | Postgres SQL | Single row with JSON array → multiple `(playerid, appid, playtime)` rows via CTE |
+| **Library** | Null handling | Postgres SQL (CTE) | Drops missing or 'NaN' `playtime_mins` before insertion |
 | **Library** | FK stub creation | Postgres trigger | Missing games auto-stubbed in `dim_game` |
 | **Games** | Type casting | Pentaho Select Values | `release_date`: NVARCHAR → Date |
 | **Achievements** | FK stub creation | Postgres trigger | Missing `gameid` → auto-stubbed in `dim_game` |

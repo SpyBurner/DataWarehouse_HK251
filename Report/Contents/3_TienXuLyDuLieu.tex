@@ -153,8 +153,8 @@ Trong bước Build DW, hệ thống thực hiện hàng loạt các quy tắc l
         \item \textbf{Số học}: Ép kiểu các trường tương tác của review (\texttt{helpful, funny, awards}) sang dạng số nguyên.
         \item \textbf{Văn bản}: Giữ nguyên định dạng chuỗi dài để bảo toàn các ký tự UTF-8 phức tạp (như review tiếng Trung, Nga, Emoji).
     \end{itemize}
-    \item \textbf{Bóc tách và định hình lại cấu trúc (Data Reshaping)}: Cột \texttt{library} của mỗi người dùng ban đầu được lưu dưới dạng một mảng JSON nguyên khối (VD: \texttt{[\{"appid":730,"playtime\_mins":500\}]}). Dữ liệu này được đẩy vào bảng trung gian \texttt{stg\_library\_temp}, sau đó sử dụng các hàm xử lý JSON của PostgreSQL để giải nén (unnest) và trải phẳng thành nhiều bản ghi riêng biệt \texttt{(playerid, appid, playtime\_mins)} trong bảng \texttt{fact\_library}.
-    \item \textbf{Xử lý giá trị rỗng (Null Handling)}: Xử lý các trường hợp dữ liệu khuyết thiếu, ví dụ như tự động gán giá trị 0 cho \texttt{playtime\_mins} nếu trường này bị null trong mảng JSON.
+    \item \textbf{Bóc tách và định hình lại cấu trúc (Data Reshaping)}: Cột \texttt{library} của mỗi người dùng ban đầu được lưu dưới dạng một mảng JSON nguyên khối (VD: \texttt{[\{"appid":730,"playtime\_mins":500\}]}). Dữ liệu này được đẩy vào bảng trung gian \texttt{stg\_library\_temp}, sau đó sử dụng Common Table Expression (CTE) kết hợp các hàm xử lý JSON của PostgreSQL để giải nén (unnest) và trải phẳng thành nhiều bản ghi riêng biệt \texttt{(playerid, appid, playtime\_mins)} trong bảng \texttt{fact\_library}.
+    \item \textbf{Xử lý giá trị rỗng (Null Handling)}: Sử dụng bộ lọc trong CTE để loại bỏ hoàn toàn các bản ghi có \texttt{playtime\_mins} bị khuyết thiếu hoặc mang giá trị 'NaN' trước khi nạp vào Fact, nhằm ngăn chặn việc hệ thống gán nhầm giá trị 0 gây sai lệch trong phát hiện SAM bot.
     \item \textbf{Bảo đảm toàn vẹn tham chiếu qua Trigger (Referential Integrity Fallback)}: Do tính chất không đồng bộ của quá trình thu thập, đôi khi một bản ghi Fact có thể trỏ tới một chiều (Dimension) chưa tồn tại. Hệ thống PostgreSQL DW sử dụng các trigger \texttt{BEFORE INSERT} để kiểm soát luồng dữ liệu:
     \begin{itemize}
         \item \textbf{Xóa bỏ bản ghi lỗi (Hard-reject)}: Nếu Fact trỏ tới một \texttt{playerid} hoàn toàn không tồn tại, dòng dữ liệu đó bị xóa bỏ vì là dữ liệu rác.
@@ -203,8 +203,8 @@ Dưới đây là chi tiết các cơ chế tiền xử lý được áp dụng 
 
     \item \textbf{Bảng Thư Viện Trò Chơi (Fact Library)}:
     \begin{itemize}
-        \item \textbf{Giải nén JSON (JSON explosion)}: Biến đổi cột \texttt{library} từ mảng JSON thành nhiều hàng \texttt{(playerid, appid, playtime\_mins)} thông qua các hàm SQL của PostgreSQL.
-        \item \textbf{Xử lý Null (Null handling)}: Nếu \texttt{playtime\_mins} không có giá trị, tự động gán bằng \texttt{0}.
+        \item \textbf{Giải nén JSON (JSON explosion)}: Biến đổi cột \texttt{library} từ mảng JSON thành nhiều hàng \texttt{(playerid, appid, playtime\_mins)} thông qua truy vấn CTE.
+        \item \textbf{Xử lý Null (Null handling)}: Lọc và loại bỏ hoàn toàn các bản ghi bị thiếu thông tin giờ chơi (\texttt{playtime\_mins} rỗng hoặc 'NaN') ngay từ bước CTE trước khi nạp.
         \item \textbf{Xử lý tham chiếu vắng mặt (FK stub creation)}: Nếu \texttt{appid} chưa có trong \texttt{Dim Game}, trigger tự động tạo một bản ghi stub với tiêu đề \texttt{'Unknown (auto-stub)'}.
     \end{itemize}
 

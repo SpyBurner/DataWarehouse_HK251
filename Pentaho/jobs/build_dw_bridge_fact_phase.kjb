@@ -609,30 +609,43 @@
       <description/>
       <type>SQL</type>
       <attributes/>
-      <sql>INSERT INTO dw.fact_library (playerid, appid, playtime_mins)
+      <sql>-- 1. Extract, clean, and filter the data using a CTE
+WITH scrubbed_library AS (
+    SELECT 
+        playerid,
+        -- Dynamically extract appid based on the JSON element type
+        CASE 
+            WHEN json_typeof(game_element) = 'object' THEN (game_element->>'appid')::int
+            ELSE (game_element#>>'{}')::int 
+        END as appid,
+        -- Dynamically extract playtime, converting literal 'NaN' strings to SQL NULLs
+        CASE 
+            WHEN json_typeof(game_element) = 'object' AND NULLIF(game_element->>'playtime_mins', 'NaN') IS NOT NULL 
+                 THEN (NULLIF(game_element->>'playtime_mins', 'NaN'))::int
+            ELSE NULL 
+        END as playtime_mins
+    FROM dw.stg_library_temp,
+    LATERAL json_array_elements(NULLIF(library, '')::json) AS game_element
+    WHERE library IS NOT NULL 
+      AND library != '[]'
+)
+-- 2. Execute the UPSERT using only the valid rows
+INSERT INTO dw.fact_library (playerid, appid, playtime_mins)
 SELECT 
-    playerid,
-    -- Dynamically extract appid based on the JSON element type
-    CASE 
-        WHEN json_typeof(game_element) = 'object' THEN (game_element->>'appid')::int
-        ELSE (game_element#>>'{}')::int 
-    END as appid,
-    -- Dynamically extract playtime, defaulting to 0 for the old format
-    CASE 
-        WHEN json_typeof(game_element) = 'object' THEN COALESCE((game_element->>'playtime_mins')::int, 0)
-        ELSE 0 
-    END as playtime_mins
-FROM dw.stg_library_temp,
-LATERAL json_array_elements(NULLIF(library, '')::json) AS game_element
-WHERE library IS NOT NULL 
-  AND library != '[]'
--- The Upsert Logic:
+    playerid, 
+    appid, 
+    playtime_mins
+FROM scrubbed_library
+-- Strictly discard any row where playtime could not be determined or was 'NaN'
+WHERE playtime_mins IS NOT NULL
+
+-- 3. The Upsert Logic:
 ON CONFLICT (playerid, appid) 
 DO UPDATE SET 
-    -- EXCLUDED represents the incoming row that caused the conflict
+    -- EXCLUDED represents the incoming valid row that caused the conflict
     playtime_mins = EXCLUDED.playtime_mins; 
 
--- Clean up the temporary staging table after successful insertion/update
+-- 4. Clean up the temporary staging table after successful insertion/update
 TRUNCATE TABLE dw.stg_library_temp;</sql>
       <useVariableSubstitution>F</useVariableSubstitution>
       <sqlfromfile>F</sqlfromfile>
