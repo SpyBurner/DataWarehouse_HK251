@@ -115,7 +115,46 @@ BEGIN
     RETURN ROUND(entropy, 4);
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
+-- Datamart schema
+CREATE SCHEMA IF NOT EXISTS dm;
 
+CREATE TABLE IF NOT EXISTS dm.dm_steam_player_features_v1 (
+    playerid                        VARCHAR(30) PRIMARY KEY,
+    country                         VARCHAR(50),
+    account_age_days                DOUBLE PRECISION,
+    days_before_first_achievement   DOUBLE PRECISION,
+    library_size                    INTEGER,
+    total_playtime_mins             INTEGER,
+    total_achievements              INTEGER,
+    achievement_game_ratio          DOUBLE PRECISION,
+    avg_achievements_per_game       DOUBLE PRECISION,
+    playtime_per_achievement        DOUBLE PRECISION,
+    zero_playtime_achievements_ratio DOUBLE PRECISION,
+    top1_game_concentration         DOUBLE PRECISION,
+    top3_game_concentration         DOUBLE PRECISION,
+    game_hhi                        DOUBLE PRECISION,
+    median_unlock_interval_sec      DOUBLE PRECISION,
+    std_unlock_interval_sec         DOUBLE PRECISION,
+    cv_unlock_interval              DOUBLE PRECISION,
+    max_achievements_per_minute     INTEGER,
+    max_achievements_per_day        INTEGER,
+    night_activity_ratio            DOUBLE PRECISION,
+    hour_entropy                    DOUBLE PRECISION,
+    activity_density                DOUBLE PRECISION,
+    total_reviews                   INTEGER,
+    avg_review_length               DOUBLE PRECISION,
+    min_review_length               DOUBLE PRECISION,
+    review_unplayed_ratio           DOUBLE PRECISION,
+    review_duplication_rate         DOUBLE PRECISION,
+    refreshed_at                    TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS dm.dm_datamart_refresh_log (
+    refreshid   SERIAL PRIMARY KEY,
+    refreshed_at TIMESTAMP DEFAULT NOW(),
+    player_count INTEGER,
+    status       VARCHAR(20)
+);
 
 -- -----------------------------------------------------------------------------
 -- Default Data Initialization (-1 values for Referential Integrity Fallbacks)

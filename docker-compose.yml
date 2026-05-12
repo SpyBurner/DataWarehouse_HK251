@@ -89,7 +89,10 @@ services:
     command: ["sh", "-c", "python main.py > outputs/pipeline.log"]
     volumes:
       - ./ML_analytics:/app
-      - ml_outputs:/app/outputs
+      - type: bind
+        source: ./ML_analytics/outputs
+        target: /app/outputs
+
     restart: "no"
 
   ml-dashboard:
