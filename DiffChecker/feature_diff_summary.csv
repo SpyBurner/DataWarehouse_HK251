@@ -1,0 +1,26 @@
+Feature,Diff Count,Diff %
+account_age_days,3296,99.2173389524383
+library_size,3275,98.5851896447923
+achievement_game_ratio,2493,75.04515352197471
+avg_review_length,1860,55.99036724864539
+total_playtime_mins,1275,38.38049367850692
+playtime_per_achievement,1275,38.38049367850692
+min_review_length,951,28.62733293196869
+review_unplayed_ratio,354,10.65623118603251
+zero_playtime_achievements_ratio,256,7.706201083684528
+std_unlock_interval_sec,6,0.1806140878988561
+top1_game_concentration,6,0.1806140878988561
+game_hhi,6,0.1806140878988561
+total_achievements,6,0.1806140878988561
+night_activity_ratio,6,0.1806140878988561
+hour_entropy,6,0.1806140878988561
+cv_unlock_interval,6,0.1806140878988561
+activity_density,6,0.1806140878988561
+avg_achievements_per_game,6,0.1806140878988561
+top3_game_concentration,6,0.1806140878988561
+median_unlock_interval_sec,2,0.060204695966285374
+review_duplication_rate,1,0.030102347983142687
+max_achievements_per_minute,0,0.0
+max_achievements_per_day,0,0.0
+total_reviews,0,0.0
+days_before_first_achievement,0,0.0

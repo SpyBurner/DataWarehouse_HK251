@@ -221,20 +221,37 @@ FOR EACH ROW EXECUTE FUNCTION dw.trg_fk_fallback_fact_achievement();
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION dw.trg_fk_fallback_fact_achievement_unlock()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_gameid VARCHAR(30);
 BEGIN
     -- PK = (playerid, achievementid)
     IF NEW.playerid IS NULL OR NEW.achievementid IS NULL THEN
         RETURN NULL;
     END IF;
 
-    -- playerid is PK+FK -> reject if missing in dimension
+    -- playerid is PK+FK -> hard-reject if player not in dimension
+    -- (an unlock with no matching player is genuinely corrupt data)
     IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN
         RETURN NULL;
     END IF;
 
-    -- achievementid is PK+FK -> reject if missing in dimension
+    -- achievementid is PK+FK -> auto-create stub if missing so no unlock is lost.
+    -- The original Python pipeline keeps all rows regardless of whether the
+    -- achievement exists in a reference table; dropping here causes feature drift.
     IF NOT EXISTS (SELECT 1 FROM dw.fact_achievement WHERE achievementid = NEW.achievementid) THEN
-        RETURN NULL;
+        -- Derive gameid from achievementid prefix (format: "<gameid>_<name>")
+        v_gameid := split_part(NEW.achievementid, '_', 1);
+        IF v_gameid IS NULL OR v_gameid = '' THEN
+            v_gameid := '-1';
+        END IF;
+        -- Ensure the parent game stub exists first
+        INSERT INTO dw.dim_game (gameid, title, release_date)
+        VALUES (v_gameid, 'Unknown (auto-stub)', NULL)
+        ON CONFLICT (gameid) DO NOTHING;
+        -- Now insert the achievement stub
+        INSERT INTO dw.fact_achievement (achievementid, gameid)
+        VALUES (NEW.achievementid, v_gameid)
+        ON CONFLICT (achievementid) DO NOTHING;
     END IF;
 
     -- De-dupe inserts by PK
@@ -265,14 +282,20 @@ BEGIN
         RETURN NULL;
     END IF;
 
-    -- playerid is PK+FK -> reject if missing
+    -- playerid is PK+FK -> hard-reject if player not in dimension
+    -- (a library entry with no matching player is genuinely corrupt data)
     IF NOT EXISTS (SELECT 1 FROM dw.dim_player WHERE playerid = NEW.playerid) THEN
         RETURN NULL;
     END IF;
 
-    -- appid is PK+FK -> reject if missing in dim_game (do not rewrite PK)
+    -- appid is PK+FK -> auto-create stub game if missing so no library entry is lost.
+    -- The original Python pipeline keeps all owned games regardless of whether the
+    -- game exists in a metadata table; dropping here shrinks library_size and
+    -- corrupts downstream features (achievement_game_ratio, playtime features, etc.).
     IF NOT EXISTS (SELECT 1 FROM dw.dim_game WHERE gameid = NEW.appid) THEN
-        RETURN NULL;
+        INSERT INTO dw.dim_game (gameid, title, release_date)
+        VALUES (NEW.appid, 'Unknown (auto-stub)', NULL)
+        ON CONFLICT (gameid) DO NOTHING;
     END IF;
 
     NEW.playtime_mins := COALESCE(NEW.playtime_mins, 0);
