@@ -636,8 +636,8 @@ SELECT
     appid, 
     playtime_mins
 FROM scrubbed_library
--- Strictly discard any row where playtime could not be determined or was 'NaN'
-WHERE playtime_mins IS NOT NULL
+-- Strictly discard any row where appid could not be determined
+WHERE appid IS NOT NULL
 
 -- 3. The Upsert Logic:
 ON CONFLICT (playerid, appid) 

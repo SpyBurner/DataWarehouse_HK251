@@ -70,7 +70,14 @@ def _parse_list_fast(s: str) -> list:
         if isinstance(parsed_data[0], (int, str)):
             return [{"appid": int(appid), "playtime_mins": -1} for appid in parsed_data]
         elif isinstance(parsed_data[0], dict):
-            return [{"appid": int(item.get("appid", -1)), "playtime_mins": int(item.get("playtime_mins", -1))} for item in parsed_data if "appid" in item]
+            res = []
+            for item in parsed_data:
+                if "appid" in item:
+                    appid = int(item.get("appid", -1) or -1)
+                    pt = item.get("playtime_mins")
+                    pt = int(pt) if pt is not None else -1
+                    res.append({"appid": appid, "playtime_mins": pt})
+            return res
         return []
     except (ValueError, TypeError):
         return []

@@ -1,0 +1,129 @@
+2026-05-13 10:16:14.648 | 03:16:14 [INFO] Loading data directly from PostgreSQL DW …
+2026-05-13 10:16:14.842 | 03:16:14 [INFO]   -> Loading history...
+2026-05-13 10:17:01.595 | 03:17:01 [INFO]   -> Loading players...
+2026-05-13 10:17:01.638 | 03:17:01 [INFO]   -> Loading reviews...
+2026-05-13 10:17:02.578 | 03:17:02 [INFO]   -> Loading purchased_games...
+2026-05-13 10:17:06.788 | 03:17:06 [INFO]   history:   4308276 rows  |  columns: ['playerid', 'achievementid', 'date_acquired', 'gameid']
+2026-05-13 10:17:06.789 | 03:17:06 [INFO]   players:   3488 rows  |  columns: ['playerid', 'country', 'created']
+2026-05-13 10:17:06.789 | 03:17:06 [INFO]   reviews:   26417 rows  |  columns: ['reviewid', 'playerid', 'gameid', 'review', 'helpful', 'funny', 'awards', 'posted']
+2026-05-13 10:17:06.789 | 03:17:06 [INFO]   purchased: 3488 rows  |  columns: ['playerid', 'library', 'library_size']
+2026-05-13 10:17:08.303 | 03:17:08 [INFO] Feature reference timestamp (last achievement record): 2026-04-02 17:07:55
+2026-05-13 10:17:08.303 | 03:17:08 [INFO] Step 3 — Building feature matrix …
+2026-05-13 10:17:08.382 | 03:17:08 [INFO]   Trimming: 3487 total players → 3102 with (≥10 achievements OR ≥3 reviews) AND library_size ≥ 1 (385 dropped)
+2026-05-13 10:17:08.725 | 03:17:08 [INFO]   Group A: speed features …
+2026-05-13 10:17:16.774 | 03:17:16 [INFO]   Group B: temporal features …
+2026-05-13 10:17:19.084 | 03:17:19 [INFO]   Group C: diversity features …
+2026-05-13 10:17:19.488 | 03:17:19 [INFO]   Group D: review features …
+2026-05-13 10:17:22.273 | 03:17:22 [INFO]   Group E: account age features …
+2026-05-13 10:17:22.323 | 03:17:22 [INFO]   Group F: playtime features …
+2026-05-13 10:17:26.507 | 03:17:26 [INFO]   Feature matrix: 3102 players × 22 features
+2026-05-13 10:17:26.706 | 03:17:26 [INFO] Saved → /app/outputs/feature_matrix.csv
+2026-05-13 10:17:26.706 | 03:17:26 [INFO] Step 2 — Building heuristic labels from feature matrix …
+2026-05-13 10:17:26.718 | 03:17:26 [INFO]   Speed bots:       3
+2026-05-13 10:17:26.719 | 03:17:26 [INFO]   Volume bots:      381
+2026-05-13 10:17:26.720 | 03:17:26 [INFO]   Review bots:      0
+2026-05-13 10:17:26.721 | 03:17:26 [INFO]   Heuristic bots   (total unique): 383 (12.35%)
+2026-05-13 10:17:26.722 | 03:17:26 [INFO]   Heuristic normal (total unique): 2285 (73.66%)
+2026-05-13 10:17:26.756 | 03:17:26 [INFO] Saved → /app/outputs/heuristic_labels.csv
+2026-05-13 10:17:26.759 | 03:17:26 [INFO] Common players for modelling: 3102
+2026-05-13 10:17:26.775 | 03:17:26 [INFO] Train-Test split: 2481 train (80%), 621 test (20%)
+2026-05-13 10:17:26.779 | 03:17:26 [INFO]   Applying log1p to 9 heavy-tailed features: ['median_unlock_interval_sec', 'total_reviews', 'total_achievements', 'library_size', 'avg_review_length', 'avg_achievements_per_game', 'max_achievements_per_day', 'max_achievements_per_minute', 'std_unlock_interval_sec']
+2026-05-13 10:17:26.803 | 03:17:26 [INFO] Step 4 — Preprocessing (Imputer + StandardScaler) …
+2026-05-13 10:17:26.830 | 03:17:26 [INFO]   Scaled: 3102 players × 22 features
+2026-05-13 10:17:26.853 | 03:17:26 [INFO]   Preprocessor saved → /app/outputs/preprocessor.pkl
+2026-05-13 10:17:26.856 | 03:17:26 [INFO] Step 5 — Hyperparameter tuning (IsolationForest) …
+2026-05-13 10:17:26.856 | 03:17:26 [INFO]   Tuning IsolationForest (54 param combos) …
+2026-05-13 10:17:58.260 | 03:17:58 [INFO]     Best IF  ROC-AUC=0.9324  {'contamination': 0.02, 'max_features': 1.0, 'max_samples': 0.8, 'n_estimators': 200, 'random_state': 42}
+2026-05-13 10:17:58.282 | 03:17:58 [INFO] Saved → /app/outputs/tuning_results.csv
+2026-05-13 10:17:58.282 | 03:17:58 [INFO] Step 6 — Training IsolationForest …
+2026-05-13 10:17:58.829 | 03:17:58 [INFO]   IF scoring: train=2481, test=621
+2026-05-13 10:17:59.196 | 03:17:59 [INFO] Saved → /app/outputs/best_if.pkl
+2026-05-13 10:17:59.199 | 03:17:59 [INFO] Step 5b — XGBoost PU-Learning training (raw features, no scaling) …
+2026-05-13 10:17:59.202 | 03:17:59 [INFO]   Train set: 2481 players
+2026-05-13 10:17:59.202 | 03:17:59 [INFO]   PU training set: 1873 players (bot=306, confirmed_normal=1567)
+2026-05-13 10:17:59.203 | 03:17:59 [INFO]   Grey area excluded: 608 players
+2026-05-13 10:17:59.203 | 03:17:59 [INFO]   Class imbalance ratio (scale_pos_weight): 5.12
+2026-05-13 10:17:59.203 | 03:17:59 [INFO]   Running RandomizedSearchCV (n_iter=50, cv=5) …
+2026-05-13 10:18:41.454 | 03:18:41 [INFO]   Best CV PR-AUC: 0.9985
+2026-05-13 10:18:41.455 | 03:18:41 [INFO]   Best params: {'subsample': 1.0, 'reg_lambda': 1, 'reg_alpha': 0.1, 'n_estimators': 1000, 'min_child_weight': 10, 'max_depth': 3, 'learning_rate': 0.1, 'colsample_bytree': 0.7}
+2026-05-13 10:18:41.537 | 03:18:41 [INFO]   XGBoost scoring: train=2481, test=621
+2026-05-13 10:18:41.537 | 03:18:41 [INFO] Step 7 — Building ensemble [TEST] (Dynamic Duo: XGB + IF) …
+2026-05-13 10:18:41.540 | 03:18:41 [INFO]   IF ROC-AUC: 0.9360
+2026-05-13 10:18:41.542 | 03:18:41 [INFO]   Anomalies flagged: 50 (8.05%)
+2026-05-13 10:18:41.556 | 03:18:41 [INFO] Saved test ensemble → /app/outputs/ensemble_results_test.csv
+2026-05-13 10:18:41.556 | 03:18:41 [INFO] Step 7 — Building ensemble [FULL] (Dynamic Duo: XGB + IF) …
+2026-05-13 10:18:41.561 | 03:18:41 [INFO]   IF ROC-AUC: 0.5051
+2026-05-13 10:18:41.563 | 03:18:41 [INFO]   Anomalies flagged: 235 (7.58%)
+2026-05-13 10:18:41.563 | 03:18:41 [INFO] Ensemble weight tuning [TEST] — sweeping xgb_weight 0.0 → 1.0 (step=0.05) …
+2026-05-13 10:18:41.588 | 03:18:41 [INFO]   Optimal XGB weight: 0.25  (Precision@100=0.6600, HCC=9)
+2026-05-13 10:18:41.593 | 03:18:41 [INFO]   Saved metric table → /app/outputs/ensemble_weight_metrics_test.csv
+2026-05-13 10:18:42.269 | 03:18:42 [INFO]   Saved dual-axis chart → /app/outputs/plots/ensemble_weight_tuning_test.png
+2026-05-13 10:18:42.274 | 03:18:42 [INFO] Step 8 — Evaluation & Model Comparison …
+2026-05-13 10:18:42.291 | 03:18:42 [INFO] 
+2026-05-13 10:18:42.291 |                  ROC-AUC  PR-AUC  Flagged Rate %  Precision@100  Precision@500  Precision@1000
+2026-05-13 10:18:42.291 | XGBoost           0.7815  0.3534          1.9324           0.16          0.154           0.124
+2026-05-13 10:18:42.291 | IsolationForest   0.9360  0.6143          5.1530           0.54          0.154           0.124
+2026-05-13 10:18:42.291 | Ensemble          0.9733  0.8198          8.0515           0.66          0.154           0.124
+2026-05-13 10:18:42.323 | 03:18:42 [INFO]   Optimal threshold (F1): 0.9159
+2026-05-13 10:18:42.323 | 03:18:42 [INFO] --- XGBoost Detailed Classification Report ---
+2026-05-13 10:18:42.332 | 03:18:42 [INFO] 
+2026-05-13 10:18:42.332 |               precision    recall  f1-score   support
+2026-05-13 10:18:42.332 | 
+2026-05-13 10:18:42.332 |       Normal       1.00      0.73      0.85       544
+2026-05-13 10:18:42.332 |          Bot       0.35      1.00      0.51        77
+2026-05-13 10:18:42.332 | 
+2026-05-13 10:18:42.332 |     accuracy                           0.76       621
+2026-05-13 10:18:42.332 |    macro avg       0.67      0.87      0.68       621
+2026-05-13 10:18:42.332 | weighted avg       0.92      0.76      0.80       621
+2026-05-13 10:18:42.332 | 
+2026-05-13 10:18:42.559 | 03:18:42 [INFO] 
+2026-05-13 10:18:42.560 | Top-15 XGBoost Feature Importance:
+2026-05-13 10:18:42.560 |                          feature  importance
+2026-05-13 10:18:42.560 | zero_playtime_achievements_ratio    0.240368
+2026-05-13 10:18:42.560 |         playtime_per_achievement    0.199022
+2026-05-13 10:18:42.560 |                     hour_entropy    0.124712
+2026-05-13 10:18:42.560 |        avg_achievements_per_game    0.116567
+2026-05-13 10:18:42.560 |      max_achievements_per_minute    0.093024
+2026-05-13 10:18:42.560 |         max_achievements_per_day    0.069332
+2026-05-13 10:18:42.560 |       median_unlock_interval_sec    0.060455
+2026-05-13 10:18:42.560 |               total_achievements    0.055654
+2026-05-13 10:18:42.560 |             night_activity_ratio    0.020258
+2026-05-13 10:18:42.560 |              total_playtime_mins    0.015238
+2026-05-13 10:18:42.560 |                    total_reviews    0.001851
+2026-05-13 10:18:42.560 |    days_before_first_achievement    0.001318
+2026-05-13 10:18:42.560 |               cv_unlock_interval    0.001100
+2026-05-13 10:18:42.560 |                 account_age_days    0.000904
+2026-05-13 10:18:42.560 |                 activity_density    0.000100
+2026-05-13 10:18:42.944 | 03:18:42 [INFO] 
+2026-05-13 10:18:42.944 | Top-50 Flagged vs Normal:
+2026-05-13 10:18:42.944 |                                   Flagged (mean)  Normal (mean)   Ratio
+2026-05-13 10:18:42.944 | median_unlock_interval_sec             11608.612      29897.388   0.388
+2026-05-13 10:18:42.944 | std_unlock_interval_sec              3441661.876    3599146.616   0.956
+2026-05-13 10:18:42.944 | cv_unlock_interval                         6.757          4.471   1.511
+2026-05-13 10:18:42.944 | max_achievements_per_minute             1517.327         53.230  28.505
+2026-05-13 10:18:42.944 | max_achievements_per_day                4666.143        102.542  45.505
+2026-05-13 10:18:42.944 | night_activity_ratio                       0.476          0.358   1.332
+2026-05-13 10:18:42.944 | hour_entropy                               1.798          2.695   0.667
+2026-05-13 10:18:42.944 | activity_density                           0.107          0.089   1.209
+2026-05-13 10:18:42.944 | total_achievements                     10505.204       1087.101   9.664
+2026-05-13 10:18:42.944 | library_size                             773.320        239.513   3.229
+2026-05-13 10:18:42.945 | achievement_game_ratio                     0.477          0.386   1.234
+2026-05-13 10:18:42.945 | top1_game_concentration                    0.439          0.221   1.989
+2026-05-13 10:18:42.945 | avg_achievements_per_game                 67.250         15.525   4.332
+2026-05-13 10:18:42.945 | total_reviews                             34.200          6.089   5.616
+2026-05-13 10:18:42.945 | review_unplayed_ratio                      0.000          0.000     NaN
+2026-05-13 10:18:42.945 | review_duplication_rate                    0.040          0.025   1.604
+2026-05-13 10:18:42.945 | avg_review_length                        410.446        143.951   2.851
+2026-05-13 10:18:42.945 | days_before_first_achievement            453.286        405.540   1.118
+2026-05-13 10:18:42.945 | account_age_days                        3809.520       4090.651   0.931
+2026-05-13 10:18:42.945 | zero_playtime_achievements_ratio           0.592          0.070   8.400
+2026-05-13 10:18:42.945 | playtime_per_achievement                 103.558        838.202   0.124
+2026-05-13 10:18:42.945 | total_playtime_mins                   920941.850     268358.273   3.432
+2026-05-13 10:18:42.962 | 03:18:42 [INFO] Step 9 — SHAP explanations …
+2026-05-13 10:18:42.964 | 03:18:42 [INFO]   Computing SHAP values natively via XGBoost on 621 samples …
+2026-05-13 10:18:42.994 | 03:18:42 [INFO]   [v] Successfully computed SHAP values via native XGBoost
+2026-05-13 10:18:43.960 | 03:18:43 [INFO]   Saved shap_summary.png
+2026-05-13 10:18:44.452 | 03:18:44 [INFO]   Saved shap_waterfall.png
+2026-05-13 10:18:45.083 | 03:18:45 [INFO]   Saved SHAP scatter plots for: ['playtime_per_achievement', 'max_achievements_per_day', 'night_activity_ratio']
+2026-05-13 10:18:45.309 | 03:18:45 [INFO] Saved → /app/outputs/model_memory.pkl
+2026-05-13 10:18:45.309 | 03:18:45 [INFO] Pipeline complete. All outputs in /app/outputs/

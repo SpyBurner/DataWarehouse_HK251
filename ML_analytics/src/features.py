@@ -136,7 +136,7 @@ def build_player_library(purchased: pd.DataFrame) -> dict:
     """
     result = {}
     for pid, lib in zip(purchased["playerid"], purchased["library"]):
-        if lib is None or not isinstance(lib, np.ndarray):
+        if lib is None or not isinstance(lib, (list, np.ndarray)):
             result[int(pid)] = set()
         else:
             # lib is an array of dicts
@@ -161,7 +161,7 @@ def build_zero_playtime_library(purchased: pd.DataFrame) -> dict:
     result = {}
     for pid, lib in zip(purchased["playerid"], purchased["library"]):
         pid_int = int(pid)
-        if lib is None or not isinstance(lib, np.ndarray):
+        if lib is None or not isinstance(lib, (list, np.ndarray)):
             result[pid_int] = set()
         else:
             result[pid_int] = {
