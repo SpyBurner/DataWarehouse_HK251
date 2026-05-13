@@ -316,7 +316,7 @@
       <parallel>N</parallel>
       <draw>Y</draw>
       <nr>0</nr>
-      <xloc>672</xloc>
+      <xloc>816</xloc>
       <yloc>128</yloc>
       <attributes_kjc/>
     </entry>
@@ -444,6 +444,31 @@
       <yloc>128</yloc>
       <attributes_kjc/>
     </entry>
+    <entry>
+      <name>3_run_ml_services.bat</name>
+      <description/>
+      <type>SHELL</type>
+      <attributes/>
+      <filename>D:\GeneralProjectSpace\.UNI\.HKVIII\Datawarehouse\BTL DW\3_run_ml_services.bat</filename>
+      <work_directory>D:\GeneralProjectSpace\.UNI\.HKVIII\Datawarehouse\BTL DW\</work_directory>
+      <arg_from_previous>N</arg_from_previous>
+      <exec_per_row>N</exec_per_row>
+      <set_logfile>N</set_logfile>
+      <logfile/>
+      <set_append_logfile>N</set_append_logfile>
+      <logext/>
+      <add_date>N</add_date>
+      <add_time>N</add_time>
+      <insertScript>N</insertScript>
+      <script/>
+      <loglevel>Basic</loglevel>
+      <parallel>N</parallel>
+      <draw>Y</draw>
+      <nr>0</nr>
+      <xloc>688</xloc>
+      <yloc>128</yloc>
+      <attributes_kjc/>
+    </entry>
   </entries>
   <hops>
     <hop>
@@ -493,21 +518,30 @@
     </hop>
     <hop>
       <from>Fact/Bridge phase 2</from>
-      <to>Success</to>
-      <from_nr>0</from_nr>
-      <to_nr>0</to_nr>
-      <enabled>Y</enabled>
-      <evaluation>Y</evaluation>
-      <unconditional>N</unconditional>
-    </hop>
-    <hop>
-      <from>Fact/Bridge phase 2</from>
       <to>Abort job 2</to>
       <from_nr>0</from_nr>
       <to_nr>0</to_nr>
       <enabled>Y</enabled>
       <evaluation>N</evaluation>
       <unconditional>N</unconditional>
+    </hop>
+    <hop>
+      <from>Fact/Bridge phase 2</from>
+      <to>3_run_ml_services.bat</to>
+      <from_nr>0</from_nr>
+      <to_nr>0</to_nr>
+      <enabled>Y</enabled>
+      <evaluation>Y</evaluation>
+      <unconditional>Y</unconditional>
+    </hop>
+    <hop>
+      <from>3_run_ml_services.bat</from>
+      <to>Success</to>
+      <from_nr>0</from_nr>
+      <to_nr>0</to_nr>
+      <enabled>Y</enabled>
+      <evaluation>Y</evaluation>
+      <unconditional>Y</unconditional>
     </hop>
   </hops>
   <notepads>
