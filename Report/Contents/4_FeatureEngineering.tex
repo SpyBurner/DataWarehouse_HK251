@@ -1,16 +1,17 @@
-\section{Kỹ Thuật Trích Xuất Đặc Trưng (Feature Engineering)}
+\section{Kỹ thuật Trích xuất Đặc trưng (Feature Engineering)}
 
-\subsection{Tổng Quan}
-Quy trình trích xuất đặc trưng được thực hiện trong module \texttt{features.py}, tạo ra một ma trận đặc trưng gồm 25 cột từ dữ liệu lịch sử thành tựu, đánh giá, thông tin tài khoản và thông tin game đã mua.
+\subsection{Tổng quan Quy trình}
+Quy trình trích xuất đặc trưng đóng vai trò cầu nối chiến lược, chuyển đổi dữ liệu thô dạng sự kiện từ Kho dữ liệu thành các véc-tơ thông tin có ý nghĩa phân loại cao. Module \texttt{features.py} đảm nhận việc tổng hợp và ánh xạ thông tin từ 4 phân vùng chính: lịch sử mở khóa thành tựu, hoạt động đăng tải đánh giá, siêu dữ liệu tài khoản và danh mục sở hữu sản phẩm. Kết quả đầu ra là một ma trận đặc trưng tinh gọn (\textit{Feature Matrix}) bao gồm 25 biến số định lượng, cung cấp biểu diễn toán học toàn diện về hành vi của từng tài khoản trên nền tảng.
 
-\subsection{Bước Loại Bỏ (Trimming)}
-Trước khi tính toán bất kỳ đặc trưng nào, hệ thống áp dụng tiêu chí loại bỏ để tập trung vào các tài khoản có hoạt động đáng kể:
+\subsection{Chiến lược Tinh giản Dữ liệu (Data Trimming)}
+Trước khi đi vào tính toán chi tiết, hệ thống triển khai một bộ lọc thô (\textit{Trimming Filter}) nhằm loại trừ các tài khoản "ma" (\textit{ghost accounts}) hoặc các hồ sơ thiếu hụt tương tác thực tế. Việc tinh giản này dựa trên điều kiện logic:
+$$(\text{achievements} \ge 10 \lor \text{reviews} \ge 3) \land \text{library\_size} \ge 1$$
 
+Việc áp dụng tiêu chí này mang lại ba giá trị cốt lõi cho pipeline xử lý:
 \begin{itemize}
-    \item Điều kiện: \textbf{$(\ge 10 \text{ achievements OR } \ge 3 \text{ reviews}) \text{ AND } \text{library\_size} \ge 1$}
-    \item Tác dụng: Giảm tập dữ liệu từ $\sim$196K xuống $\sim$3K tài khoản (98\%), loại bỏ ghost accounts và tài khoản không hoạt động
-    \item Lợi ích: Tăng tốc độ tính toán groupby/merge, loại bỏ feature rows chỉ toàn NaN
-    \item Lưu ý: Logic OR giữ lại các bot candidates có 0 achievements nhưng spam reviews
+    \item \textbf{Tối ưu hóa khối lượng tính toán:} Giảm thiểu quy mô tập dữ liệu đầu vào từ khoảng 196.000 hồ sơ xuống còn xấp xỉ 3.000 tài khoản hoạt động trọng điểm (đạt tỷ lệ nén lên đến 98\%).
+    \item \textbf{Bảo đảm chất lượng véc-tơ đặc trưng:} Loại bỏ triệt để các hàng ma trận chỉ chứa giá trị rỗng (NaN), giúp các thao tác nhóm (\texttt{groupby}) và kết nối (\texttt{merge}) diễn ra ổn định và nhanh chóng.
+    \item \textbf{Bảo toàn các đối tượng nghi vấn tiềm năng:} Việc áp dụng toán tử logic $\lor$ (OR) mang ý nghĩa chiến lược, cho phép hệ thống giữ lại các tài khoản dù không mở khóa bất kỳ thành tựu nào nhưng lại có hành vi phát tán hàng loạt bài đánh giá nghi vấn (Review Spamming candidates).
 \end{itemize}
 
 \begin{figure}[H]
@@ -26,89 +27,72 @@ Trước khi tính toán bất kỳ đặc trưng nào, hệ thống áp dụng 
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Biểu đồ nhiệt thể hiện sự chồng lấp người dùng giữa các tập dữ liệu}
+    \caption{Biểu đồ nhiệt minh họa mức độ chồng lấp dữ liệu giữa các phân vùng sau giai đoạn tinh giản}
     \label{fig:overlap_heatmap}
 \end{figure}
 
+\subsection{Phân rã Không gian Đặc trưng Hành vi}
 
+Ma trận đặc trưng được chia tách thành 6 nhóm chỉ số chuyên biệt nhằm nắm bắt trọn vẹn các chiều kích dị biệt giữa bot và người dùng thực:
 
-\subsection{Nhóm A: Đặc Trưng Tốc Độ (Speed Features)}
-
-Nhóm này phản ánh tốc độ mở khóa thành tựu:
-
+\subsubsection{Nhóm A: Đặc trưng Động học và Tốc độ (Speed Features)}
+Nhóm chỉ số này tập trung đo lường gia tốc và biên độ thời gian trong các chuỗi hành vi mở khóa thành tựu:
 \begin{itemize}
-    \item \texttt{median\_unlock\_interval\_sec}: Khoảng thời gian trung bình giữa các lần mở khóa (tính bằng giây)
-    \item \texttt{std\_unlock\_interval\_sec}: Độ lệch chuẩn của các khoảng thời gian mở khóa
-    \item \texttt{cv\_unlock\_interval}: Hệ số biến thiên (standard deviation / mean) của khoảng thời gian
-    \item \texttt{max\_achievements\_per\_minute}: Số lượng thành tựu tối đa mở khóa trong 1 phút
-    \item \texttt{max\_achievements\_per\_day}: Số lượng thành tựu tối đa mở khóa trong 1 ngày
+    \item \texttt{median\_unlock\_interval\_sec}: Trung vị khoảng cách thời gian giữa các mốc mở khóa kế tiếp (giây). Bot thường ghi nhận giá trị tiệm cận 0 do cơ chế gọi API tự động.
+    \item \texttt{std\_unlock\_interval\_sec}: Độ lệch chuẩn của chuỗi thời gian mở khóa, đo lường sự biến động tốc độ.
+    \item \texttt{cv\_unlock\_interval}: Hệ số biến thiên toán học ($\frac{\sigma}{\mu}$), giúp chuẩn hóa mức độ dao động nhịp độ mở khóa độc lập với thang đo.
+    \item \texttt{max\_achievements\_per\_minute} và \texttt{max\_achievements\_per\_day}: Các chỉ số cực đại phản ánh công suất hoạt động tối đa, làm nổi bật các xung đột đột biến mang tính phi nhân loại.
 \end{itemize}
 
-\subsection{Nhóm B: Đặc Trưng Thời Gian (Temporal Features)}
-
-Nhóm này đặc trưng hóa mô hình hoạt động theo thời gian:
-
+\subsubsection{Nhóm B: Đặc trưng Phân bố Thời gian (Temporal Features)}
+Mô hình hóa thói quen sinh học của tài khoản thông qua việc ánh xạ mốc thời gian sự kiện về múi giờ địa phương tương ứng:
 \begin{itemize}
-    \item \texttt{night\_activity\_ratio}: Tỷ lệ thành tựu mở khóa trong giờ ban đêm (giờ địa phương < 6 sáng), có đưa vào tính toán múi giờ
-    \item \texttt{hour\_entropy}: Entropy Shannon của phân phối thành tựu theo 24 giờ (tính theo giờ địa phương), phản ánh tính ngẫu nhiên của hoạt động
-    \item \texttt{activity\_density}: Mật độ hoạt động = số ngày có hoạt động / khoảng thời gian từ ngày đầu đến ngày cuối
+    \item \texttt{night\_activity\_ratio}: Tỷ trọng thành tựu được kích hoạt trong khung giờ nghỉ ngơi sinh học (từ 00:00 đến 06:00 theo giờ địa phương).
+    \item \texttt{hour\_entropy}: Trọng số Shannon Entropy của phổ phân bố tương tác trên khung 24 giờ. Chỉ số này định lượng mức độ ngẫu nhiên: người dùng thực có chu kỳ rõ ràng (entropy thấp), trong khi botnet rải đều hoạt động suốt ngày đêm (entropy cao).
+    \item \texttt{activity\_density}: Mật độ ngày hoạt động hiệu dụng trên tổng vòng đời tài khoản.
 \end{itemize}
 
-\subsection{Nhóm C: Đặc Trưng Đa Dạng (Diversity Features)}
-
-Nhóm này đánh giá phạm vi và sự phân bổ của hoạt động:
-
+\subsubsection{Nhóm C: Đặc trưng Đa dạng hóa Thư viện (Diversity Features)}
+Đánh giá mức độ tập trung và cấu trúc danh mục đầu tư sản phẩm của tài khoản:
 \begin{itemize}
-    \item \texttt{total\_achievements}: Tổng số thành tựu đã mở khóa
-    \item \texttt{library\_size}: Số lượng game đã mua
-    \item \texttt{achievement\_game\_ratio}: Tỷ lệ = số game có achievements / tổng số game
-    \item \texttt{top1\_game\_concentration}: Phần trăm thành tựu từ game có nhiều achievements nhất
-    \item \texttt{top3\_game\_concentration}: Phần trăm thành tựu từ 3 game có nhiều achievements nhất
-    \item \texttt{game\_hhi}: Chỉ số Herfindahl = $\sum (\text{game\_proportion})^2$, đo mức độ tập trung
-    \item \texttt{avg\_achievements\_per\_game}: Trung bình = tổng achievements / số game có achievements
+    \item \texttt{total\_achievements} và \texttt{library\_size}: Tổng quy mô thành tựu và số lượng trò chơi sở hữu.
+    \item \texttt{achievement\_game\_ratio}: Tỷ lệ thâm nhập thành tựu trên tổng số sản phẩm trong thư viện.
+    \item \texttt{top1\_game\_concentration} và \texttt{top3\_game\_concentration}: Tỷ trọng đóng góp thành tựu từ các trò chơi chủ lực, nhận diện các tài khoản chỉ tập trung khai thác một số ít tựa game rác.
+    \item \texttt{game\_hhi}: Chỉ số tập trung Herfindahl-Hirschman ($HHI = \sum p_i^2$), cung cấp phép đo chuẩn xác về độ độc quyền hoạt động trong một tài khoản.
+    \item \texttt{avg\_achievements\_per\_game}: Hiệu suất khai thác trung bình trên mỗi tựa game có tương tác.
 \end{itemize}
 
-
-\subsection{Nhóm D: Đặc Trưng Đánh Giá (Review Features)}
-
-Nhóm này phân tích mô hình đánh giá của người dùng:
-
+\subsubsection{Nhóm D: Đặc trưng Bất thường Đánh giá (Review Features)}
+Định lượng các dấu hiệu thao túng và nhắm mục tiêu thông qua nội dung văn bản:
 \begin{itemize}
-    \item \texttt{total\_reviews}: Tổng số đánh giá đã viết
-    \item \texttt{review\_unplayed\_ratio}: Tỷ lệ đánh giá cho game chưa chơi (playtime == 0)
-    \item \texttt{review\_duplication\_rate}: Tỷ lệ = $1 - \frac{\text{unique\_texts}}{\text{total\_reviews}}$, phản ánh mức độ spam
-    \item \texttt{avg\_review\_length}: Độ dài trung bình của đánh giá
-    \item \texttt{min\_review\_length}: Độ dài tối thiểu của đánh giá
+    \item \texttt{total\_reviews}: Tổng số lượng bài viết phát tán.
+    \item \texttt{review\_unplayed\_ratio}: Tỷ lệ đánh giá sản phẩm khi thời lượng trải nghiệm bằng không ($\text{playtime} = 0$), một bằng chứng rõ ràng của hành vi Review Bombing mù quáng.
+    \item \texttt{review\_duplication\_rate}: Tỷ lệ rập khuôn nội dung, được định lượng bằng công thức:
+    $$\text{Duplication Rate} = 1 - \frac{\text{unique\_texts}}{\text{total\_reviews}}$$
+    \item \texttt{avg\_review\_length} và \texttt{min\_review\_length}: Thống kê độ dài chuỗi ký tự, giúp phát hiện các tài khoản chuyên rải bình luận vô nghĩa hoặc cực ngắn.
 \end{itemize}
 
-\subsection{Nhóm E: Đặc Trưng Tuổi Tài Khoản (Account Age Features)}
-
-Nhóm này liên quan đến lịch sử tài khoản:
-
+\subsubsection{Nhóm E: Đặc trưng Lịch sử Vòng đời (Account Age Features)}
 \begin{itemize}
-    \item \texttt{days\_before\_first\_achievement}: Số ngày từ khi tạo tài khoản đến lần mở khóa thành tựu đầu tiên
-    \item \texttt{account\_age\_days}: Số ngày từ khi tạo tài khoản đến thời điểm tham chiếu (mốc thời gian cố định)
+    \item \texttt{days\_before\_first\_achievement}: Khoảng trễ tính từ thời điểm khởi tạo hồ sơ đến khi ghi nhận tương tác đầu tiên.
+    \item \texttt{account\_age\_days}: Độ tuổi tuyệt đối của tài khoản tính đến mốc quy chiếu cố định của hệ thống.
 \end{itemize}
 
-\subsection{Nhóm F: Đặc Trưng Thời Gian Chơi (Playtime Features)}
-
-Nhóm này phân tích mối quan hệ giữa thành tựu và thời gian chơi thực tế:
-
-Quá trình kết hợp dữ liệu:
+\subsubsection{Nhóm F: Đặc trưng Đối soát Thời gian chơi (Playtime Features)}
+Nhóm đặc trưng mang tính quyết định, thực hiện đối soát chéo giữa logic hệ thống và dữ liệu ghi nhận thực tế từ API thông qua bộ quy tắc phân loại điều kiện:
 \begin{itemize}
-    \item \textbf{Điều kiện A}: Game có trong lịch sử nhưng không trong library → bỏ qua (API delay)
-    \item \textbf{Điều kiện B}: Game trong library với playtime > 0 → hoạt động bình thường
-    \item \textbf{Điều kiện C}: Game trong library với playtime == 0 → tín hiệu bot (SAM/unlocker)
+    \item \textbf{Điều kiện A (Bỏ qua - Trễ API):} Sản phẩm xuất hiện trong bảng Lịch sử nhưng vắng mặt tại Thư viện. Đây là nhiễu hệ thống do độ trễ đồng bộ API và được loại trừ khỏi véc-tơ tính toán.
+    \item \textbf{Điều kiện B (Hợp lệ):} Trò chơi tồn tại trong Thư viện đi kèm thời lượng trải nghiệm hợp lý ($\text{playtime} > 0$).
+    \item \textbf{Điều kiện C (Dị biệt):} Ghi nhận thành tựu từ sản phẩm trong Thư viện nhưng tổng thời gian chơi hoàn toàn trống không ($\text{playtime} = 0$). Đây là tín hiệu tố cáo sự can thiệp của các phần mềm giả lập giao thức (như SAM).
+\end{itemize}
+Từ phân loại trên, hệ thống trích xuất các biến số:
+\begin{itemize}
+    \item \texttt{zero\_playtime\_achievements\_ratio}: Tỷ trọng tương tác giả lập trên tổng tương tác thực tế: $\frac{C}{B + C}$.
+    \item \texttt{total\_playtime\_mins}: Tổng thời gian tiêu tốn cho toàn bộ thư viện (đã khử trùng lặp sản phẩm nhằm tránh thổi phồng số liệu).
+    \item \texttt{playtime\_per\_achievement}: Hiệu suất thời gian trung bình để gặt hái một thành tựu ($\frac{\text{total\_playtime\_mins}}{B + C}$).
 \end{itemize}
 
-Các đặc trưng:
-\begin{itemize}
-    \item \texttt{zero\_playtime\_achievements\_ratio}: Tỷ lệ = $\frac{\text{achievements từ C}}{\text{B + C}}$
-    \item \texttt{total\_playtime\_mins}: Tổng thời gian chơi (game riêng biệt, tránh inflate)
-    \item \texttt{playtime\_per\_achievement}: Thời gian chơi trung bình trên mỗi thành tựu = $\frac{\text{total\_playtime\_mins}}{\text{B + C}}$
-\end{itemize}
-
-\subsection{Phân Tích Dữ Liệu Khám Phá (EDA)}
+\subsection{Phân tích Dữ liệu Khám phá (EDA)}
 
 \begin{figure}[H]
     \centering
@@ -123,14 +107,11 @@ Các đặc trưng:
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Biểu đồ Histogram của các đặc trưng quan trọng (Log transform)}
+    \caption{Phân phối biểu đồ tần suất (Histogram) của các đặc trưng cốt lõi sau khi áp dụng phép biến đổi Logarit}
     \label{fig:histograms}
 \end{figure}
 
-
-
-\subsubsection{Câu hỏi 1: Các cụm tài khoản cụ thể có tỷ lệ đạt được thành tựu bất thường không?}
-
+\subsubsection{Khảo sát 1: Tương quan Phân cụm giữa Mật độ Thành tựu và Thời gian Trải nghiệm}
 \begin{figure}[H]
     \centering
     \IfFileExists{Images/Slide/9.jpg}{
@@ -144,13 +125,11 @@ Các đặc trưng:
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Mật độ Hexbin giữa Thời gian chơi và Số lượng thành tựu}
+    \caption{Biểu đồ phân tán mật độ (Hexbin Plot) đối chiếu thời lượng chơi game và tổng quy mô thành tựu}
     \label{fig:hexbin_playtime}
 \end{figure}
 
-
-\subsubsection{Câu hỏi 2: Các thành tựu được phân bổ đa dạng hay tập trung quá mức?}
-
+\subsubsection{Khảo sát 2: Phân tích Mức độ Tập trung và Đa dạng Danh mục}
 \begin{figure}[H]
     \centering
     \IfFileExists{Images/Slide/10.jpg}{
@@ -164,13 +143,11 @@ Các đặc trưng:
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Sự tập trung danh mục trò chơi theo phân đoạn người dùng}
+    \caption{Phân phối mức độ tập trung danh mục khai thác (Game Concentration) theo các nhóm phân khúc người dùng}
     \label{fig:game_concentration}
 \end{figure}
 
-
-\subsubsection{Câu hỏi 3: Sự khác biệt về nhịp độ hành vi giữa các nhóm người dùng?}
-
+\subsubsection{Khảo sát 3: Khám phá Dấu vết Nhịp độ Sinh học và Chu kỳ Hoạt động}
 \begin{figure}[H]
     \centering
     \IfFileExists{Images/Slide/11.jpg}{
@@ -184,7 +161,7 @@ Các đặc trưng:
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{So sánh nhịp sinh học giữa các nhóm người dùng (Hourly activity)}
+    \caption{Đối chiếu chu kỳ hoạt động theo giờ (Hourly Activity) phản ánh sự khác biệt nhịp sinh học giữa người dùng và bot}
     \label{fig:hourly_activity}
 \end{figure}
 
@@ -201,7 +178,6 @@ Các đặc trưng:
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Biểu đồ nhiệt thời gian (24/7) của các sự kiện thành tựu}
+    \caption{Bản đồ nhiệt phân bố chu kỳ sự kiện theo ma trận thời gian 24/7}
     \label{fig:temporal_heatmap}
 \end{figure}
-

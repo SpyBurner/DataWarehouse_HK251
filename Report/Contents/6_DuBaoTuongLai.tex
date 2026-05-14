@@ -1,8 +1,7 @@
-\section{Dự Báo và Dashboard (Inference \& Visualization)}
+\section{Dự báo và Giao diện Quản trị (Inference \& Visualization)}
 
-\subsection{Giải thích mô hình (Explainable AI)}
-
-Để đảm bảo tính minh bạch trong việc phát hiện bot, hệ thống sử dụng SHAP (SHapley Additive exPlanations) để giải thích các quyết định của mô hình.
+\subsection{Cơ chế Diễn giải Mô hình (Explainable AI - XAI)}
+Để xóa bỏ định kiến về "hộp đen học máy" (\textit{black-box AI}) và củng cố niềm tin cho đội ngũ kiểm duyệt viên, hệ thống tích hợp giải pháp \textbf{SHAP (SHapley Additive exPlanations)} dựa trên lý thuyết trò chơi hợp tác. SHAP phân rã véc-tơ đầu ra thành các giá trị đóng góp độc lập, cho phép giải thích chính xác động lực phía sau mỗi phán quyết phân loại.
 
 \begin{figure}[H]
     \centering
@@ -17,7 +16,7 @@
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Tầm quan trọng của các đặc trưng trong mô hình XGBoost (Top 15)}
+    \caption{Bảng xếp hạng mức độ ảnh hưởng toàn cục của Top 15 đặc trưng quan trọng nhất trong mô hình XGBoost}
     \label{fig:xgb_importance}
 \end{figure}
 
@@ -35,13 +34,12 @@
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Giải thích mô hình bằng giá trị SHAP (Scatter plot và Waterfall plot)}
+    \caption{Phân tích vi mô giá trị SHAP thông qua biểu đồ phân tán (Scatter plot) và luồng đóng góp cục bộ (Waterfall plot)}
     \label{fig:shap_explanation}
 \end{figure}
 
-\subsection{Hệ Thống Dashboard BI}
-
-Hệ thống cung cấp giao diện trực quan để theo dõi và phân tích các tài khoản bất thường.
+\subsection{Hệ thống Bảng điều khiển Thông minh (Dashboard BI)}
+Giao diện BI được thiết kế tối ưu hóa trải nghiệm người dùng (UX), cung cấp trung tâm kiểm soát trực quan để rà quét, giám sát và trích xuất hồ sơ dị biệt theo thời gian thực.
 
 \begin{figure}[H]
     \centering
@@ -56,7 +54,7 @@ Hệ thống cung cấp giao diện trực quan để theo dõi và phân tích 
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Giao diện tìm kiếm tài khoản trên Dashboard (Hỗ trợ nhiều ID hoặc file CSV)}
+    \caption{Module truy vấn hồ sơ linh hoạt (Hỗ trợ nhập liệu ID đơn lẻ hoặc tải tệp ma trận CSV)}
     \label{fig:dash_search}
 \end{figure}
 
@@ -73,12 +71,12 @@ Hệ thống cung cấp giao diện trực quan để theo dõi và phân tích 
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Kết quả tìm kiếm và đánh giá nhanh rủi ro}
+    \caption{Giao diện trả kết quả phân tích nhanh kèm hệ thống cảnh báo rủi ro tự động}
     \label{fig:dash_result_quick}
 \end{figure}
 
-\subsubsection{Chi Tiết Hành Vi và So Sánh Baseline}
-Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức trung bình của cộng đồng.
+\subsubsection{Truy xuất Hành vi Cục bộ và Đối chuẩn Cộng đồng (Baseline Comparison)}
+Hệ thống cho phép đi sâu phân tích thông số kỹ thuật của từng đối tượng, đồng thời thực hiện ánh xạ đối chuẩn trực tiếp với đường cơ sở (\textit{baseline}) phản ánh hành vi trung bình của toàn cộng đồng.
 
 \begin{figure}[H]
     \centering
@@ -93,7 +91,7 @@ Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức tru
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Chi tiết các chỉ số hành vi và dự báo Online Inference}
+    \caption{Chi tiết các ma trận chỉ số và kết quả suy luận trực tuyến (Online Inference)}
     \label{fig:dash_details}
 \end{figure}
 
@@ -110,7 +108,7 @@ Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức tru
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Phân tích rủi ro chi tiết cho một tài khoản cụ thể}
+    \caption{Báo cáo rà soát cấu trúc rủi ro chuyên sâu cho một hồ sơ cụ thể}
     \label{fig:dash_risk_analysis}
 \end{figure}
 
@@ -127,11 +125,11 @@ Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức tru
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{So sánh các đặc trưng sai lệch nhất so với Baseline cộng đồng}
+    \caption{Biểu đồ radar đối soát các mảng đặc trưng có biên độ lệch chuẩn lớn nhất so với Baseline cộng đồng}
     \label{fig:comp_baseline}
 \end{figure}
 
-\subsubsection{Phân Tích Tổng Quan Dữ Liệu}
+\subsubsection{Phân tích Tương quan Dữ liệu Vĩ mô}
 
 \begin{figure}[H]
     \centering
@@ -147,7 +145,7 @@ Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức tru
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Phân phối Composite Score và Bản đồ địa lý tài khoản bất thường}
+    \caption{Phân phối phổ điểm rủi ro tổng hợp (Composite Score) và Bản đồ nhiệt phân bố vị trí địa lý của botnet}
     \label{fig:global_overview}
 \end{figure}
 
@@ -164,7 +162,7 @@ Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức tru
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Dashboard tương quan mô hình và đồng thuận Ensemble}
+    \caption{Giao diện phân tích độ tương quan và mức độ đồng thuận quyết định trong hệ Dual Ensemble}
     \label{fig:dash_consensus_overview}
 \end{figure}
 
@@ -181,7 +179,7 @@ Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức tru
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Ma trận đồng thuận giữa XGBoost và Isolation Forest}
+    \caption{Ma trận đồng thuận chéo (Consensus Matrix) minh họa độ nhất quán giữa thuật toán giám sát và độc lập}
     \label{fig:consensus_matrix}
 \end{figure}
 
@@ -198,11 +196,11 @@ Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức tru
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Phân tích độ tin cậy và sự đồng thuận của các mô hình}
+    \caption{Thống kê độ tin cậy và phân phối biên độ đồng thuận của các luồng dự báo}
     \label{fig:consensus_stats}
 \end{figure}
 
-\subsection{Phân Tích Đặc Trưng Discriminative}
+\subsection{Khai phá Năng lực Phân biệt của Đặc trưng (Discriminative Insights)}
 
 \begin{figure}[H]
     \centering
@@ -218,7 +216,7 @@ Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức tru
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{So sánh Mean Ratio (Bot vs Normal) và tương quan đặc trưng nhân khẩu học}
+    \caption{Phân tích Tỷ lệ Trung bình (Mean Ratio) đối chiếu Bot vs Người dùng và Tương quan chéo với các biến số định danh}
     \label{fig:behavioral_insights}
 \end{figure}
 
@@ -235,13 +233,12 @@ Hệ thống hiển thị các chỉ số hành vi chi tiết so với mức tru
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Tỷ lệ bất thường theo quy mô thư viện và năm tạo tài khoản}
+    \caption{Bản đồ phân phối tỷ lệ tấn công dị biệt dựa trên quy mô tài sản thư viện và mốc lịch sử khởi tạo}
     \label{fig:anomaly_rates}
 \end{figure}
 
-\subsection{Kiểm thử thực tế}
-
-Hệ thống đã được kiểm thử trên một tập dữ liệu gồm 40 hồ sơ (20 người dùng thật và 20 tài khoản bot được tạo giả lập).
+\subsection{Thẩm định Hiệu năng trên Tập Dữ liệu Thực tế}
+Để nghiệm chứng độ tin cậy của mô hình trong môi trường kiểm soát, hệ thống triển khai một đợt kiểm thử kín trên 40 hồ sơ độc lập (bao gồm 20 tài khoản người dùng thực ngẫu nhiên và 20 hồ sơ bot được thiết lập giả lập các chiến thuật né tránh tiên tiến). Kết quả phân loại được phản ánh trực quan qua Ma trận nhầm lẫn dưới đây, khẳng định khả năng tổng quát hóa tuyệt vời của giải pháp.
 
 \begin{figure}[H]
     \centering
@@ -256,6 +253,6 @@ Hệ thống đã được kiểm thử trên một tập dữ liệu gồm 40 h
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Ma trận nhầm lẫn (Confusion Matrix) trên tập dữ liệu kiểm thử (40 profiles)}
+    \caption{Ma trận nhầm lẫn (Confusion Matrix) đánh giá năng lực suy luận thực tế trên tập hồ sơ độc lập (40 profiles)}
     \label{fig:confusion_matrix_test}
 \end{figure}

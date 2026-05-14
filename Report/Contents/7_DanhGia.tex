@@ -1,23 +1,24 @@
-\section{Kết luận và Hướng phát triển}
+\section{Kết luận và Định hướng Phát triển}
 
-\subsection{Ưu điểm và Hạn chế}
+\subsection{Tổng kết Ưu điểm và Hạn chế Kỹ thuật}
 
-\subsubsection{Ưu điểm}
+\subsubsection{Ưu điểm vượt trội}
 \begin{itemize}
-    \item \textbf{Cấu trúc Dual Ensemble:} Cân bằng giữa khả năng phát hiện (IF) và độ chính xác (XGBoost), giảm thiểu tỷ lệ dương tính giả.
-    \item \textbf{Khả năng giải thích (SHAP):} Cung cấp căn cứ minh bạch cho các quyết định của mô hình, hỗ trợ đắc lực cho người kiểm duyệt.
-    \item \textbf{Vòng lặp Active Learning:} Cho phép hệ thống tự cải thiện thông qua phản hồi của con người.
+    \item \textbf{Cơ chế Phòng thủ Kép (Dual Ensemble Architecture):} Tạo lập thế cân bằng chiến lược giữa khả năng càn quét diện rộng của Isolation Forest và độ chính xác tuyệt đối của XGBoost, kiểm soát tối đa bài toán rủi ro dương tính giả (\textit{False Positive Rate}) gây ảnh hưởng đến người dùng hợp lệ.
+    \item \textbf{Minh bạch hóa Quyết định (Explainability via SHAP):} Cung cấp các luận cứ toán học tường minh phía sau mỗi cảnh báo, trang bị công cụ kiểm chứng đắc lực giúp đội ngũ vận hành đưa ra các quyết định xử lý thuyết phục.
+    \item \textbf{Khả năng Thích ứng qua Vòng lặp Học chủ động (Active Learning):} Kiến trúc hệ thống sẵn sàng tích hợp các luồng phản hồi từ con người (\textit{human-in-the-loop}) nhằm liên tục cập nhật và tái huấn luyện các trọng số nhận diện, giúp hệ thống không bị lỗi thời trước các biến thể gian lận mới.
 \end{itemize}
 
-\subsubsection{Hạn chế}
+\subsubsection{Hạn chế tồn đọng}
 \begin{itemize}
-    \item \textbf{Rò rỉ dữ liệu (Data leakage):} Các quy tắc heuristic dựa trên chính các đặc trưng mà mô hình sử dụng có thể gây ra hiện tượng học vẹt.
-    \item \textbf{Ràng buộc API:} Giới hạn tần suất gọi API dẫn đến dữ liệu đôi khi không đầy đủ hoặc không nhất quán.
-    \item \textbf{Điểm mù mạng lưới:} Khó phát hiện các mạng lưới bot đánh giá có tổ chức nếu chúng hoạt động rời rạc.
+    \item \textbf{Rủi ro Rò rỉ Dữ liệu (Data Leakage):} Việc sử dụng các quy tắc Heuristic có độ tương quan cao với một số biến số đầu vào để tạo nhãn giả định có thể dẫn tới hiện tượng mô hình giám sát bị "học vẹt" (\textit{tautological learning}) tại một số cụm phân phối.
+    \item \textbf{Rào cản Giới hạn Giao thức (API Bottlenecks):} Các chính sách giới hạn lưu lượng truy vấn (\textit{Rate Limiting}) từ phía Steam Web API khiến cho luồng thu thập dữ liệu đôi khi bị gián đoạn, tạo ra các khoảng trống thông tin ảnh hưởng đến tính toàn vẹn của véc-tơ đặc trưng.
+    \item \textbf{Điểm mù Phân tán của Botnet:} Hệ thống hiện tại tập trung phân tích hồ sơ dưới dạng các véc-tơ hành vi độc lập. Do đó, giải pháp gặp khó khăn khi truy vết các chiến dịch thao túng đánh giá tinh vi, nơi hàng ngàn tài khoản bot hoạt động hết sức thưa thớt và rời rạc để tránh kích hoạt các ngưỡng báo động đơn lẻ.
 \end{itemize}
 
-\subsection{Hướng phát triển tương lai}
+\subsection{Định hướng Mở rộng Nghiên cứu}
+Để hoàn thiện năng lực bảo mật cho hệ sinh thái, các giai đoạn phát triển tiếp theo của dự án sẽ hướng tới hai mũi nhọn công nghệ:
 \begin{itemize}
-    \item \textbf{Graph-Based Detection (GNN):} Mô hình hóa mối quan hệ giữa người dùng, trò chơi và các đánh giá dưới dạng đồ thị để phát hiện các nhóm gian lận có tổ chức.
-    \item \textbf{Mô hình chuỗi thời gian (LSTM/Transformer):} Phân tích sâu hơn trình tự thời gian của các hành vi để bắt kịp các kiểu gian lận thay đổi theo thời gian.
-\end{itemize}
+    \item \textbf{Phát hiện Bất thường dựa trên Đồ thị (Graph Neural Networks - GNN):} Chuyển đổi mô hình hóa dữ liệu từ dạng bảng sang dạng cấu trúc Đồ thị Tương tác. Bằng cách kết nối các nút Người dùng, Trò chơi và Bài đánh giá thông qua các cạnh tương tác, thuật toán GNN có thể khai phá các cụm liên kết ngầm, trực tiếp bóc gỡ toàn bộ các mạng lưới gian lận có tổ chức dù chúng ngụy trang cực kỳ khéo léo ở tầng hồ sơ cá nhân.
+    \item \textbf{Phân tích Chuỗi Thời gian Sâu (Deep Temporal Sequence Modeling):} Tích hợp các kiến trúc mạng nơ-ron hồi quy (LSTM) hoặc cơ chế tự chú ý (Transformers) nhằm phân tích sâu chuỗi trình tự ngắt quãng của các gói tin hành vi theo thời gian thực. Giải pháp này hứa hẹn bắt kịp và dự báo sớm các kịch bản tấn công động học liên tục biến đổi của giới gian lận chuyên nghiệp.
+\end{itemize}

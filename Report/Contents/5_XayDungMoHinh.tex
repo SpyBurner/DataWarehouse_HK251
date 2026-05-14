@@ -1,13 +1,13 @@
-\section{Xây Dựng Mô Hình (Model Selection, Training \& Tuning)}
+\section{Xây dựng Mô hình (Model Selection, Training \& Tuning)}
 
-\subsection{Tổng Quan}
-Hệ thống sử dụng hai mô hình machine learning chính: \textbf{XGBoost} và \textbf{IsolationForest}, được kết hợp trong một ensemble để tăng độ chính xác và độ tin cậy của phát hiện bot.
+\subsection{Tổng quan Kiến trúc}
+Để giải quyết triệt để rào cản khan hiếm nhãn gốc đồng thời tối đa hóa độ chính xác, hệ thống đề xuất kiến trúc học máy kết hợp (\textbf{Dual Ensemble Architecture}). Giải pháp tích hợp thế mạnh của hai trường phái thuật toán bổ trợ lẫn nhau: mô hình học có giám sát \textbf{XGBoost} và mô hình học không giám sát \textbf{Isolation Forest}.
 
-\subsection{Lựa chọn thuật toán}
-Dựa trên so sánh các thuật toán phổ biến:
+\subsection{Lập luận Lựa chọn Thuật toán}
+Sự kết hợp giữa XGBoost và Isolation Forest mang lại giải pháp toàn diện cho đặc thù dữ liệu Steam:
 \begin{itemize}
-    \item \textbf{XGBoost (Supervised)}: Phù hợp với dữ liệu mất cân bằng, dễ giải thích qua Feature Importance. Cần nhãn dữ liệu (Heuristic labeling).
-    \item \textbf{Isolation Forest (Unsupervised)}: Phát hiện các anomaly mới mà không phụ thuộc vào nhãn. Hiệu quả với dữ liệu lớn.
+    \item \textbf{XGBoost (Học có giám sát):} Thể hiện sự vượt trội khi xử lý các ma trận đặc trưng mất cân bằng nghiêm trọng. Cấu trúc cây tăng cường (Gradient Boosting) cho phép trích xuất tầm quan trọng của các biến số một cách minh bạch. Tuy nhiên, mô hình này đòi hỏi hệ thống phải thiết lập một chiến lược gán nhãn giả định (Heuristic labeling) chất lượng cao.
+    \item \textbf{Isolation Forest (Học không giám sát):} Xây dựng các cây cách ly ngẫu nhiên nhằm rà quét và cô lập các điểm dữ liệu dị biệt trong không gian đa chiều mà không phụ thuộc vào nhãn định trước. Mô hình này sở hữu tốc độ tính toán tối ưu trên tập Big Data và đặc biệt nhạy bén trong việc phát hiện các biến thể tấn công mới (\textit{zero-day anomalies}) chưa từng xuất hiện trong tập quy tắc gán nhãn.
 \end{itemize}
 
 \begin{figure}[H]
@@ -23,28 +23,29 @@ Dựa trên so sánh các thuật toán phổ biến:
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Sơ đồ kiến trúc mô hình Dual Ensemble (XGBoost + Isolation Forest)}
+    \caption{Sơ đồ kiến trúc tổng thể mô hình Dual Ensemble kết hợp XGBoost và Isolation Forest}
     \label{fig:model_diagram}
 \end{figure}
 
-\subsection{Quy trình huấn luyện và tối ưu}
+\subsection{Chiến lược Huấn luyện và Tối ưu Hóa}
 
-\subsubsection{Tạo nhãn bằng Heuristic (PU-Learning style)}
-Do dữ liệu gốc không có nhãn, hệ thống sử dụng các quy tắc (heuristic rules) để xác định các mẫu "chắc chắn là bot" và "chắc chắn là người dùng bình thường":
+\subsubsection{Kỹ thuật Gán nhãn Heuristic (Tiếp cận theo cơ chế PU-Learning)}
+Do thiếu hụt bộ dữ liệu chuẩn (\textit{ground truth}), hệ thống triển khai phương pháp học dựa trên dữ liệu dương tính và chưa xác định (Positive-Unlabeled Learning) thông qua hệ thống quy tắc ngặt:
 \begin{itemize}
-    \item \textbf{Bot Rules}: Tốc độ mở khóa cực nhanh (< 10s) hoặc tỷ lệ thành tựu với 0 phút chơi cao (> 0.9).
-    \item \textbf{Normal Rules}: Thời gian chơi dài, tốc độ mở khóa tự nhiên (> 600s).
+    \item \textbf{Tập nhãn Bot (Positive Class):} Kích hoạt đối với các hồ sơ có tốc độ mở khóa phi thực tế (trung vị khoảng thời gian $< 10$ giây) hoặc sở hữu tỷ lệ thành tựu phi thực tế với mốc thời gian chơi bằng không vượt ngưỡng $0.9$.
+    \item \textbf{Tập nhãn Người dùng (Negative Class):} Gán cho các hồ sơ sở hữu thời gian trải nghiệm tích lũy lớn kèm theo nhịp độ mở khóa tự nhiên (trung vị khoảng thời gian $> 600$ giây).
+\end{itemize}
+Phần dữ liệu nằm giữa hai biên này được giữ ở trạng thái xám nhằm tránh đưa nhiễu vào quá trình hội tụ của mô hình giám sát.
+
+\subsubsection{Tối ưu hóa Siêu tham số (Hyperparameter Tuning)}
+\begin{itemize}
+    \item \textbf{Isolation Forest:} Triển khai thuật toán rà quét không gian tham số (Grid Search) để tìm ra điểm cân bằng tối ưu cho tỷ lệ nhiễu dự kiến (\texttt{contamination}) và quy mô quần thể cây (\texttt{n\_estimators}).
+    \item \textbf{XGBoost:} Tận dụng tập nhãn Heuristic để tiến hành tinh chỉnh sâu các tham số kiểm soát độ phức tạp (như \texttt{max\_depth}, \texttt{learning\_rate}, \texttt{min\_child\_weight}) thông qua kỹ thuật kiểm chứng chéo K-Fold Cross Validation nhằm triệt tiêu rủi ro học vẹt (\textit{overfitting}).
 \end{itemize}
 
-\subsubsection{Hyperparameter Tuning}
-\begin{itemize}
-    \item \textbf{Isolation Forest}: Sử dụng Grid Search để tối ưu hóa \texttt{contamination} và \texttt{n\_estimators}.
-    \item \textbf{XGBoost}: Huấn luyện trên tập dữ liệu đã gán nhãn heuristic, tối ưu hóa qua cross-validation.
-\end{itemize}
-
-\subsection{Xây Dựng Ensemble}
-
-Kết quả từ hai mô hình được chuẩn hóa và kết hợp theo trọng số tối ưu.
+\subsection{Cơ chế Hợp nhất Ensemble}
+Điểm số dự báo dị biệt từ hai mô hình thành phần được đưa qua hàm chuẩn hóa Min-Max để đưa về cùng hệ quy chiếu xác suất $[0, 1]$. Sau đó, hệ thống áp dụng một hàm tổng hợp tuyến tính dựa trên ma trận trọng số tối ưu $\alpha$:
+$$\text{Score}_{\text{ensemble}} = \alpha \cdot P_{\text{XGBoost}} + (1 - \alpha) \cdot S_{\text{IsolationForest}}$$
 
 \begin{figure}[H]
     \centering
@@ -59,17 +60,18 @@ Kết quả từ hai mô hình được chuẩn hóa và kết hợp theo trọn
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Phân tích độ nhạy của trọng số Ensemble để tìm điểm cắt tối ưu}
+    \caption{Phân tích độ nhạy của trọng số tích hợp nhằm xác định ngưỡng quyết định (Cut-off point) tối ưu cho Ensemble}
     \label{fig:weight_sensitivity}
 \end{figure}
 
-\subsection{Các chỉ số đánh giá}
-
+\subsection{Hệ Thang đo Đánh giá Hiệu năng}
+Hiệu suất phân loại của các thuật toán được kiểm chứng toàn diện thông qua 4 chỉ số thống kê tiêu chuẩn:
 \begin{itemize}
-    \item \textbf{Recall}: Tỷ lệ bot được phát hiện trên tổng số bot thực tế.
-    \item \textbf{Precision}: Tỷ lệ chính xác trong số các tài khoản bị gắn thẻ là bot.
-    \item \textbf{Accuracy}: Tỷ lệ phát hiện đúng cho cả bot và người dùng bình thường.
-    \item \textbf{F1-score}: Cân bằng giữa Precision và Recall.
+    \item \textbf{Độ bao phủ (Recall):} Định lượng năng lực truy vết botnet của hệ thống trên tổng số bot thực tế hiện diện: $\frac{TP}{TP + FN}$.
+    \item \textbf{Độ chính xác (Precision):} Đo lường mức độ tin cậy trong các quyết định gắn nhãn bất thường, phản ánh khả năng kiềm chế tỷ lệ nhận diện nhầm: $\frac{TP}{TP + FP}$.
+    \item \textbf{Độ xác thực Toàn cục (Accuracy):} Tỷ lệ dự báo chuẩn xác trên cả hai lớp thực thể: $\frac{TP + TN}{TP + TN + FP + FN}$.
+    \item \textbf{Điểm số F1 (F1-Score):} Trung bình điều hòa giữa Precision và Recall, đóng vai trò là thước đo trung tâm đánh giá tính ổn định của mô hình trên tập dữ liệu bất cân bằng:
+    $$F1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}$$
 \end{itemize}
 
 \begin{figure}[H]
@@ -87,11 +89,11 @@ Kết quả từ hai mô hình được chuẩn hóa và kết hợp theo trọn
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Các chỉ số đánh giá mô hình: Recall, Precision và Accuracy}
+    \caption{Trực quan hóa so sánh các chỉ số đánh giá cốt lõi: Recall, Precision và Accuracy}
     \label{fig:eval_metrics}
 \end{figure}
 
-\subsection{Kết quả đánh giá}
+\subsection{Tổng hợp Kết quả Nghiên cứu}
 
 \begin{figure}[H]
     \centering
@@ -106,6 +108,6 @@ Kết quả từ hai mô hình được chuẩn hóa và kết hợp theo trọn
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Bảng tổng hợp kết quả đánh giá các mô hình (XGBoost, Isolation Forest, Ensemble)}
+    \caption{Bảng tổng hợp chi tiết thông số hiệu năng đối sánh giữa các mô hình độc lập và giải pháp Ensemble đề xuất}
     \label{fig:eval_results}
 \end{figure}
