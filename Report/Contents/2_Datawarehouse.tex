@@ -1,218 +1,101 @@
-\section{Tiền xử lý và Tích hợp dữ liệu (ETL Pipeline)}
+\section{Kiến trúc Kho dữ liệu (Data Warehouse)}
 
-\subsection{Kiến trúc Tổng quan Hệ thống ETL}
+\subsection{Cấu trúc và Đặc tính Tập dữ liệu}
 
-Quá trình tiền xử lý, chuẩn hóa và tích hợp dữ liệu từ các nguồn phân tán được tự động hóa hoàn toàn thông qua nền tảng \textbf{Pentaho Data Integration (PDI / Spoon)}. Kiến trúc luồng dữ liệu được thiết kế chặt chẽ theo mô hình 3 lớp tiêu chuẩn nhằm tối ưu hóa hiệu năng, bảo đảm tính toàn vẹn và khả năng mở rộng của hệ thống:
-\begin{enumerate}
-    \item \textbf{Vùng tiếp nhận (Landing Zone - định dạng CSV):} Điểm tập kết ban đầu của các tệp dữ liệu thô nguyên bản (RAW CSV) trích xuất từ các bộ dữ liệu gốc, đồng thời liên tục tiếp nhận các gói dữ liệu mới khai thác (crawled data) từ luồng API.
-    \item \textbf{Vùng đệm tiền xử lý (Staging Area - MSSQL):} Đóng vai trò là phân vùng đệm trung gian cô lập luồng dữ liệu thô trước khi can thiệp sâu. Vùng Staging được thiết lập cơ chế tự động làm sạch (truncate) triệt để sau mỗi chu kỳ nạp dữ liệu thành công, đảm bảo tối ưu hóa tài nguyên lưu trữ và tránh xung đột dữ liệu giữa các phiên làm việc.
-    \item \textbf{Kho dữ liệu trung tâm (Data Warehouse - PostgreSQL):} Đích đến cuối cùng lưu trữ toàn bộ các bản ghi đã trải qua quá trình tinh chế, làm sạch sâu và chuẩn hóa cấu trúc.
-\end{enumerate}
-
-\begin{figure}[H]
-    \centering
-    \IfFileExists{Images/Pentaho/full_run.png}{
-        \includegraphics[width=0.9\linewidth]{Images/Pentaho/full_run}
-    }{
-        \fbox{\begin{minipage}{0.9\linewidth}
-            \centering
-            \vspace{2cm}
-            [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Pentaho/full\_run.png}\\
-            \vspace{2cm}
-        \end{minipage}}
-    }
-    \caption{Toàn cảnh quá trình thực thi Full Run Pipeline}
-    \label{fig:pentaho_full_run}
-\end{figure}
-
-Quy trình vận hành toàn phần (Full Run) của hệ thống được chia tách thành hai luồng tác vụ chính thực thi nối tiếp nhau: luồng nạp gốc \textbf{Pre-Master} và luồng tự động hóa \textbf{Master}.
-
-\subsection{Chi tiết Kiến trúc các Luồng Thực thi}
-
-\subsubsection{Luồng Khởi tạo Dữ liệu Lịch sử (Pre-Master)}
-
-\begin{figure}[H]
-    \centering
-    \IfFileExists{Images/Pentaho/pre_master.png}{
-        \includegraphics[width=0.7\linewidth]{Images/Pentaho/pre_master}
-    }{
-        \fbox{\begin{minipage}{0.7\linewidth}
-            \centering
-            \vspace{2cm}
-            [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Pentaho/pre\_master.png}\\
-            \vspace{2cm}
-        \end{minipage}}
-    }
-    \caption{Luồng Pre-Master nạp dữ liệu gốc ban đầu}
-    \label{fig:pentaho_pre_master}
-\end{figure}
-
-Luồng \textbf{Pre-Master} đảm nhận trọng trách thiết lập nền tảng ban đầu bằng cách nạp toàn bộ khối lượng dữ liệu lịch sử quy mô lớn từ bộ dữ liệu gốc. Chuỗi tác vụ cốt lõi trong luồng này bao gồm:
+Nguồn dữ liệu đầu vào chủ lực được khai thác từ tập dữ liệu quy mô lớn \textbf{Gaming Profiles 2025} công bố trên nền tảng Kaggle. Tập dữ liệu cung cấp bức tranh đa chiều về hành vi người dùng thông qua 4 bảng cấu trúc chuyên biệt:
 \begin{itemize}
-    \item Đọc và phân tích định dạng từ các tệp RAW CSV nguyên bản.
-    \item Đổ tải dòng dữ liệu thô vào các bảng đệm tương ứng tại Staging Area (MSSQL).
-    \item Kích hoạt các luồng chuyển đổi chuyên sâu nhằm vận chuyển và chuẩn hóa dữ liệu từ Staging Area sang Data Warehouse (PostgreSQL).
+    \item \texttt{history}: Lưu trữ chi tiết các phiên hoạt động và thời lượng trải nghiệm trò chơi của từng tài khoản, sở hữu quy mô dữ liệu đồ sộ vượt mốc 10 triệu bản ghi. Đây là nguồn thông tin cốt lõi để khai phá các mẫu hình thời gian chơi và trích xuất đặc trưng về chu kỳ hoạt động.
+    \item \texttt{reviews}: Tổng hợp các bài đánh giá do cộng đồng đăng tải, bao gồm nội dung văn bản, dán nhãn tích cực/tiêu cực và các mốc thời gian tương ứng, phục vụ trực tiếp cho bài toán phân tích bất thường trong thao túng đánh giá.
+    \item \texttt{players}: Cung cấp các thông số định danh và siêu dữ liệu (metadata) của hồ sơ người chơi, phản ánh mức độ hoàn thiện hồ sơ và trạng thái hiển thị cộng đồng.
+    \item \texttt{purchased\_games}: Ghi nhận danh mục các sản phẩm kỹ thuật số mà người chơi đã sở hữu, giúp xác định danh mục đầu tư và quy mô tài khoản.
 \end{itemize}
 
-\subsubsection{Luồng Vận hành và Cập nhật Tự động (Master)}
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.48\linewidth}
+        \centering
+        \IfFileExists{Images/Slide/3.jpg}{
+            \includegraphics[width=\linewidth]{Images/Slide/3}
+        }{
+            \fbox{[IMAGE 3]}
+        }
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\linewidth}
+        \centering
+        \IfFileExists{Images/Slide/4.jpg}{
+            \includegraphics[width=\linewidth]{Images/Slide/4}
+        }{
+            \fbox{[IMAGE 4]}
+        }
+    \end{minipage}
+    \caption{Chi tiết cấu trúc và trường dữ liệu của bảng history và reviews}
+    \label{fig:data_tables_1}
+\end{figure}
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{Images/Pentaho/master.png}{
-        \includegraphics[width=0.9\linewidth]{Images/Pentaho/master}
-    }{
-        \fbox{\begin{minipage}{0.9\linewidth}
-            \centering
-            \vspace{2cm}
-            [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Pentaho/master.png}\\
-            \vspace{2cm}
-        \end{minipage}}
-    }
-    \caption{Luồng Master xử lý và cập nhật dữ liệu thu thập mới}
-    \label{fig:pentaho_master}
+    \begin{minipage}{0.48\linewidth}
+        \centering
+        \IfFileExists{Images/Slide/5.jpg}{
+            \includegraphics[width=\linewidth]{Images/Slide/5}
+        }{
+            \fbox{[IMAGE 5]}
+        }
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\linewidth}
+        \centering
+        \IfFileExists{Images/Slide/5-1.jpg}{
+            \includegraphics[width=\linewidth]{Images/Slide/5-1}
+        }{
+            \fbox{[IMAGE 5-1]}
+        }
+    \end{minipage}
+    \caption{Chi tiết cấu trúc và trường dữ liệu của bảng players và purchased\_games}
+    \label{fig:data_tables_2}
 \end{figure}
 
-Luồng \textbf{Master} được thiết kế tối ưu hóa cho môi trường sản xuất (production) với cơ chế \textbf{lên lịch thực thi tự động} theo chu kỳ. Luồng tác vụ này tập trung giải quyết luồng dữ liệu gia tăng thông qua các khâu:
+\subsection{Thiết kế schema Data Warehouse}
+
+Để đáp ứng yêu cầu truy vấn phân tích đa chiều (OLAP) trên khối lượng dữ liệu quy mô lớn và phục vụ việc trích xuất đặc trưng cho các mô hình học máy, hệ thống Data Warehouse được thiết kế tối ưu trên nền tảng hệ quản trị cơ sở dữ liệu PostgreSQL. Thay vì sử dụng mô hình hình sao (Star Schema) truyền thống, kiến trúc cốt lõi được phát triển theo \textbf{mô hình thiên hà (Galaxy Schema / Fact Constellation)}, cho phép chia sẻ các bảng chiều chung (Conformed Dimensions) giữa nhiều quy trình nghiệp vụ độc lập nhằm tối ưu hóa không gian lưu trữ và đảm bảo tính nhất quán của dữ liệu.
+
+Quá trình triển khai vật lý được tự động hóa thông qua các kịch bản \texttt{SQL\_SQLServer\_CreateStagingDB.sql} và \texttt{SQL\_Postgres\_InitWarehouse.sql}, phân tách luồng xử lý thành hai vùng độc lập:
 \begin{itemize}
-    \item Tự động quét, rà soát và xác thực sự hiện diện của các tệp dữ liệu mới thu thập xuất hiện tại thư mục Landing.
-    \item Nạp các gói dữ liệu gia tăng này vào vùng đệm Staging.
-    \item Thực thi đồng bộ hóa từ Staging vào Data Warehouse nhằm cập nhật trạng thái thông tin mới nhất cho toàn hệ thống.
+    \item \textbf{Vùng tiền xử lý (Staging Area - SQL Server):} Đóng vai trò làm bộ đệm trung gian để tiếp nhận dữ liệu thô từ các nguồn phân tán. Vùng này lưu trữ các cấu trúc bảng tạm bao gồm \texttt{stg\_players}, \texttt{stg\_history}, \texttt{stg\_reviews}, và \texttt{stg\_library}. Việc thiết lập Staging Area giúp cách ly quá trình trích xuất khỏi luồng nghiệp vụ chính, giảm tải cho hệ thống nguồn và tạo không gian độc lập cho các tác vụ làm sạch, đối soát dữ liệu trước khi chuyển đổi.
+    \item \textbf{Kho dữ liệu chính thức (Data Warehouse - PostgreSQL):} Nơi lưu trữ dữ liệu đã qua tinh chế, bao gồm các bảng chiều cốt lõi nhằm định danh thực thể (\texttt{dim\_player}, \texttt{dim\_game}) và các bảng sự kiện (Fact tables) phản ánh chi tiết từng mảng hành vi: \texttt{fact\_achievement\_unlock} (lịch sử và biên độ thời gian mở khóa thành tựu), \texttt{fact\_review} (nội dung, cảm xúc và thông số bài đánh giá), \texttt{fact\_library} (trạng thái sở hữu trong thư viện), và \texttt{fact\_achievement} (danh mục thành tựu chuẩn của từng trò chơi).
 \end{itemize}
 
-\subsection{Quy trình Tiền xử lý và Làm sạch Dữ liệu Chuyên sâu}
-
-\subsubsection{Giai đoạn Nạp Dữ liệu vào Vùng đệm (Staging Load)}
-
-Dữ liệu thô trích xuất từ tệp CSV được hệ thống phân tích cú pháp và đẩy trực tiếp vào các bảng đệm tạm thời tại MSSQL.
-
 \begin{figure}[H]
     \centering
-    \IfFileExists{Images/Pentaho/Stage_Raw.png}{
-        \includegraphics[width=0.7\linewidth]{Images/Pentaho/Stage_Raw}
+    \IfFileExists{Images/Slide/DW_Schema.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/DW_Schema}
     }{
         \fbox{\begin{minipage}{0.7\linewidth}
             \centering
             \vspace{2cm}
             [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Pentaho/Stage\_Raw.png}\\
+            \texttt{Images/Slide/DW_Schema.png}\\
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Quá trình nạp dữ liệu thô vào Staging}
-    \label{fig:pentaho_stage_raw}
+    \caption{Sơ đồ Thực thể - Mối quan hệ (ERD) của Data Warehouse theo mô hình thiên hà (Galaxy Schema)}
+    \label{fig:dw_schema_erd}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{Images/Pentaho/Stage_Update.png}{
-        \includegraphics[width=0.7\linewidth]{Images/Pentaho/Stage_Update}
+    \IfFileExists{Images/Slide/2.png}{
+        \includegraphics[width=0.7\linewidth]{Images/Slide/2}
     }{
         \fbox{\begin{minipage}{0.7\linewidth}
             \centering
             \vspace{2cm}
             [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Pentaho/Stage\_Update.png}\\
+            \texttt{Images/Slide/2.png}\\
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Quá trình nạp dữ liệu cập nhật vào Staging}
-    \label{fig:pentaho_stage_update}
+    \caption{Sơ đồ luồng quy trình tích hợp ETL và Machine Learning Pipeline}
+    \label{fig:etl_ml_pipeline}
 \end{figure}
-
-\subsubsection{Giai đoạn Xây dựng và Chuẩn hóa Kho dữ liệu (Build DW)}
-
-Giai đoạn vận chuyển dữ liệu từ Staging vào DW đóng vai trò là hạt nhân xử lý kỹ thuật phức tạp nhất trong toàn bộ pipeline ETL.
-
-\begin{figure}[H]
-    \centering
-    \IfFileExists{Images/Pentaho/Build_DW.png}{
-        \includegraphics[width=0.7\linewidth]{Images/Pentaho/Build_DW}
-    }{
-        \fbox{\begin{minipage}{0.7\linewidth}
-            \centering
-            \vspace{2cm}
-            [IMAGE PLACEHOLDER]\\
-            \texttt{Images/Pentaho/Build\_DW.png}\\
-            \vspace{2cm}
-        \end{minipage}}
-    }
-    \caption{Quá trình tiền xử lý và xây dựng Data Warehouse}
-    \label{fig:pentaho_build_dw}
-\end{figure}
-
-Trong quy trình Build DW, hệ thống áp dụng một ma trận các quy tắc tinh chế và chuẩn hóa sâu nhằm giải quyết triệt để các dị biệt của dữ liệu Web. Dưới đây là 5 cơ chế tiền xử lý cốt lõi được áp dụng:
-
-\begin{enumerate}
-    \item \textbf{Cơ chế Khử trùng lặp (Deduplication):} Do đặc thù các luồng thu thập tự động (crawler) thường xuyên trả về các bản ghi trùng lặp, hệ thống Staging thực thi các truy vấn SQL tận dụng hàm cửa sổ \texttt{ROW\_NUMBER() OVER(PARTITION BY <pk> ORDER BY loaded\_at DESC)}. Cơ chế này đảm bảo cô lập và trích xuất duy nhất phiên bản ghi nhận mới nhất của từng thực thể (dựa trên mốc thời gian nạp) trước khi vận chuyển vào DW.
-    \item \textbf{Cơ chế Bảo toàn và Ép kiểu Dữ liệu (Type Casting):} Nhằm triệt tiêu rủi ro mất mát thông tin trong pha tải thô ban đầu, toàn bộ các trường dữ liệu tại Staging đều được định dạng an toàn dưới dạng chuỗi ký tự động \texttt{NVARCHAR(MAX)}. Khi bước vào pha Build DW, quy trình chuẩn hóa định dạng tường minh mới được kích hoạt:
-    \begin{itemize}
-        \item \textbf{Dữ liệu Thời gian:} Chuyển đổi chính xác các chuỗi ký tự sang định dạng chuẩn \texttt{Date} hoặc \texttt{Timestamp} (tiêu biểu như việc chuẩn hóa trường \texttt{date\_acquired} sang mốc \texttt{DD/MM/YYYY HH:mm} tuân thủ hệ quy chiếu múi giờ UTC).
-        \item \textbf{Dữ liệu Định lượng:} Các chỉ số tương tác bài đánh giá (bao gồm các trường \texttt{helpful}, \texttt{funny}, \texttt{awards}) được ép chặt về kiểu số nguyên nguyên thủy.
-        \item \textbf{Dữ liệu Văn bản Tự do:} Duy trì cấu trúc chuỗi ký tự độ dài lớn nhằm bảo toàn nguyên vẹn các bảng mã ký tự đa ngôn ngữ phức tạp (như bài đánh giá tiếng Trung, tiếng Nga và hệ thống ký tự Emoji) trên nền tảng mã hóa UTF-8.
-    \end{itemize}
-    \item \textbf{Cơ chế Tái cấu trúc và Trải phẳng Dữ liệu (Data Reshaping):} Trường thông tin \texttt{library} của tài khoản ban đầu tồn tại ở dạng mảng JSON nguyên khối (ví dụ: \texttt{[\{"appid":730,"playtime\_mins":500\}]}). Dữ liệu này được đẩy tạm thời vào bảng trung gian \texttt{stg\_library\_temp}, sau đó tận dụng kỹ thuật truy vấn CTE (Common Table Expression) kết hợp các hàm xử lý JSON bản địa mạnh mẽ của PostgreSQL để bóc tách (unnest) và phân rã cấu trúc mảng thành các hàng véc-tơ độc lập \texttt{(playerid, appid, playtime\_mins)} trực tiếp tại bảng \texttt{fact\_library}.
-    \item \textbf{Cơ chế Kiểm soát Toàn vẹn Tham chiếu qua Trigger (Referential Integrity Fallback):} Đặc thù thu thập bất đồng bộ dẫn tới rủi ro một bản ghi Sự kiện (Fact) trỏ đến một Chiều (Dimension) chưa kịp cập nhật định danh trong hệ thống. Để xử lý triệt để rào cản này, DW trên PostgreSQL thiết lập hệ thống trigger \texttt{BEFORE INSERT} hoạt động như các chốt chặn tự động:
-    \begin{itemize}
-        \item \textbf{Loại bỏ Dữ liệu rác (Hard-reject):} Trong trường hợp bản ghi Fact trỏ tới một định danh \texttt{playerid} hoàn toàn không tồn tại, dòng dữ liệu lập tức bị từ chối và xóa bỏ nhằm bảo vệ độ sạch của kho.
-        \item \textbf{Khởi tạo Thực thể Ảo (Auto-stubbing):} Nếu một trò chơi hoặc thành tựu xuất hiện trong lịch sử tài khoản nhưngếm vắng trong bảng Dimension, trigger sẽ tự động sinh một bản ghi giữ chỗ (stub) mang nhãn \texttt{"Unknown"} vào bảng Dimension tương ứng. Giải pháp này bảo toàn trọn vẹn dấu vết sự kiện thực tế của người chơi, ngăn chặn nguy cơ làm sai lệch hoặc khuyết thiếu ma trận đặc trưng (feature matrix) phục vụ huấn luyện Machine Learning trong giai đoạn tiếp theo.
-    \end{itemize}
-\end{enumerate}
-
-Để duy trì tính toàn vẹn tuyệt đối về mặt cấu trúc và thỏa mãn các ràng buộc khóa ngoại (key constraints), toàn bộ luồng thực thi Build DW bắt buộc phải tuân thủ nghiêm ngặt lộ trình 3 pha tuần tự:
-\begin{enumerate}
-    \item \textbf{Pha 1 (Phase 1):} Khởi tạo và đồng bộ hóa các bảng Chiều cốt lõi (Dim Game, Dim Player).
-    \item \textbf{Pha 2 (Phase 2):} Xây dựng nhóm bảng Sự kiện độc lập cấp một (Fact Achievement, Private SteamID).
-    \item \textbf{Pha 3 (Phase 3):} Hoàn thiện nhóm bảng Sự kiện phụ thuộc cấp hai dựa trên các hệ khóa đã hình thành từ hai pha trước (bao gồm các bảng Fact Achievement Unlock, Fact Library và Fact Review).
-\end{enumerate}
-
-\subsubsection{Tổng hợp Bộ quy tắc Làm sạch Chi tiết theo Bảng (Per-Table Cleaning Inventory)}
-
-Chi tiết các chiến lược tiền xử lý áp dụng riêng biệt cho từng đối tượng bảng trong pha chuyển tải giao tiếp giữa Staging và DW được quy định như sau:
-
-\begin{itemize}
-    \item \textbf{Quy tắc Toàn cục (Áp dụng trên mọi bảng):}
-    \begin{itemize}
-        \item \textbf{Truy vết mốc thời gian (Temporal tracking):} Tự động gắn nhãn thời điểm nạp bản ghi thông qua trường \texttt{loaded\_at DEFAULT SYSUTCDATETIME()} ngay tại tầng đệm Staging.
-        \item \textbf{Khử trùng lặp tầng cơ sở dữ liệu (Deduplication):} Phối hợp mệnh đề lọc \texttt{ROW\_NUMBER() ... WHERE rn=1} trong câu lệnh truy vấn trích xuất với hệ thống Trigger \texttt{BEFORE INSERT} rà soát khóa chính (PK) ở tầng Database nhằm triệt tiêu hoàn toàn các thao tác chèn lặp.
-    \end{itemize}
-
-    \item \textbf{Bảng Định danh Người chơi (Dim Player):}
-    \begin{itemize}
-        \item \textbf{Ép kiểu (Type casting):} Chuyển đổi định dạng chuỗi của mốc \texttt{created} về dạng \texttt{Timestamp} chuẩn.
-        \item \textbf{Phân loại quyền riêng tư (Privacy flagging):} Căn cứ vào danh sách đối chiếu từ bảng Private SteamIDs để cập nhật trạng thái cờ \texttt{is\_private = TRUE}.
-    \end{itemize}
-
-    \item \textbf{Bảng Lịch sử Mở khóa Thành tựu (Fact Achievement Unlock):}
-    \begin{itemize}
-        \item \textbf{Ép kiểu (Type casting):} Chuẩn hóa chuỗi thời gian \texttt{date\_acquired} sang định dạng \texttt{Timestamp} hệ UTC.
-        \item \textbf{Tự động điền khuyết tham chiếu (FK stub creation):} Nếu phát hiện mã thành tựu (\texttt{achievementid}) chưa tồn tại trong bảng gốc \texttt{Fact Achievement}, trigger can thiệp bằng cách trích xuất mã trò chơi (\texttt{gameid}) từ dải tiền tố (ví dụ: bóc tách chuỗi "730" từ mã "730\_WINS\_1"). Sau đó, hệ thống tự động sinh các bản ghi stub song song cho cả \texttt{Dim Game} và \texttt{Fact Achievement} trước khi chính thức ghi nhận bản ghi lịch sử.
-        \item \textbf{Kiểm soát giá trị rỗng (Null rejection):} Bác bỏ và gạch bỏ triệt để các hàng dữ liệu chứa \texttt{playerid} hoặc \texttt{achievementid} mang giá trị rỗng (NULL).
-    \end{itemize}
-
-    \item \textbf{Bảng Tương tác Đánh giá (Fact Review):}
-    \begin{itemize}
-        \item \textbf{Ép kiểu (Type casting):} Chuyển đổi trọn bộ các trường \texttt{helpful}, \texttt{funny}, \texttt{awards} sang định dạng số nguyên (\texttt{Integer}); đồng thời chuẩn hóa mốc thời gian đăng \texttt{posted} sang kiểu \texttt{Date}.
-        \item \textbf{Dự phòng tham chiếu (FK fallback):} Tự động định tuyến các bài đánh giá trỏ về \texttt{gameid} vắng mặt sang mã định danh mặc định \texttt{'-1'}.
-        \item \textbf{Thanh lọc thực thể (Player validation):} Gạch bỏ hoàn toàn bài đánh giá nếu tài khoản phát sinh (\texttt{playerid}) không tồn tại trong hệ thống \texttt{Dim Player}.
-    \end{itemize}
-
-    \item \textbf{Bảng Dữ liệu Thư viện (Fact Library):}
-    \begin{itemize}
-        \item \textbf{Khai phá cấu trúc JSON (JSON explosion):} Triển khai khối CTE nhằm ánh xạ và phân rã chuỗi JSON \texttt{library} thành tập hợp các hàng véc-tơ \texttt{(playerid, appid, playtime\_mins)}.
-        \item \textbf{Bộ lọc giá trị khuyết (Null handling):} Loại trừ triệt để các hàng thiếu vắng thông số thời gian trải nghiệm (trường \texttt{playtime\_mins} mang giá trị rỗng hoặc chuỗi 'NaN') trực tiếp từ pha xử lý CTE trước khi đổ dữ liệu.
-        \item \textbf{Xây dựng tham chiếu ảo (FK stub creation):} Trường hợp \texttt{appid} chưa có mặt tại \texttt{Dim Game}, một trigger lập tức can thiệp khởi tạo bản ghi stub mang tiêu đề quy ước \texttt{'Unknown (auto-stub)'}.
-    \end{itemize}
-
-    \item \textbf{Bảng Thông tin Trò chơi (Dim Game):}
-    \begin{itemize}
-        \item \textbf{Ép kiểu (Type casting):} Thực hiện chuyển đổi cấu trúc chuỗi của \texttt{release\_date} về định dạng ngày chuẩn \texttt{Date}.
-    \end{itemize}
-
-    \item \textbf{Bảng Danh mục Thành tựu (Fact Achievement):}
-    \begin{itemize}
-        \item \textbf{Dự phòng tham chiếu (FK fallback):} Ấn định tự động \texttt{gameid = '-1'} trong các trường hợp dữ liệu sản phẩm gốc chưa được cập nhật kịp thời vào hệ thống.
-    \end{itemize}
-\end{itemize}

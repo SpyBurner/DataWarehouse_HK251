@@ -1,4 +1,4 @@
-\documentclass[a4paper]{report}
+\documentclass[a4paper]{article}
 \usepackage[fontsize=13pt]{scrextend}
 \usepackage{vntex}
 %\usepackage[english,vietnam]{babel}
@@ -224,12 +224,12 @@
 \makeatletter
 \newcounter {subsubsubsection}[subsubsection]
 \renewcommand\thesubsubsubsection{\thesubsubsection .\@alph\c@subsubsubsection}
-\newcommand\paragraph{\@startsection{subsubsubsection}{4}{\z@}%
+\renewcommand\paragraph{\@startsection{subsubsubsection}{4}{\z@}%
 	{-3.25ex\@plus -1ex \@minus -.2ex}%
 	{1.5ex \@plus .2ex}%
 	{\normalfont\normalsize\bfseries}}
 \newcommand*\l@subsubsubsection{\@dottedtocline{3}{10.0em}{4.1em}}
-\newcommand*{\paragraphmark}[1]{}
+\renewcommand*{\paragraphmark}[1]{}
 \makeatother
 
 \everymath{\color{black}}%make in-line maths symbols blue to read/check easily

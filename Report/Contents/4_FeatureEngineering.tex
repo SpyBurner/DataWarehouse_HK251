@@ -1,7 +1,7 @@
 \section{Kỹ thuật Trích xuất Đặc trưng (Feature Engineering)}
 
 \subsection{Tổng quan Quy trình}
-Quy trình trích xuất đặc trưng đóng vai trò cầu nối chiến lược, chuyển đổi dữ liệu thô dạng sự kiện từ Kho dữ liệu thành các véc-tơ thông tin có ý nghĩa phân loại cao. Module \texttt{features.py} đảm nhận việc tổng hợp và ánh xạ thông tin từ 4 phân vùng chính: lịch sử mở khóa thành tựu, hoạt động đăng tải đánh giá, siêu dữ liệu tài khoản và danh mục sở hữu sản phẩm. Kết quả đầu ra là một ma trận đặc trưng tinh gọn (\textit{Feature Matrix}) bao gồm 25 biến số định lượng, cung cấp biểu diễn toán học toàn diện về hành vi của từng tài khoản trên nền tảng.
+Quy trình trích xuất đặc trưng đóng vai trò cầu nối chiến lược, chuyển đổi dữ liệu thô dạng sự kiện từ Kho dữ liệu thành các véc-tơ thông tin có ý nghĩa phân loại cao. Module \texttt{features.py} đảm nhận việc tổng hợp và ánh xạ thông tin từ 4 phân vùng chính: lịch sử mở khóa thành tựu, hoạt động đăng tải đánh giá, siêu dữ liệu tài khoản và danh mục sở hữu sản phẩm. Kết quả đầu ra là một ma trận đặc trưng tinh gọn (\textit{Feature Matrix}) bao gồm 22 biến số định lượng, cung cấp biểu diễn toán học toàn diện về hành vi của từng tài khoản trên nền tảng.
 
 \subsection{Chiến lược Tinh giản Dữ liệu (Data Trimming)}
 Trước khi đi vào tính toán chi tiết, hệ thống triển khai một bộ lọc thô (\textit{Trimming Filter}) nhằm loại trừ các tài khoản "ma" (\textit{ghost accounts}) hoặc các hồ sơ thiếu hụt tương tác thực tế. Việc tinh giản này dựa trên điều kiện logic:
@@ -57,8 +57,7 @@ Mô hình hóa thói quen sinh học của tài khoản thông qua việc ánh x
 \begin{itemize}
     \item \texttt{total\_achievements} và \texttt{library\_size}: Tổng quy mô thành tựu và số lượng trò chơi sở hữu.
     \item \texttt{achievement\_game\_ratio}: Tỷ lệ thâm nhập thành tựu trên tổng số sản phẩm trong thư viện.
-    \item \texttt{top1\_game\_concentration} và \texttt{top3\_game\_concentration}: Tỷ trọng đóng góp thành tựu từ các trò chơi chủ lực, nhận diện các tài khoản chỉ tập trung khai thác một số ít tựa game rác.
-    \item \texttt{game\_hhi}: Chỉ số tập trung Herfindahl-Hirschman ($HHI = \sum p_i^2$), cung cấp phép đo chuẩn xác về độ độc quyền hoạt động trong một tài khoản.
+    \item \texttt{top1\_game\_concentration}: Tỷ trọng đóng góp thành tựu từ trò chơi chủ lực, nhận diện các tài khoản chỉ tập trung khai thác một số ít tựa game rác.
     \item \texttt{avg\_achievements\_per\_game}: Hiệu suất khai thác trung bình trên mỗi tựa game có tương tác.
 \end{itemize}
 
@@ -69,7 +68,7 @@ Mô hình hóa thói quen sinh học của tài khoản thông qua việc ánh x
     \item \texttt{review\_unplayed\_ratio}: Tỷ lệ đánh giá sản phẩm khi thời lượng trải nghiệm bằng không ($\text{playtime} = 0$), một bằng chứng rõ ràng của hành vi Review Bombing mù quáng.
     \item \texttt{review\_duplication\_rate}: Tỷ lệ rập khuôn nội dung, được định lượng bằng công thức:
     $$\text{Duplication Rate} = 1 - \frac{\text{unique\_texts}}{\text{total\_reviews}}$$
-    \item \texttt{avg\_review\_length} và \texttt{min\_review\_length}: Thống kê độ dài chuỗi ký tự, giúp phát hiện các tài khoản chuyên rải bình luận vô nghĩa hoặc cực ngắn.
+    \item \texttt{avg\_review\_length}: Thống kê độ dài chuỗi ký tự trung bình, giúp phát hiện các tài khoản chuyên rải bình luận vô nghĩa hoặc cực ngắn.
 \end{itemize}
 
 \subsubsection{Nhóm E: Đặc trưng Lịch sử Vòng đời (Account Age Features)}
