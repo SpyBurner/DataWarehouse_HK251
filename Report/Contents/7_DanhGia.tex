@@ -1,22 +1,22 @@
-\chapter{Kết luận và Hướng phát triển}
+\section{Kết luận và Hướng phát triển}
 
-\section{Ưu điểm và Hạn chế}
+\subsection{Ưu điểm và Hạn chế}
 
-\subsection{Ưu điểm}
+\subsubsection{Ưu điểm}
 \begin{itemize}
     \item \textbf{Cấu trúc Dual Ensemble:} Cân bằng giữa khả năng phát hiện (IF) và độ chính xác (XGBoost), giảm thiểu tỷ lệ dương tính giả.
     \item \textbf{Khả năng giải thích (SHAP):} Cung cấp căn cứ minh bạch cho các quyết định của mô hình, hỗ trợ đắc lực cho người kiểm duyệt.
     \item \textbf{Vòng lặp Active Learning:} Cho phép hệ thống tự cải thiện thông qua phản hồi của con người.
 \end{itemize}
 
-\subsection{Hạn chế}
+\subsubsection{Hạn chế}
 \begin{itemize}
     \item \textbf{Rò rỉ dữ liệu (Data leakage):} Các quy tắc heuristic dựa trên chính các đặc trưng mà mô hình sử dụng có thể gây ra hiện tượng học vẹt.
     \item \textbf{Ràng buộc API:} Giới hạn tần suất gọi API dẫn đến dữ liệu đôi khi không đầy đủ hoặc không nhất quán.
     \item \textbf{Điểm mù mạng lưới:} Khó phát hiện các mạng lưới bot đánh giá có tổ chức nếu chúng hoạt động rời rạc.
 \end{itemize}
 
-\section{Hướng phát triển tương lai}
+\subsection{Hướng phát triển tương lai}
 \begin{itemize}
     \item \textbf{Graph-Based Detection (GNN):} Mô hình hóa mối quan hệ giữa người dùng, trò chơi và các đánh giá dưới dạng đồ thị để phát hiện các nhóm gian lận có tổ chức.
     \item \textbf{Mô hình chuỗi thời gian (LSTM/Transformer):} Phân tích sâu hơn trình tự thời gian của các hành vi để bắt kịp các kiểu gian lận thay đổi theo thời gian.

@@ -1,7 +1,9 @@
-\chapter{Giới thiệu và Nguồn gốc dữ liệu}
+\section{Giới thiệu và Nguồn gốc dữ liệu}
 
-\section{Bối cảnh và Động lực}
-Steam là nền tảng phân phối trò chơi kỹ thuật số lớn nhất thế giới, tạo ra một hệ sinh thái xã hội và kinh tế khổng lồ với hàng trăm triệu người dùng hoạt động. Tuy nhiên, sự phổ biến này cũng đi kèm với sự gia tăng của các hành vi gian lận và thao túng hệ thống. Việc phát hiện các hành vi bất thường không chỉ bảo vệ tính công bằng của cộng đồng mà còn giúp duy trì giá trị kinh tế của các vật phẩm ảo và uy tín của các trò chơi trên nền tảng.
+\subsection{Bối cảnh và Động lực}
+Steam hiện là nền tảng phân phối trò chơi kỹ thuật số lớn nhất toàn cầu, đóng vai trò hạt nhân trong việc định hình hệ sinh thái kinh tế và mạng xã hội của ngành công nghiệp game. Với hàng trăm triệu người dùng hoạt động thường xuyên, Steam không chỉ xử lý khối lượng dữ liệu tương tác khổng lồ mà còn là nơi lưu chuyển các tài sản kỹ thuật số (vật phẩm ảo, thẻ bài, tài khoản) có giá trị thực tế cao. 
+
+Tuy nhiên, quy mô khổng lồ và tính chất mở của nền tảng đã biến Steam thành mục tiêu của các hành vi gian lận và thao túng có tổ chức. Việc phát hiện sớm và chính xác các hành vi bất thường mang ý nghĩa sống còn: giải pháp không chỉ bảo vệ tính công bằng, minh bạch cho trải nghiệm của cộng đồng mà còn trực tiếp bảo vệ thuật toán phân phối, duy trì sự ổn định của nền kinh tế ảo và uy tín thương mại của các nhà phát triển trên nền tảng.
 
 \begin{figure}[H]
     \centering
@@ -16,42 +18,42 @@ Steam là nền tảng phân phối trò chơi kỹ thuật số lớn nhất th
             \vspace{2cm}
         \end{minipage}}
     }
-    \caption{Hình ảnh minh họa hệ sinh thái Steam và cộng đồng người chơi}
+    \caption{Nền tảng Steam}
     \label{fig:steam_cover}
 \end{figure}
 
-\section{Các hình thức gian lận phổ biến}
+\subsection{Các hình thức thao túng và gian lận tiêu biểu}
 
-Dự án tập trung vào hai hình thức hành vi bất thường phổ biến và có tác động tiêu cực nhất:
+Trong phạm vi báo cáo, dự án tập trung phân tích và giải quyết hai mô hình hành vi bất thường có mức độ phổ biến cao và gây ra hệ lụy nghiêm trọng nhất:
 
-\subsection{Cày thành tựu (Achievement Farming)}
-Đây là hành vi sử dụng các công cụ bên thứ ba (như Steam Achievement Manager - SAM) hoặc các đoạn script tự động để mở khóa hàng loạt thành tựu trong thời gian cực ngắn.
+\subsubsection{Cày thành tựu tự động (Achievement Farming)}
+Đây là hình thức lạm dụng các công cụ can thiệp giao thức API (tiêu biểu như Steam Achievement Manager - SAM) hoặc các kịch bản tự động hóa (scripts) nhằm kích hoạt trạng thái hoàn thành hàng loạt thành tựu mà không cần trải qua quá trình chơi thực tế.
 \begin{itemize}
-    \item \textbf{Mục đích:} Tăng cấp độ hồ sơ (Profile Level), thu thập các huy hiệu (badges) hiếm để tăng giá trị bán lại của tài khoản trên thị trường đen.
-    \item \textbf{Dấu hiệu:} Hàng trăm thành tựu được mở khóa trong cùng một giây, hoặc mở khóa thành tựu của các trò chơi có thời gian chơi bằng không (\textit{zero playtime}).
+    \item \textbf{Động cơ trục lợi:} Thao túng chỉ số tài khoản nhằm đẩy nhanh Cấp độ hồ sơ (Profile Level), tích lũy trái phép các huy hiệu (badges) hiếm nhằm tối ưu hóa giá trị thương mại khi giao dịch tài khoản trên thị trường đen.
+    \item \textbf{Dấu vết đặc trưng:} Mở khóa đồng thời hàng chục đến hàng trăm thành tựu chỉ trong vài mili-giây, hoặc ghi nhận việc hoàn thành toàn bộ thành tựu của một trò chơi trong khi tổng thời gian trải nghiệm bằng không (\textit{zero playtime}).
 \end{itemize}
 
-\subsection{Thao túng đánh giá (Review Bombing \& Spamming)}
-Sử dụng các mạng lưới tài khoản bot (Botnets) để đăng tải hàng loạt đánh giá tích cực hoặc tiêu cực cho một trò chơi cụ thể.
+\subsubsection{Thao túng hệ thống đánh giá (Review Bombing \& Spamming)}
+Hành vi huy động các mạng lưới tài khoản tự động (Botnets) để tấn công tràn ngập hệ thống bằng các đánh giá cực đoan (tích cực hoặc tiêu cực) nhằm bóp méo điểm số thực tế của một sản phẩm.
 \begin{itemize}
-    \item \textbf{Mục đích:} Thao túng thuật toán đề xuất của Steam, gây thiệt hại về mặt kinh tế cho nhà phát triển hoặc quảng bá các dịch vụ trái phép.
-    \item \textbf{Dấu hiệu:} Các đánh giá có nội dung trùng lặp, độ dài cực ngắn, được đăng tải đồng loạt từ các tài khoản mới tạo hoặc không có hoạt động chơi game thực tế.
+    \item \textbf{Động cơ trục lợi:} Đánh lừa thuật toán đề xuất (Recommendation Engine) của Steam để tăng khả năng hiển thị của các trò chơi kém chất lượng, triệt hạ uy tín thương mại của các nhà phát triển đối thủ, hoặc phát tán nội dung quảng cáo trái phép.
+    \item \textbf{Dấu vết đặc trưng:} Sự bùng nổ đột biến về số lượng bài đánh giá trong khung thời gian cực ngắn; nội dung văn bản trùng lặp hoặc rập khuôn; phần lớn xuất phát từ các tài khoản mới khởi tạo, sở hữu thư viện game hạn chế và thiếu hụt dữ liệu hoạt động thực tế.
 \end{itemize}
 
-\section{Thách thức trong phát hiện bất thường}
+\subsection{Thách thức kỹ thuật trong bài toán phát hiện}
 
-Việc xây dựng một hệ thống phát hiện tự động gặp phải các rào cản kỹ thuật đáng kể:
+Quá trình xây dựng một hệ thống giám sát và phát hiện bất thường tự động phải đối mặt với ba rào cản kỹ thuật cốt lõi:
 \begin{itemize}
-    \item \textbf{Thiếu dữ liệu có nhãn (Unlabeled data):} Không có tập dữ liệu "chuẩn" phân loại đâu là bot, đâu là người dùng thật. Việc gán nhãn thủ công cho hàng triệu bản ghi là bất khả thi.
-    \item \textbf{Công cụ lách luật tinh vi:} Các công cụ gian lận liên tục được cập nhật để mô phỏng hành vi của con người (ví dụ: thêm khoảng trễ ngẫu nhiên giữa các lần mở khóa).
-    \item \textbf{Sự đa dạng của người dùng:} Hành vi của một "hardcore gamer" cày cuốc ngày đêm có thể bị nhầm lẫn với bot nếu chỉ nhìn vào tần suất hoạt động.
+    \item \textbf{Sự khan hiếm dữ liệu có nhãn (Unlabeled Data):} Hệ thống dữ liệu thực tế của Steam có quy mô hàng triệu tài khoản nhưng hoàn toàn thiếu vắng các nhãn phân loại chuẩn xác (\textit{ground truth}) để phân định rõ ràng giữa người dùng thực và bot. Việc gán nhãn thủ công ở quy mô Big Data là hoàn toàn bất khả thi.
+    \item \textbf{Cơ chế ngụy trang tinh vi (Adversarial Evasion):} Các công cụ gian lận hiện đại không ngừng tiến hóa để mô phỏng chính xác hành vi con người. Chúng tích hợp các khoảng trễ ngẫu nhiên (\textit{random delays}) hoặc đan xen các phiên hoạt động giả lập nhằm qua mặt các bộ lọc dựa trên ngưỡng tĩnh đơn giản.
+    \item \textbf{Độ biến thiên cao trong hành vi hợp lệ (High Behavioral Variance):} Ranh giới phân định giữa một người chơi nhiệt huyết (\textit{hardcore gamer}) với tần suất hoạt động dày đặc và một tài khoản bot tự động là cực kỳ mỏng manh nếu hệ thống chỉ đánh giá đơn chiều.
 \end{itemize}
 
-\section{Mục tiêu và Giải pháp đề xuất}
+\subsection{Mục tiêu và Giải pháp đề xuất}
 
-Dự án hướng tới việc xây dựng một giải pháp dựa trên dữ liệu (\textit{Data-driven approach}) để giải quyết các vấn đề trên:
+Để vượt qua các thách thức trên, dự án đề xuất một phương pháp tiếp cận toàn diện hướng dữ liệu (\textit{Data-Driven Approach}), chuyển dịch từ việc kiểm tra quy tắc tĩnh sang phân tích không gian hành vi đa chiều:
 \begin{itemize}
-    \item \textbf{Xây dựng Data Warehouse chuẩn hóa:} Tích hợp dữ liệu từ nhiều nguồn (Kaggle dataset, Steam Web API) để có cái nhìn đa chiều về một tài khoản (Lịch sử chơi game, Danh mục sở hữu, Hoạt động cộng đồng).
-    \item \textbf{Mô hình Học máy Hành vi:} Thay vì chỉ dựa trên các quy tắc tĩnh dễ bị vượt qua, hệ thống sử dụng các mô hình học máy (XGBoost, Isolation Forest) để tìm ra các mẫu hành vi bất thường trong không gian đa chiều.
-    \item \textbf{Bổ trợ cho VAC:} Hệ thống Valve Anti-Cheat (VAC) chủ yếu phát hiện các phần mềm can thiệp trực tiếp vào bộ nhớ game. Giải pháp của dự án đóng vai trò như một lớp bảo vệ thứ hai, tập trung vào tầng hành vi để phát hiện các botnet mà VAC có thể bỏ sót.
-\end{itemize}
+    \item \textbf{Xây dựng Kho dữ liệu chuẩn hóa (Data Warehouse):} Thực hiện trích xuất, chuyển đổi và tải (ETL) để hợp nhất dữ liệu từ nhiều nguồn phân tán (tập dữ liệu mẫu và Steam Web API). Quá trình này giúp phác họa trọn vẹn chân dung kỹ thuật số của một tài khoản thông qua ba chiều phân tích cốt lõi: Lịch sử sở hữu, Hành vi trải nghiệm game và Mức độ tương tác cộng đồng.
+    \item \textbf{Ứng dụng Mô hình Học máy Hành vi (Behavioral ML Models):} Thay vì áp dụng các bộ quy tắc cố định dễ bị lách luật, giải pháp tận dụng các mô hình học máy tiên tiến (như XGBoost hoặc Isolation Forest) nhằm tự động trích xuất và nhận diện các cụm hành vi dị biệt trong không gian đặc trưng đa chiều.
+    \item \textbf{Kiến trúc phòng thủ bổ trợ cho VAC:} Nếu hệ thống Valve Anti-Cheat (VAC) truyền thống đóng vai trò chốt chặn ở tầng thấp (tập trung quét bộ nhớ và tệp thực thi để rà soát phần mềm can thiệp trực tiếp vào game), thì giải pháp của dự án hoạt động như một lớp bảo mật chiến lược ở tầng cao (Tầng hành vi - \textit{Behavioral Layer}). Sự kết hợp này tạo nên một hệ thống phòng thủ đa tầng, lấp đầy các khoảng trống rà quét mà VAC thường bỏ sót khi đối mặt với các mạng lưới botnet thao túng nền tảng.
+\end

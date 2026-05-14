@@ -1,9 +1,9 @@
-\chapter{Xây Dựng Mô Hình (Model Selection, Training \& Tuning)}
+\section{Xây Dựng Mô Hình (Model Selection, Training \& Tuning)}
 
-\section{Tổng Quan}
+\subsection{Tổng Quan}
 Hệ thống sử dụng hai mô hình machine learning chính: \textbf{XGBoost} và \textbf{IsolationForest}, được kết hợp trong một ensemble để tăng độ chính xác và độ tin cậy của phát hiện bot.
 
-\section{Lựa chọn thuật toán}
+\subsection{Lựa chọn thuật toán}
 Dựa trên so sánh các thuật toán phổ biến:
 \begin{itemize}
     \item \textbf{XGBoost (Supervised)}: Phù hợp với dữ liệu mất cân bằng, dễ giải thích qua Feature Importance. Cần nhãn dữ liệu (Heuristic labeling).
@@ -27,22 +27,22 @@ Dựa trên so sánh các thuật toán phổ biến:
     \label{fig:model_diagram}
 \end{figure}
 
-\section{Quy trình huấn luyện và tối ưu}
+\subsection{Quy trình huấn luyện và tối ưu}
 
-\subsection{Tạo nhãn bằng Heuristic (PU-Learning style)}
+\subsubsection{Tạo nhãn bằng Heuristic (PU-Learning style)}
 Do dữ liệu gốc không có nhãn, hệ thống sử dụng các quy tắc (heuristic rules) để xác định các mẫu "chắc chắn là bot" và "chắc chắn là người dùng bình thường":
 \begin{itemize}
     \item \textbf{Bot Rules}: Tốc độ mở khóa cực nhanh (< 10s) hoặc tỷ lệ thành tựu với 0 phút chơi cao (> 0.9).
     \item \textbf{Normal Rules}: Thời gian chơi dài, tốc độ mở khóa tự nhiên (> 600s).
 \end{itemize}
 
-\subsection{Hyperparameter Tuning}
+\subsubsection{Hyperparameter Tuning}
 \begin{itemize}
     \item \textbf{Isolation Forest}: Sử dụng Grid Search để tối ưu hóa \texttt{contamination} và \texttt{n\_estimators}.
     \item \textbf{XGBoost}: Huấn luyện trên tập dữ liệu đã gán nhãn heuristic, tối ưu hóa qua cross-validation.
 \end{itemize}
 
-\section{Xây Dựng Ensemble}
+\subsection{Xây Dựng Ensemble}
 
 Kết quả từ hai mô hình được chuẩn hóa và kết hợp theo trọng số tối ưu.
 
@@ -63,7 +63,7 @@ Kết quả từ hai mô hình được chuẩn hóa và kết hợp theo trọn
     \label{fig:weight_sensitivity}
 \end{figure}
 
-\section{Các chỉ số đánh giá}
+\subsection{Các chỉ số đánh giá}
 
 \begin{itemize}
     \item \textbf{Recall}: Tỷ lệ bot được phát hiện trên tổng số bot thực tế.
@@ -91,7 +91,7 @@ Kết quả từ hai mô hình được chuẩn hóa và kết hợp theo trọn
     \label{fig:eval_metrics}
 \end{figure}
 
-\section{Kết quả đánh giá}
+\subsection{Kết quả đánh giá}
 
 \begin{figure}[H]
     \centering

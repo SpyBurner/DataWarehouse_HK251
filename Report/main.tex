@@ -1,4 +1,5 @@
 \documentclass[a4paper]{report}
+\usepackage[fontsize=13pt]{scrextend}
 \usepackage{vntex}
 %\usepackage[english,vietnam]{babel}
 %\usepackage[utf8]{inputenc}
@@ -223,12 +224,12 @@
 \makeatletter
 \newcounter {subsubsubsection}[subsubsection]
 \renewcommand\thesubsubsubsection{\thesubsubsection .\@alph\c@subsubsubsection}
-\newcommand\subsubsubsection{\@startsection{subsubsubsection}{4}{\z@}%
+\newcommand\paragraph{\@startsection{subsubsubsection}{4}{\z@}%
 	{-3.25ex\@plus -1ex \@minus -.2ex}%
 	{1.5ex \@plus .2ex}%
 	{\normalfont\normalsize\bfseries}}
 \newcommand*\l@subsubsubsection{\@dottedtocline{3}{10.0em}{4.1em}}
-\newcommand*{\subsubsubsectionmark}[1]{}
+\newcommand*{\paragraphmark}[1]{}
 \makeatother
 
 \everymath{\color{black}}%make in-line maths symbols blue to read/check easily
@@ -255,11 +256,11 @@
 	\end{tikzpicture}
 	
 	\begin{center}
-		\LARGE \textbf{ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH} \\
+		\large \textbf{ĐẠI HỌC QUỐC GIA THÀNH PHỐ HỒ CHÍ MINH} \\
 		\vspace{0.2cm}
-		\LARGE \textbf{TRƯỜNG ĐẠI HỌC BÁCH KHOA} \\
+		\large \textbf{TRƯỜNG ĐẠI HỌC BÁCH KHOA} \\
 		\vspace{0.2cm}
-		\LARGE \textbf{KHOA KHOA HỌC VÀ KĨ THUẬT MÁY TÍNH}
+		\large \textbf{KHOA KHOA HỌC VÀ KĨ THUẬT MÁY TÍNH}
 	\end{center}
 	
 	\vspace{0.3cm}
@@ -272,40 +273,41 @@
 	
 	\begin{center}
 		\begin{tabular}{c}
-			\multicolumn{1}{c}{\textbf{{\LARGE BÀI TẬP LỚN}}}\\
+			\multicolumn{1}{c}{\textbf{{\large BÀI TẬP LỚN}}}\\
 			
-			\\{\textbf{{\LARGE KHO DỮ LIỆU }}}
-			\\{\textbf{\LARGE VÀ HỆ HỖ TRỢ QUYẾT ĐỊNH}}\\
+			\\{\textbf{{\Large KHO DỮ LIỆU }}}
+			\\{\textbf{\Large VÀ HỆ HỖ TRỢ QUYẾT ĐỊNH}}
 
-			\\\textbf{\LARGE STEAM ANOMALY DETECTION}\\			
+			\\\textbf{\LARGE HỆ THỐNG PHÁT HIỆN BẤT THƯỜNG }
+			\\\textbf{\LARGE TRÊN NỀN TẢNG STEAM}
 		\end{tabular}
 	\end{center}
 	\vspace{0.5cm}
 	\begin{table}[h]
 \centering
 \begin{tabular}{lll} 
-\multicolumn{3}{l}{\textbf{\Large Giáo viên hướng dẫn:} {\Large Bùi Tiến Đức}}\\
+\multicolumn{3}{l}{\textbf{Giáo viên hướng dẫn:} { Bùi Tiến Đức}}\\
 \\
-\multicolumn{3}{l}{\textbf{\Large Lớp:} {\Large L01}}\\
+\multicolumn{3}{l}{\textbf{Lớp:} {L01}}\\
 \\
-\multicolumn{3}{l}{\textbf{\Large Sinh viên thực hiện:}} 
-\\
-\\
-{\Large Thịnh Trần Khánh Linh} & {\Large 2211862} &
+\multicolumn{3}{l}{\textbf{Sinh viên thực hiện:}} 
 \\
 \\
-{\Large Nguyễn Hiệp Tài} & {\Large 2212985} &
+{Thịnh Trần Khánh Linh} & {2211862} &
+\\
+\\
+{Nguyễn Hiệp Tài} & {2212985} &
 \end{tabular}
 \end{table}
 	\vspace{0.5cm}
 	\begin{center}
-		{\Large TP. HỒ CHÍ MINH, THÁNG 05 NĂM 2026 }
+		{TP. HỒ CHÍ MINH, THÁNG 05 NĂM 2026 }
 	\end{center}
 
 \end{titlepage}
 %\thispagestyle{empty}
 
-\section*{Danh sách thành viên \& đóng góp}
+\subsection*{Danh sách thành viên \& đóng góp}
 
 \begin{center}
 	\begin{tabularx}{\textwidth}{c l c X c}

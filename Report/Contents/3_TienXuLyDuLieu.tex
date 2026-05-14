@@ -1,6 +1,6 @@
-\chapter{Tiền Xử Lý Dữ Liệu (ETL Pipeline)}
+\section{Tiền Xử Lý Dữ Liệu (ETL Pipeline)}
 
-\section{Tổng Quan Hệ Thống ETL}
+\subsection{Tổng Quan Hệ Thống ETL}
 
 Quá trình tiền xử lý và tích hợp dữ liệu được thực hiện tự động bằng công cụ \textbf{Pentaho Data Integration (PDI / Spoon)}. Pipeline được thiết kế theo kiến trúc 3 lớp chuẩn:
 \begin{enumerate}
@@ -28,9 +28,9 @@ Quá trình tiền xử lý và tích hợp dữ liệu được thực hiện t
 
 Quá trình chạy toàn bộ hệ thống (Full Run) bao gồm hai luồng chính chạy nối tiếp nhau: \textbf{Pre-Master} và \textbf{Master}.
 
-\section{Chi Tiết Các Luồng Thực Thi}
+\subsection{Chi Tiết Các Luồng Thực Thi}
 
-\subsection{Luồng Khởi Tạo (Pre-Master)}
+\subsubsection{Luồng Khởi Tạo (Pre-Master)}
 
 \begin{figure}[H]
     \centering
@@ -56,7 +56,7 @@ Luồng \textbf{Pre-Master} chịu trách nhiệm nạp toàn bộ lượng dữ
     \item Chuyển và xử lý dữ liệu từ Staging Area sang Data Warehouse (PostgreSQL).
 \end{itemize}
 
-\subsection{Luồng Cập Nhật (Master)}
+\subsubsection{Luồng Cập Nhật (Master)}
 
 \begin{figure}[H]
     \centering
@@ -82,9 +82,9 @@ Luồng \textbf{Master} là luồng được thiết lập để \textbf{lên l�
     \item Chuyển từ Staging vào Data Warehouse để cập nhật dữ liệu mới nhất.
 \end{itemize}
 
-\section{Quá Trình Tiền Xử Lý Dữ Liệu}
+\subsection{Quá Trình Tiền Xử Lý Dữ Liệu}
 
-\subsection{Nạp Dữ Liệu Vào Staging}
+\subsubsection{Nạp Dữ Liệu Vào Staging}
 
 Dữ liệu thô từ file CSV được đọc và đẩy vào các bảng đệm tạm thời tại MSSQL.
 
@@ -122,7 +122,7 @@ Dữ liệu thô từ file CSV được đọc và đẩy vào các bảng đệ
     \label{fig:pentaho_stage_update}
 \end{figure}
 
-\subsection{Xây Dựng Data Warehouse}
+\subsubsection{Xây Dựng Data Warehouse}
 
 Đây là bước thực hiện các thao tác tiền xử lý dữ liệu của toàn bộ pipeline ETL.
 
@@ -154,12 +154,10 @@ Trong bước Build DW, hệ thống thực hiện hàng loạt các quy tắc l
         \item \textbf{Văn bản}: Giữ nguyên định dạng chuỗi dài để bảo toàn các ký tự UTF-8 phức tạp (như review tiếng Trung, Nga, Emoji).
     \end{itemize}
     \item \textbf{Bóc tách và định hình lại cấu trúc (Data Reshaping)}: Cột \texttt{library} của mỗi người dùng ban đầu được lưu dưới dạng một mảng JSON nguyên khối (VD: \texttt{[\{"appid":730,"playtime\_mins":500\}]}). Dữ liệu này được đẩy vào bảng trung gian \texttt{stg\_library\_temp}, sau đó sử dụng Common Table Expression (CTE) kết hợp các hàm xử lý JSON của PostgreSQL để giải nén (unnest) và trải phẳng thành nhiều bản ghi riêng biệt \texttt{(playerid, appid, playtime\_mins)} trong bảng \texttt{fact\_library}.
-    \item \textbf{Xử lý giá trị rỗng (Null Handling)}: Sử dụng bộ lọc trong CTE để loại bỏ hoàn toàn các bản ghi có \texttt{playtime\_mins} bị khuyết thiếu hoặc mang giá trị 'NaN' trước khi nạp vào Fact, nhằm ngăn chặn việc hệ thống gán nhầm giá trị 0 gây sai lệch trong phát hiện SAM bot.
     \item \textbf{Bảo đảm toàn vẹn tham chiếu qua Trigger (Referential Integrity Fallback)}: Do tính chất không đồng bộ của quá trình thu thập, đôi khi một bản ghi Fact có thể trỏ tới một chiều (Dimension) chưa tồn tại. Hệ thống PostgreSQL DW sử dụng các trigger \texttt{BEFORE INSERT} để kiểm soát luồng dữ liệu:
     \begin{itemize}
         \item \textbf{Xóa bỏ bản ghi lỗi (Hard-reject)}: Nếu Fact trỏ tới một \texttt{playerid} hoàn toàn không tồn tại, dòng dữ liệu đó bị xóa bỏ vì là dữ liệu rác.
         \item \textbf{Tự động sinh dữ liệu ảo (Auto-stubbing)}: Nếu một game hoặc một achievement chưa tồn tại trong dimension nhưng lại xuất hiện trong lịch sử của người chơi, trigger sẽ tự động tạo một dòng dữ liệu tạm (stub) với thông tin \texttt{"Unknown"} trong bảng Dimension để giữ lại sự kiện của người chơi, tránh việc làm sai lệch bộ đặc trưng (feature matrix) phục vụ Machine Learning sau này.
-        \item \textbf{Giá trị mặc định (Sentinel Fallback)}: Ánh xạ khóa ngoại về \texttt{'-1'} nếu không thể xác định được đối tượng tham chiếu gốc (ví dụ trong bảng review).
     \end{itemize}
 \end{enumerate}
 
@@ -170,7 +168,7 @@ Trong bước Build DW, hệ thống thực hiện hàng loạt các quy tắc l
     \item \textbf{Phase 3}: Xây dựng các bảng Fact cấp hai (phụ thuộc vào dữ liệu của các bảng đã được nạp ở giai đoạn trước, bao gồm: Fact Achievement Unlock, Fact Library, Fact Review).
 \end{enumerate}
 
-\subsection{Tổng Hợp Quy Tắc Làm Sạch Theo Từng Bảng (Per-Table Cleaning Inventory)}
+\subsubsection{Tổng Hợp Quy Tắc Làm Sạch Theo Từng Bảng (Per-Table Cleaning Inventory)}
 
 Dưới đây là chi tiết các cơ chế tiền xử lý được áp dụng cụ thể cho từng bảng dữ liệu khi chuyển từ Staging sang Data Warehouse:
 
