@@ -1198,12 +1198,12 @@ with c1:
             python_exec = get_preferred_python_executable()
             cmd = [
                 python_exec,
-                "-u",
-                "steam_crawling.py",
-                "--steam-ids",
+                "-m",
+                "steam_crawler.cli",
+                "--playerids",
                 *[str(x) for x in crawl_ids],
-                "--data",
-                "players,purchased_games,history,reviews",
+                "--output-root",
+                os.path.join(os.getcwd(), "Datasets", "landing"),
             ]
             creation_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
             progress_slot = st.empty()
@@ -1211,7 +1211,7 @@ with c1:
             with st.spinner("Crawling Steam API..."):
                 proc = subprocess.run(
                     cmd,
-                    cwd=os.getcwd(),
+                    cwd=os.path.join(os.getcwd(), "steam_crawler"),
                     capture_output=True,
                     text=True,
                     creationflags=creation_flags,
